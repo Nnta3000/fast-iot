@@ -205,3 +205,10 @@ __pycache__/
 
 
 /dump/
+
+# CN: iot 实验的生成结果与临时锁
+# EN: iot experiment generated outputs and transient lock
+/iot_experiments/scratch/results/
+/iot_experiments/benchmark/.cpu_lock/
+/iot_experiments/benchmark/out/
+/iot_experiments/benchmark/thetas/

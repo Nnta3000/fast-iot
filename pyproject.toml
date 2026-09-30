@@ -22,6 +22,7 @@ dependencies = [
 experiments = ["pyyaml>=6", "pandas>=2", "matplotlib>=3.8"]
 dataset-build = ["safetensors", "tqdm"]
 ott = ["jax==0.4.25", "ott-jax==0.4.6"]
+psd = ["cvxpy>=1.5"]
 reproduce = ["numpy>=1.26,<2", "pykeops==2.3", "matplotlib>=3.8", "pytest>=8"]
 test = ["pytest>=8"]
 native-build = ["ninja>=1.11", "pybind11==2.12.*"]
@@ -31,4 +32,4 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["hello_ot*"]
+include = ["hello_ot*", "iot*"]

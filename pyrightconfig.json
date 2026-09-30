@@ -1,0 +1,10 @@
+{
+  "include": ["src/iot"],
+  "exclude": ["**/__pycache__"],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "none"
+}
