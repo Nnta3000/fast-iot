@@ -40,10 +40,16 @@ from .master import (
     MasterSolver,
     RegularizedMasterSolver,
     TieBreak,
+    WarmStartMasterSolver,
     draw_generic_direction,
 )
 from .oracle import ViolationScan, scan_violations
 from .problem import InverseOTError, InverseOTProblem
+from .reduced_master import (
+    ForestRepresentation,
+    SpanningForestMasterSolver,
+    build_forest_representation,
+)
 from .result import InverseOTResult, IterationRecord
 from .sdp import SdpMasterSolver
 from .theta import (
@@ -75,6 +81,7 @@ __all__ = [
     "EntropicFitResult",
     "EntropicIteration",
     "FeatureMap",
+    "ForestRepresentation",
     "GroundedInstance",
     "BilinearPSDFeatures",
     "BilinearPSDTheta",
@@ -91,11 +98,14 @@ __all__ = [
     "RegularizedMasterSolver",
     "SdpMasterSolver",
     "SimplexTheta",
+    "SpanningForestMasterSolver",
     "ThetaRange",
     "ThetaSet",
     "TieBreak",
     "ViolationScan",
+    "WarmStartMasterSolver",
     "__version__",
+    "build_forest_representation",
     "connector_edges",
     "dense_cost_matrix",
     "draw_generic_direction",

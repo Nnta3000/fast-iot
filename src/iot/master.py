@@ -9,8 +9,9 @@ EN: The master is accessed through the `MasterSolver` protocol so that a future
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
-from typing import Literal, Protocol, cast, runtime_checkable
+from typing import Any, Literal, Protocol, cast, runtime_checkable
 
 import numpy as np
 from scipy.optimize import linprog
@@ -451,12 +452,188 @@ class RegularizedMasterSolver:
         )
 
 
+class WarmStartMasterSolver:
+    """
+    CN: 增量式 HiGHS master（**新增选项，非默认**）。变量 (delta, theta, f, g)、S 上的等式、
+        Theta 约束与规范固定只建一次；每次迭代只把 F\\S 不等式行在「激活 (upper=0) / 停用
+        (upper=+inf)」之间切换，因此每次重解都从上一轮的 LP 基热启动，而不是像
+        `LinearMasterSolver`/`RegularizedMasterSolver` 那样整表重建。
+    EN: Incremental HiGHS master (**new option, not the default**). The variables
+        (delta, theta, f, g), the S equalities, the Theta constraints and the gauge are built
+        once; each iteration only toggles the F\\S inequality rows between active (upper=0) and
+        inactive (upper=+inf), so every re-solve warm-starts from the previous LP basis instead
+        of rebuilding the whole tableau like `LinearMasterSolver`/`RegularizedMasterSolver`.
+
+    CN: 与 `RegularizedMasterSolver` 一样只做单次求解，目标默认 `delta + eps*<rtilde,(theta,f,g)>`
+        （`epsilon=0` 时即纯 `max delta`）。对任何 `LinearThetaSet` 都成立，不限于 diagonal weights。
+    EN: Like `RegularizedMasterSolver`, it performs a single solve per call, with objective
+        `delta + eps*<rtilde,(theta,f,g)>` by default (pure `max delta` when `epsilon=0`). It
+        works for any `LinearThetaSet`, not only diagonal weights.
+
+    CN: 凸性/可行集/最优值与原 LP 完全一致，因此不改变证明；只在退化时可能返回不同的最优顶点，
+        所以仅保证 delta 与证书一致，不保证 (f,g) 逐位相同。
+    EN: The feasible set and optimal value are identical to the full LP, so the proof is
+        unchanged; only when degenerate may it return a different optimal vertex, so we
+        guarantee delta and the certificate, not bitwise-identical (f, g).
+    """
+
+    def __init__(
+        self,
+        *,
+        epsilon: float = 1e-4,
+        random_seed: int = 0,
+        presolve: str = "choose",
+    ) -> None:
+        self.epsilon = float(epsilon)
+        self.random_seed = int(random_seed)
+        self.presolve = str(presolve)
+        # CN: highspy 无类型存根，模型句柄是窄互操作边界，类型为 Any 是刻意的。
+        # EN: highspy has no type stubs; the model handle is a narrow interop boundary, so Any
+        #     is deliberate here.
+        self._highs: Any = None
+        self._layout: _VariableLayout | None = None
+        self._eq_count: int = 0
+        self._key_row: dict[int, int] = {}
+        self._active: set[int] = set()
+        self._signature: tuple[int, int, int] | None = None
+        self._last_status: str = ""
+        # CN: 纯 `Highs.run()` 累计耗时与次数，便于与冷启的 `_solve_system` 计时对比。
+        # EN: Accumulated pure `Highs.run()` time and count, comparable to the cold path's
+        #     `_solve_system` timer.
+        self.lp_seconds: float = 0.0
+        self.n_solves: int = 0
+
+    def solve(
+        self,
+        problem: InverseOTProblem,
+        edges: EdgeSet,
+        *,
+        tie_break: TieBreak = "none",
+    ) -> MasterSolution:
+        del tie_break  # single-solve regime; the tie-break is not part of this option
+        import highspy  # CN: 惰性导入，避免让 `import iot` 依赖 highspy。EN: lazy import.
+
+        support_keys = problem.support_keys()
+        in_support = np.isin(edges.keys, support_keys)
+        nonsupport_keys = edges.keys[~in_support]
+        signature = (int(problem.n_source), int(problem.n_target), int(problem.n_features))
+        if self._highs is None or self._signature != signature:
+            self._build(highspy, problem, edges, in_support, nonsupport_keys, signature)
+        else:
+            self._update(highspy, problem, nonsupport_keys)
+        assert self._highs is not None and self._layout is not None
+        solve_started = time.perf_counter()
+        self._highs.run()
+        self.lp_seconds += time.perf_counter() - solve_started
+        self.n_solves += 1
+        model_status = self._highs.getModelStatus()
+        optimal = highspy.HighsModelStatus.kOptimal
+        if model_status != optimal:
+            name = self._highs.modelStatusToString(model_status)
+            if model_status in (
+                highspy.HighsModelStatus.kInfeasible,
+                highspy.HighsModelStatus.kUnbounded,
+                highspy.HighsModelStatus.kUnboundedOrInfeasible,
+            ):
+                raise InverseOTError(f"master problem is infeasible or unbounded: {name}")
+            raise InverseOTError(f"warm-start master failed: {name}")
+        solution = np.asarray(self._highs.getSolution().col_value, dtype=np.float64)
+        return _extract(solution, self._layout, "optimal")
+
+    def _objective(self, layout: _VariableLayout, problem: InverseOTProblem) -> np.ndarray:
+        objective = np.zeros(layout.size, dtype=np.float64)
+        objective[layout.delta] = -1.0
+        if self.epsilon:
+            direction = draw_generic_direction(
+                random_seed=self.random_seed,
+                n_features=int(problem.n_features),
+                n_source=int(problem.n_source),
+                n_target=int(problem.n_target),
+            )
+            scale = float(np.abs(direction).max()) or 1.0
+            objective[layout.theta_start :] -= self.epsilon * (direction / scale)
+        return objective
+
+    def _build(self, highspy, problem, edges, in_support, nonsupport_keys, signature) -> None:
+        system = build_master_system(problem, edges)
+        layout = system.layout
+        self._layout = layout
+        self._signature = signature
+        model = highspy.Highs()
+        model.setOptionValue("output_flag", False)
+        if self.presolve != "choose":
+            model.setOptionValue("presolve", self.presolve)
+        bounds = system.bounds
+        lower = np.array(
+            [-np.inf if lo is None else float(lo) for lo, _ in bounds], dtype=np.float64
+        )
+        upper = np.array(
+            [np.inf if hi is None else float(hi) for _, hi in bounds], dtype=np.float64
+        )
+        model.addCols(
+            layout.size, self._objective(layout, problem), lower, upper, 0,
+            np.zeros(layout.size + 1, dtype=np.int32),
+            np.zeros(0, dtype=np.int32), np.zeros(0, dtype=np.float64),
+        )
+        a_eq = system.a_eq.tocsr()
+        a_eq_shape = cast("tuple[int, int]", a_eq.shape)
+        if a_eq_shape[0]:
+            model.addRows(
+                a_eq_shape[0], system.b_eq, system.b_eq, int(a_eq.nnz),
+                a_eq.indptr.astype(np.int32), a_eq.indices.astype(np.int32),
+                a_eq.data.astype(np.float64),
+            )
+        self._eq_count = int(a_eq_shape[0])
+        a_ub = system.a_ub.tocsr()
+        rows = int(cast("tuple[int, int]", a_ub.shape)[0])
+        if rows:
+            model.addRows(
+                rows, np.full(rows, -np.inf), np.zeros(rows), int(a_ub.nnz),
+                a_ub.indptr.astype(np.int32), a_ub.indices.astype(np.int32),
+                a_ub.data.astype(np.float64),
+            )
+        self._key_row = {
+            int(key): self._eq_count + position
+            for position, key in enumerate(nonsupport_keys.tolist())
+        }
+        self._active = set(self._key_row)
+        self._highs = model
+
+    def _update(self, highspy, problem, nonsupport_keys) -> None:
+        assert self._highs is not None and self._layout is not None
+        target = set(int(key) for key in nonsupport_keys.tolist())
+        for key in self._active - target:
+            self._highs.changeRowBounds(self._key_row[key], -np.inf, np.inf)
+        layout = self._layout
+        n_target = int(problem.n_target)
+        for key in target - self._active:
+            if key in self._key_row:
+                self._highs.changeRowBounds(self._key_row[key], -np.inf, 0.0)
+                continue
+            row = int(key) // n_target
+            col = int(key) % n_target
+            feature = problem.features.features(
+                np.array([row], dtype=np.int64), np.array([col], dtype=np.int64)
+            )[0]
+            indices = np.concatenate(
+                [
+                    np.array([layout.delta, layout.source_start + row, layout.target_start + col]),
+                    np.arange(layout.theta_start, layout.source_start, dtype=np.int64),
+                ]
+            ).astype(np.int32)
+            values = np.concatenate([np.ones(3), -feature]).astype(np.float64)
+            self._highs.addRow(-np.inf, 0.0, int(indices.size), indices, values)
+            self._key_row[key] = int(self._highs.getNumRow()) - 1
+        self._active = target
+
+
 __all__ = [
     "LinearMasterSolver",
     "MasterSolution",
     "MasterSolver",
     "RegularizedMasterSolver",
     "TieBreak",
+    "WarmStartMasterSolver",
     "build_master_system",
     "coordinate_extrema",
     "draw_generic_direction",
