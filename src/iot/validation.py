@@ -7,9 +7,9 @@ EN: Validation utilities for inverse OT: theta ranges under a fixed dual pair, a
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
-import ot
 from scipy.optimize import linprog
 
 from .edges import EdgeSet
@@ -26,6 +26,21 @@ _POT_OPTIMAL_RESULT_CODE = 1
 # EN: Default iteration cap for validation; covers n≈3200 (needs ~2e6) and is far above
 #     POT's 1e5 default.
 _DEFAULT_VALIDATION_NUM_ITERMAX = 10_000_000
+
+
+def _require_ot() -> Any:
+    """
+    CN: 惰性加载 POT。只有验证路径需要 OT 求解器，`import iot` 不必承担其巨大导入足迹。
+    EN: Load POT lazily. Only the validation path needs the OT solver; `import iot` must not
+        pay its large import footprint.
+    """
+    try:
+        import ot
+    except ImportError as error:
+        raise InverseOTError(
+            "validation requires POT; install it with `pip install pot`."
+        ) from error
+    return ot
 
 
 def _dual_vector(value: np.ndarray, *, size: int, name: str) -> np.ndarray:
@@ -282,7 +297,7 @@ def is_optimal_plan(
     target_mass = problem.resolved_target_mass
     if abs(float(source_mass.sum()) - float(target_mass.sum())) > 1e-8:
         raise InverseOTError("source and target masses must have equal total mass")
-    transport, log = ot.emd(
+    transport, log = _require_ot().emd(
         source_mass, target_mass, cost, numItermax=int(num_itermax), log=True
     )
     result_code = int(log["result_code"])
@@ -373,7 +388,7 @@ def dual_optimality_certificate(
     target_mass = problem.resolved_target_mass
     if abs(float(source_mass.sum()) - float(target_mass.sum())) > 1e-8:
         raise InverseOTError("source and target masses must have equal total mass")
-    _transport, log = ot.emd(
+    _transport, log = _require_ot().emd(
         source_mass, target_mass, cost, numItermax=int(num_itermax), log=True
     )
     source_dual = np.asarray(log["u"], dtype=np.float64).reshape(-1)
