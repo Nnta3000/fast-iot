@@ -9,6 +9,7 @@ EN: The master is accessed through the `MasterSolver` protocol so that a future
 
 from __future__ import annotations
 
+import heapq
 import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, cast, runtime_checkable
@@ -307,6 +308,140 @@ def coordinate_extrema(
         upper[index] = float(high[variable])
         statuses.append(f"min={low_status}; max={high_status}")
     return lower, upper, tuple(statuses)
+
+
+def canonical_potentials(
+    problem: InverseOTProblem,
+    edges: EdgeSet,
+    *,
+    delta: float,
+    theta: np.ndarray,
+    reference_source_dual: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    CN: 给定 (delta, theta)，返回固定该点的最优面上「逐点最大」的势 (f, g)。S 为置换时，
+        消去 g 得到源点上的差分约束 `f_i - f_k <= w_ik`，其中 `w_ik = c_ij - delta - c_kj`
+        （`j = match[k]`）。用参考势 `reference_source_dual` 把各弧松弛量变成非负，再从固定
+        `g_0 = 0` 的根出发用 Dijkstra 求逐点最大解，复杂度 O(|F| log n)。
+
+    EN: Given (delta, theta), return the pointwise-maximal potentials (f, g) on the face where
+        both are fixed. When S is a permutation, eliminating g gives difference constraints
+        `f_i - f_k <= w_ik` on the sources, with `w_ik = c_ij - delta - c_kj` for `j = match[k]`.
+        The reference potential `reference_source_dual` makes every arc slack nonnegative; Dijkstra
+        from the root that fixes `g_0 = 0` then gives the pointwise-maximal solution in
+        O(|F| log n).
+
+    CN: 参考势只需可行（各弧 slack >= 0）。若 S 不是置换或存在不可达源点则抛错。
+    EN: The reference only has to be feasible (every arc slack >= 0). Raises when S is not a
+        permutation or a source is unreachable.
+    """
+    n_source = int(problem.n_source)
+    n_target = int(problem.n_target)
+    support_rows, support_cols, _values = problem.support()
+    match_source = np.full(n_source, -1, dtype=np.int64)
+    match_target = np.full(n_target, -1, dtype=np.int64)
+    for row, col in zip(support_rows.tolist(), support_cols.tolist(), strict=True):
+        if match_source[int(row)] != -1 or match_target[int(col)] != -1:
+            raise InverseOTError("canonical potentials require S to be a matching")
+        match_source[int(row)] = int(col)
+        match_target[int(col)] = int(row)
+    if np.any(match_source < 0) or np.any(match_target < 0):
+        raise InverseOTError(
+            "canonical potentials require S to be a permutation of the sources and targets"
+        )
+    reference = np.asarray(reference_source_dual, dtype=np.float64).reshape(-1)
+    if reference.size != n_source:
+        raise ValueError(f"reference_source_dual must have length {n_source}")
+
+    support_costs = problem.features.costs(theta, support_rows, support_cols)
+    cost_of_source = np.empty(n_source, dtype=np.float64)
+    cost_of_source[support_rows] = support_costs
+
+    support_keys = problem.support_keys()
+    off_support = ~np.isin(edges.keys, support_keys)
+    off_rows = edges.rows[off_support]
+    off_cols = edges.cols[off_support]
+    off_costs = problem.features.costs(theta, off_rows, off_cols)
+    owner = match_target[off_cols]
+    weight = off_costs - float(delta) - cost_of_source[owner]
+    slack = weight - (reference[off_rows] - reference[owner])
+    np.maximum(slack, 0.0, out=slack)
+
+    adjacency: list[list[tuple[int, float]]] = [[] for _ in range(n_source)]
+    for position in range(off_rows.size):
+        adjacency[int(owner[position])].append((int(off_rows[position]), float(slack[position])))
+
+    root = int(match_target[0])
+    distance = np.full(n_source, np.inf, dtype=np.float64)
+    distance[root] = 0.0
+    heap: list[tuple[float, int]] = [(0.0, root)]
+    while heap:
+        current, node = heapq.heappop(heap)
+        if current > distance[node]:
+            continue
+        for neighbour, arc in adjacency[node]:
+            candidate = current + arc
+            if candidate < distance[neighbour] - 1e-12:
+                distance[neighbour] = candidate
+                heapq.heappush(heap, (candidate, neighbour))
+    if not np.all(np.isfinite(distance)):
+        raise InverseOTError("canonical potentials: an off-support component is unreachable")
+
+    offset = cost_of_source[root] - reference[root]
+    source_dual = np.ascontiguousarray(reference + offset + distance, dtype=np.float64)
+    target_dual = np.ascontiguousarray(
+        cost_of_source[match_target] - source_dual[match_target], dtype=np.float64
+    )
+    return source_dual, target_dual
+
+
+class CanonicalGaugeMasterSolver:
+    """
+    CN: 规范势包装器（**新增选项，非默认**）。包住任意 master：先照常求解，再在返回的
+        `(delta, theta)` 上把 `(f, g)` 重算为逐点最大的规范势（见 `canonical_potentials`）。
+        这样两个不同的 master 只要 `(delta, theta)` 一致，就会给出**逐位相同**的 `(f, g)`，
+        消除 (f,g) 面自由度对剪枝的影响。不改变内层 master 的目标或默认设置。
+
+    EN: Canonical-potential wrapper (**new option, not the default**). Wraps any master: it solves
+        as usual, then recomputes `(f, g)` as the pointwise-maximal canonical potentials on the
+        returned `(delta, theta)` (see `canonical_potentials`). Two different masters that agree on
+        `(delta, theta)` then return bit-for-bit identical `(f, g)`, removing the effect of the
+        (f,g) face freedom on pruning. The inner master's objective and defaults are untouched.
+    """
+
+    def __init__(self, inner: MasterSolver) -> None:
+        self.inner = inner
+
+    def solve(
+        self,
+        problem: InverseOTProblem,
+        edges: EdgeSet,
+        *,
+        tie_break: TieBreak = "none",
+    ) -> MasterSolution:
+        base = self.inner.solve(problem, edges, tie_break=tie_break)
+        source_dual, target_dual = canonical_potentials(
+            problem,
+            edges,
+            delta=base.delta,
+            theta=base.theta,
+            reference_source_dual=base.source_dual,
+        )
+        return MasterSolution(
+            delta=base.delta,
+            theta=base.theta,
+            source_dual=source_dual,
+            target_dual=target_dual,
+            status=base.status,
+        )
+
+    @property
+    def lp_seconds(self) -> float:
+        return float(getattr(self.inner, "lp_seconds", 0.0))
+
+    @property
+    def n_solves(self) -> int:
+        return int(getattr(self.inner, "n_solves", 0))
 
 
 @dataclass(frozen=True)
@@ -661,6 +796,7 @@ class WarmStartMasterSolver:
 
 
 __all__ = [
+    "CanonicalGaugeMasterSolver",
     "LinearMasterSolver",
     "MasterSolution",
     "MasterSolver",
@@ -668,6 +804,7 @@ __all__ = [
     "TieBreak",
     "WarmStartMasterSolver",
     "build_master_system",
+    "canonical_potentials",
     "coordinate_extrema",
     "draw_generic_direction",
 ]

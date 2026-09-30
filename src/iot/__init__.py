@@ -35,12 +35,14 @@ from .grounded import (
 )
 from .loop import solve_inverse_ot
 from .master import (
+    CanonicalGaugeMasterSolver,
     LinearMasterSolver,
     MasterSolution,
     MasterSolver,
     RegularizedMasterSolver,
     TieBreak,
     WarmStartMasterSolver,
+    canonical_potentials,
     draw_generic_direction,
 )
 from .oracle import ViolationScan, scan_violations
@@ -74,6 +76,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "ComponentPartition",
+    "CanonicalGaugeMasterSolver",
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
     "DualCertificate",
@@ -106,6 +109,7 @@ __all__ = [
     "WarmStartMasterSolver",
     "__version__",
     "build_forest_representation",
+    "canonical_potentials",
     "connector_edges",
     "dense_cost_matrix",
     "draw_generic_direction",
