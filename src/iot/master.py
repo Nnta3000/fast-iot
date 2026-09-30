@@ -483,10 +483,16 @@ class WarmStartMasterSolver:
         epsilon: float = 1e-4,
         random_seed: int = 0,
         presolve: str = "choose",
+        purge: bool = True,
     ) -> None:
         self.epsilon = float(epsilon)
         self.random_seed = int(random_seed)
         self.presolve = str(presolve)
+        # CN: purge=True 时直接删除离开 F 的不等式行（保持模型行数 = |F\S|）；
+        #     purge=False 时仅把行设为非激活（保留历史行，便于对照）。
+        # EN: purge=True deletes inequality rows that leave F (model rows stay = |F\S|);
+        #     purge=False only deactivates them (keeps history, for comparison).
+        self.purge = bool(purge)
         # CN: highspy 无类型存根，模型句柄是窄互操作边界，类型为 Any 是刻意的。
         # EN: highspy has no type stubs; the model handle is a narrow interop boundary, so Any
         #     is deliberate here.
@@ -539,6 +545,15 @@ class WarmStartMasterSolver:
             raise InverseOTError(f"warm-start master failed: {name}")
         solution = np.asarray(self._highs.getSolution().col_value, dtype=np.float64)
         return _extract(solution, self._layout, "optimal")
+
+    @property
+    def active_inequality_rows(self) -> int:
+        """
+        CN: 当前模型中处于激活状态的 F\\S 不等式行数（purge=True 时应等于 |F\\S|）。
+        EN: Number of active F\\S inequality rows currently in the model (equals |F\\S| when
+            purge=True).
+        """
+        return len(self._key_row)
 
     def _objective(self, layout: _VariableLayout, problem: InverseOTProblem) -> np.ndarray:
         objective = np.zeros(layout.size, dtype=np.float64)
@@ -602,29 +617,47 @@ class WarmStartMasterSolver:
     def _update(self, highspy, problem, nonsupport_keys) -> None:
         assert self._highs is not None and self._layout is not None
         target = set(int(key) for key in nonsupport_keys.tolist())
-        for key in self._active - target:
-            self._highs.changeRowBounds(self._key_row[key], -np.inf, np.inf)
+        if self.purge:
+            removed = [key for key in self._key_row if key not in target]
+            if removed:
+                old_rows = np.array(sorted(self._key_row[key] for key in removed), dtype=np.int32)
+                self._highs.deleteRows(int(old_rows.size), old_rows)
+                retained: dict[int, int] = {}
+                for key, row in self._key_row.items():
+                    if key in target:
+                        retained[key] = row - int(np.searchsorted(old_rows, row, side="left"))
+                self._key_row = retained
+            for key in sorted(target - set(self._key_row)):
+                self._add_row(problem, key)
+        else:
+            for key in self._active - target:
+                self._highs.changeRowBounds(self._key_row[key], -np.inf, np.inf)
+            for key in sorted(target - self._active):
+                if key in self._key_row:
+                    self._highs.changeRowBounds(self._key_row[key], -np.inf, 0.0)
+                else:
+                    self._add_row(problem, key)
+        self._active = target
+
+    def _add_row(self, problem: InverseOTProblem, key: int) -> None:
+        """CN: 为边 key 追加 `delta + f_i + g_j − c_ij(theta) <= 0` 一行。EN: Add one row."""
+        assert self._highs is not None and self._layout is not None
         layout = self._layout
         n_target = int(problem.n_target)
-        for key in target - self._active:
-            if key in self._key_row:
-                self._highs.changeRowBounds(self._key_row[key], -np.inf, 0.0)
-                continue
-            row = int(key) // n_target
-            col = int(key) % n_target
-            feature = problem.features.features(
-                np.array([row], dtype=np.int64), np.array([col], dtype=np.int64)
-            )[0]
-            indices = np.concatenate(
-                [
-                    np.array([layout.delta, layout.source_start + row, layout.target_start + col]),
-                    np.arange(layout.theta_start, layout.source_start, dtype=np.int64),
-                ]
-            ).astype(np.int32)
-            values = np.concatenate([np.ones(3), -feature]).astype(np.float64)
-            self._highs.addRow(-np.inf, 0.0, int(indices.size), indices, values)
-            self._key_row[key] = int(self._highs.getNumRow()) - 1
-        self._active = target
+        row = int(key) // n_target
+        col = int(key) % n_target
+        feature = problem.features.features(
+            np.array([row], dtype=np.int64), np.array([col], dtype=np.int64)
+        )[0]
+        indices = np.concatenate(
+            [
+                np.array([layout.delta, layout.source_start + row, layout.target_start + col]),
+                np.arange(layout.theta_start, layout.source_start, dtype=np.int64),
+            ]
+        ).astype(np.int32)
+        values = np.concatenate([np.ones(3), -feature]).astype(np.float64)
+        self._highs.addRow(-np.inf, 0.0, int(indices.size), indices, values)
+        self._key_row[int(key)] = int(self._highs.getNumRow()) - 1
 
 
 __all__ = [

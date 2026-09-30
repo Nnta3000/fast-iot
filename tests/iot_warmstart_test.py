@@ -109,6 +109,21 @@ def test_warmstart_incremental_sequence_matches_cold_each_step() -> None:
         assert abs(cold.delta - warm.delta) <= 1e-7
 
 
+def test_warmstart_purges_rows_to_match_the_active_set() -> None:
+    rng = np.random.default_rng(34)
+    instance = make_diagonal_grounded_instance(n_source=10, n_target=10, n_features=3, rng=rng)
+    mandatory, _ = mandatory_edges(instance.problem)
+    all_edges = _all_edges(instance.problem)
+    solver = WarmStartMasterSolver(epsilon=1e-4, random_seed=0, purge=True)
+    for size in (mandatory.size, mandatory.size + 5, mandatory.size + 10, all_edges.size, mandatory.size):
+        subset = EdgeSet.from_arrays(
+            all_edges.rows[:size], all_edges.cols[:size], n_target=int(instance.problem.n_target)
+        ).union(mandatory)
+        solver.solve(instance.problem, subset, tie_break="none")
+        in_support = np.isin(subset.keys, instance.problem.support_keys())
+        assert solver.active_inequality_rows == int(np.count_nonzero(~in_support))
+
+
 def test_warmstart_drives_the_loop_to_an_optimal_theta() -> None:
     rng = np.random.default_rng(33)
     instance = make_diagonal_grounded_instance(n_source=12, n_target=12, n_features=3, rng=rng)
