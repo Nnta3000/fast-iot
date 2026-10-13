@@ -39,8 +39,11 @@ one tiny validated run. **Do not proceed if this fails.**
 | `run_batch.py` | the single entry point (`--batch env|gpu_master_k|e2e`) |
 | `master_microbench.py` | isolated master LP: HiGHS vs CuPDLPx on the same `F` |
 | `lp_build_probe.py` | build the master LP only (no solve); per-phase timing + `nnz` |
+| `gpu_queue.sh` | user-space GPU job queue (one job per idle GPU; see `QUEUE.md`) |
+| `jobs/gpu_only.txt` | curated GPU-only e2e jobs (`scans hello` + `masters cupdlpx`) |
 | `run_batch.sh` | thin wrapper: `./run_batch.sh --batch ... --gpu auto` |
 | `BATCHES.md` | the recommended batches, configs, and cost |
+| `QUEUE.md` | how to queue jobs on a SLURM-less box (one job per idle GPU) |
 | `out/<batch>/` | git-ignored results (`manifest`/`records` json, csv, logs) |
 
 ## Sync back
