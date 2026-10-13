@@ -38,6 +38,8 @@ class RunSpec:
     lowrank_k: int = 8
     seed: int = 0
     solver: str = "auto"
+    scan_backend: str = "numpy"
+    prune: bool = True
     max_iterations: int = 300
     num_itermax: int = 2_000_000
     validate: bool = False
@@ -50,8 +52,10 @@ class RunSpec:
             raise ValueError("max_iterations must be >= 1")
         if int(self.num_itermax) < 1:
             raise ValueError("num_itermax must be >= 1")
-        if self.solver not in {"auto", "regularized", "sdp"}:
-            raise ValueError("solver must be one of auto/regularized/sdp")
+        if self.solver not in {"auto", "regularized", "sdp", "cupdlpx"}:
+            raise ValueError("solver must be one of auto/regularized/sdp/cupdlpx")
+        if self.scan_backend not in {"numpy", "hello"}:
+            raise ValueError("scan_backend must be 'numpy' or 'hello'")
 
     def run_id(self) -> str:
         """CN: 稳定运行 id。EN: Stable run id."""

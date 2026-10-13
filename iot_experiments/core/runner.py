@@ -20,6 +20,7 @@ import ot
 from scipy import sparse
 
 from iot import (
+    CuPdlpxMasterSolver,
     InverseOTError,
     InverseOTProblem,
     RegularizedMasterSolver,
@@ -84,11 +85,12 @@ def run_spec(spec: RunSpec) -> RunRecord:
     solver_name = spec.solver
     if solver_name == "auto":
         solver_name = "sdp" if family_spec.is_sdp else "regularized"
-    solver = (
-        SdpMasterSolver()
-        if solver_name == "sdp"
-        else RegularizedMasterSolver(epsilon=EPSILON, random_seed=int(spec.seed))
-    )
+    if solver_name == "sdp":
+        solver = SdpMasterSolver()
+    elif solver_name == "cupdlpx":
+        solver = CuPdlpxMasterSolver()
+    else:
+        solver = RegularizedMasterSolver(epsilon=EPSILON, random_seed=int(spec.seed))
     tol = SDP_TOL if solver_name == "sdp" else LP_TOL
 
     solve_started = time.perf_counter()
@@ -115,8 +117,9 @@ def run_spec(spec: RunSpec) -> RunRecord:
             tau_prune=TAU_PRUNE,
             gamma=GAMMA,
             validate=False,
-            prune_hysteresis=True,
-            prune=True,
+            prune=bool(spec.prune),
+            prune_hysteresis=bool(spec.prune),
+            scan_backend=str(spec.scan_backend),
         )
         iterations = int(result.n_iterations)
         converged = bool(result.converged)

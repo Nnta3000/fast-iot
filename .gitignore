@@ -227,6 +227,10 @@ __pycache__/
 # EN: local-only agent spec, never pushed
 /AGENTS.md
 
+# CN: A100 批处理结果目录
+# EN: A100 batch output directory
+/iot_experiments/gpu_bench/out/
+
 # CN: 本地工具链状态
 # EN: local tooling state
 /.pytest_cache/
