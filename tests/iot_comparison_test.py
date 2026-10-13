@@ -69,6 +69,18 @@ def test_sinkhorn_theta_reduces_gap_on_simplex(simplex_instance: GroundedInstanc
     )
 
 
+def test_entropic_stops_once_no_longer_improving(simplex_instance: GroundedInstance) -> None:
+    # EN: The entropic plan is piecewise constant in theta, so L_eps plateaus and never reaches
+    #     the exact optimum. The runner must stop instead of burning the whole outer budget.
+    problem = simplex_instance.problem
+    result = fit_theta_sinkhorn(
+        problem, num_outer=500, epsilon_decay=0.9, sinkhorn_iterations=100
+    )
+    assert result.stopped_reason == "no_improvement"
+    assert 0 < len(result.iterations) < 500
+    assert result.stopped_iteration == len(result.iterations) - 1
+
+
 def test_constraint_generation_certifies_on_psd(psd_instance: GroundedInstance) -> None:
     pytest.importorskip("cvxpy")
     problem = psd_instance.problem

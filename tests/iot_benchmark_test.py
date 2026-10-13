@@ -40,7 +40,7 @@ from iot_experiments.benchmark.runner import (  # noqa: E402
 
 
 def test_generator_matches_common_build_problem_for_seeds_0_to_9() -> None:
-    from iot_experiments.scratch.common import build_problem
+    from iot_experiments.legacy.scratch.common import build_problem
 
     for seed in range(10):
         ours = build_instance(n=50, k=8, seed=seed, num_itermax=2_000_000)

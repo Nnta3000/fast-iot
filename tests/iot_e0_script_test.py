@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-E0_SCRIPT = REPO_ROOT / "iot_experiments" / "e0_fixed_fg.py"
+E0_SCRIPT = (
+    REPO_ROOT / "iot_experiments" / "legacy" / "methods" / "exact" / "e0_fixed_fg.py"
+)
 
 
 def test_e0_script_writes_valid_report(tmp_path: Path) -> None:

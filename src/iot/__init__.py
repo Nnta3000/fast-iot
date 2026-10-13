@@ -11,6 +11,21 @@ from .components import (
     mandatory_edges,
     support_components,
 )
+from .cutting_plane import (
+    CutMasterResult,
+    CuttingPlaneConfig,
+    CuttingPlaneCut,
+    CuttingPlaneIteration,
+    CuttingPlaneResult,
+    MasterMode,
+    solve_cut_master,
+    solve_cutting_plane,
+)
+from .cupdlpx_master import (
+    CuPdlpxLp,
+    CuPdlpxMasterSolver,
+    build_cupdlpx_lp,
+)
 from .edges import EdgeSet, edge_keys
 from .entropic import (
     EntropicFitResult,
@@ -26,6 +41,7 @@ from .features import (
     DenseFeatureTensor,
     DiagonalWeightFeatures,
     FeatureMap,
+    QuadraticFeatures,
     dense_cost_matrix,
 )
 from .grounded import (
@@ -33,6 +49,8 @@ from .grounded import (
     make_bilinear_psd_grounded_instance,
     make_diagonal_grounded_instance,
 )
+from .hello_scan import fast_scan_supported, scan_violations_fast
+from .hello_solver import hello_solver_supported, make_hello_solver
 from .loop import solve_inverse_ot
 from .master import (
     CanonicalGaugeMasterSolver,
@@ -77,6 +95,13 @@ __version__ = "0.1.0"
 __all__ = [
     "ComponentPartition",
     "CanonicalGaugeMasterSolver",
+    "CutMasterResult",
+    "CuttingPlaneConfig",
+    "CuttingPlaneCut",
+    "CuttingPlaneIteration",
+    "CuttingPlaneResult",
+    "CuPdlpxLp",
+    "CuPdlpxMasterSolver",
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
     "DualCertificate",
@@ -95,9 +120,11 @@ __all__ = [
     "LinearMasterSolver",
     "LinearThetaConstraints",
     "LinearThetaSet",
+    "MasterMode",
     "MasterSolution",
     "MasterSolver",
     "OptimalityCheck",
+    "QuadraticFeatures",
     "RegularizedMasterSolver",
     "SdpMasterSolver",
     "SimplexTheta",
@@ -109,6 +136,7 @@ __all__ = [
     "WarmStartMasterSolver",
     "__version__",
     "build_forest_representation",
+    "build_cupdlpx_lp",
     "canonical_potentials",
     "connector_edges",
     "dense_cost_matrix",
@@ -117,9 +145,12 @@ __all__ = [
     "edge_keys",
     "fit_psd_moment_entropic",
     "fixed_dual_theta_ranges",
+    "fast_scan_supported",
+    "hello_solver_supported",
     "is_optimal_plan",
     "make_bilinear_psd_grounded_instance",
     "make_diagonal_grounded_instance",
+    "make_hello_solver",
     "mandatory_edges",
     "moment_from_plan",
     "optimal_theta_ranges",
@@ -127,7 +158,10 @@ __all__ = [
     "project_psd",
     "scale_invariant_error",
     "scan_violations",
+    "scan_violations_fast",
     "sinkhorn_plan",
+    "solve_cut_master",
+    "solve_cutting_plane",
     "solve_inverse_ot",
     "support_components",
 ]

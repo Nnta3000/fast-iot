@@ -208,7 +208,26 @@ __pycache__/
 
 # CN: iot 实验的生成结果与临时锁
 # EN: iot experiment generated outputs and transient lock
-/iot_experiments/scratch/results/
 /iot_experiments/benchmark/.cpu_lock/
 /iot_experiments/benchmark/out/
 /iot_experiments/benchmark/thetas/
+
+# CN: 三个轴的当前研究输出目录
+# EN: outputs of the current three-axis studies
+/iot_experiments/scaling/out/
+/iot_experiments/marginals/out/
+/iot_experiments/families/out/
+/iot_experiments/external/out/
+
+# CN: legacy（历史）实验整目录不推送（含不适合公开的报告/脚本）
+# EN: the whole legacy experiments directory is not pushed (holds files unfit for public)
+/iot_experiments/legacy/
+
+# CN: agent 规格文件仅本地保留，不推送
+# EN: local-only agent spec, never pushed
+/AGENTS.md
+
+# CN: 本地工具链状态
+# EN: local tooling state
+/.pytest_cache/
+/uv.lock

@@ -16,11 +16,11 @@ EN: This is the information-matched baseline to the constraint-generation loop (
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Callable, Literal
 
 import numpy as np
 
-from .entropic import project_psd, sinkhorn_plan
+from .entropic import project_psd, sinkhorn_plan, sinkhorn_plan_with_potentials
 from .problem import InverseOTProblem
 from .theta import BilinearPSDTheta, SimplexTheta
 
@@ -36,6 +36,8 @@ class SinkhornThetaIteration:
     epsilon: float
     entropic_gap: float
     gradient_norm: float
+    theta: tuple[float, ...] = ()
+    sinkhorn_marginal_error: float = float("nan")
 
 
 @dataclass(frozen=True)
@@ -51,6 +53,8 @@ class SinkhornThetaResult:
     final_epsilon: float
     initial_gradient_norm: float
     final_gradient_norm: float
+    stopped_reason: str = "completed"
+    stopped_iteration: int = -1
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "theta", np.ascontiguousarray(self.theta, dtype=np.float64))
@@ -124,12 +128,18 @@ def fit_theta_sinkhorn(
     epsilon_end: float = 1e-3,
     epsilon_decay: float = 0.95,
     learning_rate: float = 0.05,
+    learning_rate_decay: float = 1.0,
     step_rule: Literal["adam", "plain"] = "adam",
     beta1: float = 0.9,
     beta2: float = 0.999,
     adam_epsilon: float = 1e-8,
     sinkhorn_iterations: int = 500,
     sinkhorn_tolerance: float = 1e-9,
+    on_iteration: Callable[[SinkhornThetaIteration], None] | None = None,
+    stop_on_stagnation: bool = True,
+    stagnation_tolerance: float = 1e-6,
+    stagnation_patience: int = 5,
+    warm_start: bool = True,
 ) -> SinkhornThetaResult:
     """
     CN: 用投影梯度/Adam 在 Θ 上最小化熵 OT 间隙，返回 θ 与 ε 退火轨迹。
@@ -181,22 +191,45 @@ def fit_theta_sinkhorn(
     second_moment = np.zeros_like(theta)
     records: list[SinkhornThetaIteration] = []
     initial_gradient_norm = float("nan")
+    best_gap = float("inf")
+    stagnant = 0
+    stopped_reason = "completed"
+    stopped_iteration = -1
+    potential_source: np.ndarray | None = None
+    potential_target: np.ndarray | None = None
     for step in range(int(num_outer)):
         cost = cost_of(theta)
-        plan = sinkhorn_plan(
+        sinkhorn = sinkhorn_plan_with_potentials(
             cost,
             source_mass,
             target_mass,
             epsilon=float(epsilon),
             max_iterations=int(sinkhorn_iterations),
             tolerance=float(sinkhorn_tolerance),
+            initial_log_source_potential=potential_source if warm_start else None,
+            initial_log_target_potential=potential_target if warm_start else None,
         )
+        plan = sinkhorn.plan
+        potential_source = sinkhorn.log_source_potential
+        potential_target = sinkhorn.log_target_potential
         fitted_moment = feature_matrix.T @ plan.reshape(-1)
         gradient = observed_moment - fitted_moment
         entropic_gap = float(theta @ gradient)
         gradient_norm = float(np.linalg.norm(gradient))
         if step == 0:
             initial_gradient_norm = gradient_norm
+
+        # CN: 熵 OT 的 plan 对 theta 分段常值：一旦接近解，梯度冻结，L_eps 不再下降。
+        #     连续 `stagnation_patience` 次没有实质改进即停止（"能做的最好" 已达成）。
+        # EN: The entropic plan is piecewise constant in theta: near the solution the gradient
+        #     freezes and L_eps stops decreasing. Stop after `stagnation_patience` consecutive
+        #     iterations without a meaningful improvement (the attainable optimum is reached).
+        reference = max(1.0, abs(best_gap)) if np.isfinite(best_gap) else 1.0
+        if best_gap - entropic_gap > float(stagnation_tolerance) * reference:
+            best_gap = entropic_gap
+            stagnant = 0
+        else:
+            stagnant += 1
 
         if step_rule == "adam":
             first_moment = beta1 * first_moment + (1.0 - beta1) * gradient
@@ -206,32 +239,46 @@ def fit_theta_sinkhorn(
             direction = corrected_first / (np.sqrt(corrected_second) + float(adam_epsilon))
         else:
             direction = gradient
-        theta = project_theta(theta - float(learning_rate) * direction, theta_set)
+        theta_iterate = theta
+        step_learning_rate = float(learning_rate) * float(learning_rate_decay) ** step
+        theta = project_theta(theta - step_learning_rate * direction, theta_set)
         records.append(
             SinkhornThetaIteration(
                 index=step,
                 epsilon=float(epsilon),
                 entropic_gap=entropic_gap,
                 gradient_norm=gradient_norm,
+                theta=tuple(float(value) for value in theta_iterate),
+                sinkhorn_marginal_error=float(sinkhorn.marginal_error),
             )
         )
+        if on_iteration is not None:
+            on_iteration(records[-1])
+        if stop_on_stagnation and stagnant >= int(stagnation_patience):
+            stopped_reason = "no_improvement"
+            stopped_iteration = step
+            break
         epsilon = max(float(epsilon) * float(epsilon_decay), float(epsilon_end))
 
-    final_plan = sinkhorn_plan(
+    final_sinkhorn = sinkhorn_plan_with_potentials(
         cost_of(theta),
         source_mass,
         target_mass,
         epsilon=max(float(epsilon), float(epsilon_end)),
         max_iterations=int(sinkhorn_iterations),
         tolerance=float(sinkhorn_tolerance),
+        initial_log_source_potential=potential_source,
+        initial_log_target_potential=potential_target,
     )
-    final_gradient = observed_moment - feature_matrix.T @ final_plan.reshape(-1)
+    final_gradient = observed_moment - feature_matrix.T @ final_sinkhorn.plan.reshape(-1)
     return SinkhornThetaResult(
         theta=theta,
         iterations=tuple(records),
         final_epsilon=float(max(epsilon, float(epsilon_end))),
         initial_gradient_norm=float(initial_gradient_norm),
         final_gradient_norm=float(np.linalg.norm(final_gradient)),
+        stopped_reason=str(stopped_reason),
+        stopped_iteration=int(stopped_iteration),
     )
 
 

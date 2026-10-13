@@ -1,47 +1,83 @@
 # iot_experiments
 
-Experiments for the `iot` subpackage (inverse optimal transport by constraint
-generation). Run each script from the repository root after `pip install -e .`.
+Experiments for the inverse-OT work. Run everything from the repository root after
+`pip install -e .`. This file is the **index**: what each directory answers and which
+driver/report to cite.
 
-## Layout
+## The design: three axes on one record
 
-| path | purpose |
+Every current experiment is a point in a three-axis design, described by one `RunSpec` and
+recorded as one `RunRecord` (`core/records.py`):
+
+1. **scale** — growth in `K` (point dimension / feature count), `m`, `n`;
+2. **marginal** — `uniform` vs non-uniform (`gaussian`, `gmm`, `gaussian:<c>:<w>`);
+3. **cost family** — `diagonal`, `quadratic`, `lowrank` (+ `bilinear-psd` at tiny `n`).
+
+A study is just a grid over these axes plus an analysis. `RunSpec`/`RunRecord` live in
+`core/`; studies import them, so results from different studies merge and cite directly
+(`AGENTS.md` §7.1: a number is usable only with its config).
+
+| path | what it is |
 | --- | --- |
-| `e0…e3_*.py`, `inverse_ot_method_comparison.py`, `entropic_psd_moment_fit.py` | runnable experiment drivers |
-| `benchmark/` | shared cross-method benchmark contract (`PROTOCOL.md`, instance + noisy generators, checkpoint schema, offline evaluator, runners). **Import it; do not fork it.** |
-| `scratch/` | development diagnostics: scripts at the top level, reports in `scratch/reports/`, generated outputs in `scratch/results/`, retired scripts in `scratch/archive/` |
-| `theory/` | the convergence proof (not code) |
+| `core/` | shared axes + `RunSpec`/`RunRecord` + the single `run_spec`/`run_grid` entry point |
+| `benchmark/` | **frozen** cross-method contract (`PROTOCOL.md`), generators, evaluation, gradient runner |
+| `scaling/` | **study 1** — growth in `K`, `m`, `n` |
+| `marginals/` | **study 2** — uniform vs Gaussian / GMM marginals (and a peakedness sweep) |
+| `families/` | **study 3** — diagonal / quadratic / low-rank (+ tiny-`n` bilinear-PSD) |
+| `external/` | **study 4** — adapters to external benchmarks (placeholder) |
+| `reports/` | current written results (see `reports/README.md`) |
+| `legacy/` | retired experiments and superseded reports (see `legacy/README.md`) |
+| `theory/` | the convergence proof source (`CONVERGENCE_PROOF.typ`) |
 
+## Question → study → driver → report
 
-| experiment | what it shows |
-| --- | --- |
-| `e0_fixed_fg.py` | Fix the HELLO-OT dual pair `(f*, g*)` and report the feasible `theta` range. No unknown `(f, g)`, so this isolates identifiability and is the simplest sanity check. |
-| `e1_full_master.py` | Solve the master on **all** edges with correlated (non-product) marginals, averaged over seeds. Report `delta*`, the `theta` identifiability range with `(f, g)` free, and `dist(theta_maxmargin, theta_star)` as `m = n` grows. |
-| `e2_loop_vs_full.py` | Compare the constraint-generation loop with the full-edge master in `lex` mode: `delta`, `theta`, and `(f, g)` equality, plus `|F|` over iterations. |
-| `e3_scaling.py` | Scaling of per-iteration time, `|F|`, and iterations up to `m = n = 800`, `K <= 20`, split into LP vs scoring time. Reports the OT-free `delta` certificate. |
-| `entropic_psd_moment_fit.py` | Fit a PSD metric from a cross-moment with entropic OT + Adam + Polyak averaging + ε-annealing (the exact-OT subgradient zig-zags). Reports the true L0 gap and `is_optimal_plan`. |
+| question | study | driver | report |
+| --- | --- | --- | --- |
+| where does the solve exceed 2 s in `(m,n,K)`? | `scaling/` | `scaling/run.py` + `scaling/analyse.py` | `reports/SCALING_REPORT.md` |
+| how do marginals change structure / cost? | `marginals/` | `marginals/run.py` + `marginals/analyse.py` | `reports/MARGINAL_REPORT.md` |
+| how do cost families differ? | `families/` | `families/run.py` + `families/analyse.py` | `reports/FAMILY_REPORT.md` |
+| external datasets | `external/` | (adapter, later) | (later) |
+| cross-method comparison (exact vs gradient) | `benchmark/` | `benchmark/runner.py` | `reports/BENCHMARK_EXACT_REPORT.md` |
 
 ## Running
 
 ```bash
-python iot_experiments/e0_fixed_fg.py --m 16 --n 16 --features 4 --seed 0
-python iot_experiments/e1_full_master.py --sizes 6 8 10 12 16 20 --features 4
-python iot_experiments/e2_loop_vs_full.py --sizes 8 10 12 16 --features 3
-python iot_experiments/e3_scaling.py --sizes 100 200 400 800 --features 8
+# study 1: scale
+python iot_experiments/scaling/run.py --family quadratic --marginal gmm \
+  --sizes 200 400 800 1600 3200 --dims 2 4 8 16
+python iot_experiments/scaling/analyse.py iot_experiments/scaling/out/quadratic_gmm.json
+
+# study 2: marginals
+python iot_experiments/marginals/run.py --families diagonal quadratic lowrank \
+  --marginals uniform gaussian gmm --n 800
+python iot_experiments/marginals/analyse.py iot_experiments/marginals/out/marginals_n800.json
+
+# study 3: cost families (LP) + tiny-n PSD
+python iot_experiments/families/run.py --families diagonal quadratic lowrank \
+  --marginal gmm --sizes 200 800 1600
+python iot_experiments/families/run.py --families bilinear-psd --marginal gmm --psd-ns 8 16 32
+python iot_experiments/families/analyse.py iot_experiments/families/out/families_gmm.json
 ```
 
-Each script prints a table and, with `--out PATH`, writes a JSON report. They exit
-non-zero when a check fails.
+Generated outputs land in each study's `out/` (git-ignored) as `<name>.json` + `<name>.csv`.
 
 ## Reading the results
 
-- `is_optimal` comes from `iot.validation.is_optimal_plan` (exact POT OT), not from
-  `theta == theta_star`. Discrete data is generically non-identifiable, so `e1` reports
-  a range and a distance, never an equality.
-- `is_optimal_plan` now forwards a POT iteration cap (`num_itermax`) and **raises** if POT
-  does not reach optimality, instead of silently comparing against an iteration-capped cost;
-  `dual_optimality_certificate` is the independent dual-feasibility check.
-- `e2`'s `delta_difference` is the relaxation gap between the loop (`|F|` small) and the
-  full-edge master; it is at machine precision when the loop has added all violations.
-- `e3`'s per-iteration cost grows like `O(m n)` because the oracle scans all edges
-  blockwise; the master itself stays near `O(m + n)` edges.
+- Every record carries its `RunSpec`; `is_optimal` comes from `iot.validation.is_optimal_plan`
+  (exact POT), never from `theta == theta_star`. Discrete data is generically
+  non-identifiable, so min/max ranges and distances are diagnostics, never equalities.
+- Timing is split into `scaffold_seconds` (POT ground truth, **not** the algorithm's budget)
+  and `solve_seconds`, with the per-iteration `mean_master_seconds` / `mean_oracle_seconds`
+  split — the bottleneck flips from oracle to master as `K` grows.
+- `certified`/`cert_support_residual` flag the known certificate edge case on degenerate
+  plans (a spurious `~1e-19` support entry); `is_optimal` is the verdict.
+- On noisy/off-support plans the exact method is out of scope (`AGENTS.md` §4.6); do not
+  threshold silently.
+
+## Conventions
+
+- One report per question; if superseded, add a `Status: HISTORICAL` banner (or move it to
+  `legacy/reports/`) rather than deleting.
+- Figures: instance in the title, labelled axes, legend, sibling `<name>.caption.md` + CSV
+  (`AGENTS.md` §7.2). Generated outputs go under the study's `out/` (git-ignored).
+- `legacy/` is import-only-for-provenance; new code must not import from it.

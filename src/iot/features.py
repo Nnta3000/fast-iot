@@ -229,6 +229,91 @@ class BilinearPSDFeatures:
         )
 
 
+@dataclass(frozen=True)
+class QuadraticFeatures:
+    """
+    CN: 二次交叉项代价 `c_ij(theta) = sum_{a<=b} theta_ab (x_ia - y_ja)(x_ib - y_jb)`，
+        K = d(d+1)/2。分块计算，从不 materialize (m, n, K) 张量。
+    EN: Quadratic cross-term cost
+        `c_ij(theta) = sum_{a<=b} theta_ab (x_ia - y_ja)(x_ib - y_jb)`, K = d(d+1)/2.
+        Computed blockwise; never materialises an (m, n, K) tensor.
+    """
+
+    source_points: np.ndarray
+    target_points: np.ndarray
+    chunk_elements: int = 1 << 20
+
+    def __post_init__(self) -> None:
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2:
+            raise ValueError("source_points and target_points must be 2D")
+        if source.shape[1] != target.shape[1]:
+            raise ValueError("source_points and target_points must share the dimension")
+        if source.shape[0] < 1 or target.shape[0] < 1:
+            raise ValueError("source_points and target_points must be non-empty")
+        if int(self.chunk_elements) < 1:
+            raise ValueError("chunk_elements must be >= 1")
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+
+    @property
+    def point_dimension(self) -> int:
+        """CN: 点维度 d。EN: Point dimension d."""
+        return int(self.source_points.shape[1])
+
+    @property
+    def n_source(self) -> int:
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        d = int(self.point_dimension)
+        return d * (d + 1) // 2
+
+    def pairs(self) -> list[tuple[int, int]]:
+        """CN: 特征列顺序 (a, b), a <= b。EN: Feature column order (a, b), a <= b."""
+        d = int(self.point_dimension)
+        return [(a, b) for a in range(d) for b in range(a, d)]
+
+    def features(self, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
+        row_index = _index_array(rows, name="rows")
+        col_index = _index_array(cols, name="cols")
+        difference = self.source_points[row_index] - self.target_points[col_index]
+        columns = [difference[:, a] * difference[:, b] for a, b in self.pairs()]
+        return np.ascontiguousarray(np.stack(columns, axis=1), dtype=np.float64)
+
+    def costs(self, theta: np.ndarray, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
+        value = np.asarray(theta, dtype=np.float64).reshape(-1)
+        d = int(self.point_dimension)
+        if value.size != self.n_features:
+            raise ValueError(
+                f"theta has length {value.size} but quadratic features have {self.n_features}"
+            )
+        # CN: c = diff^T M diff，M_aa = theta_aa，M_ab = theta_ab / 2（a != b）。
+        # EN: c = diff^T M diff with M_aa = theta_aa and M_ab = theta_ab / 2 (a != b).
+        matrix = np.zeros((d, d), dtype=np.float64)
+        for index, (a, b) in enumerate(self.pairs()):
+            if a == b:
+                matrix[a, a] = value[index]
+            else:
+                matrix[a, b] = 0.5 * value[index]
+                matrix[b, a] = 0.5 * value[index]
+        row_index = np.asarray(rows, dtype=np.int64).reshape(-1)
+        col_index = np.asarray(cols, dtype=np.int64).reshape(-1)
+        out = np.empty(row_index.size, dtype=np.float64)
+        step = max(1, int(self.chunk_elements))
+        for start in range(0, row_index.size, step):
+            stop = min(row_index.size, start + step)
+            difference = self.source_points[row_index[start:stop]] - self.target_points[col_index[start:stop]]
+            out[start:stop] = np.einsum("ea,ab,eb->e", difference, matrix, difference, optimize=True)
+        return np.ascontiguousarray(out, dtype=np.float64)
+
+
 def dense_cost_matrix(
     feature_map: FeatureMap,
     theta: np.ndarray,
@@ -256,5 +341,6 @@ __all__ = [
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
     "FeatureMap",
+    "QuadraticFeatures",
     "dense_cost_matrix",
 ]

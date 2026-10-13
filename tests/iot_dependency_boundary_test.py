@@ -9,7 +9,11 @@ PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src" / "iot"
 
 # CN: 只有这些模块允许 import hello_ot；核心算法模块必须与 HELLO-OT 解耦。
 # EN: Only these modules may import hello_ot; the core algorithm must stay decoupled.
-HELLO_OT_ADAPTERS = {"grounded.py"}
+# `cupdlpx_master.py` is an interop adapter (it drives HELLO-OT's bundled CuPDLPx LP solver
+# for the optional master backend); `hello_scan.py` reuses HELLO-OT's torch blockwise violation
+# scan as an optional fast separation oracle; `hello_solver.py` uses HELLO-OT as an optional
+# exact-OT inner solver; `grounded.py` generates ground truth via HELLO-OT.
+HELLO_OT_ADAPTERS = {"grounded.py", "cupdlpx_master.py", "hello_scan.py", "hello_solver.py"}
 
 
 def test_only_adapters_import_hello_ot() -> None:
