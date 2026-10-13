@@ -231,6 +231,9 @@ __pycache__/
 # EN: A100 batch output directory
 /iot_experiments/gpu_bench/out/
 
+# CN: 论文 PDF（不推送）/ EN: paper PDFs (not pushed)
+/*.pdf
+
 # CN: 本地工具链状态
 # EN: local tooling state
 /.pytest_cache/

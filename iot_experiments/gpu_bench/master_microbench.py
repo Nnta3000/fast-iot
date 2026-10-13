@@ -45,24 +45,38 @@ def _family_for_k(family: str, k: int) -> FamilySpec:
     raise ValueError(f"unsupported family for K-sweep: {family!r}")
 
 
+def _cost_matrix(features, theta, *, byte_budget: int = 256 * 1024 * 1024) -> np.ndarray:
+    """
+    CN: 分块构造 (m,n) 代价矩阵，避免一次性 (m*n, K) 中间张量（K~10^3 时那是数 GB）。
+    EN: Blockwise (m,n) cost matrix, avoiding a single (m*n, K) intermediate (GBs at K~10^3).
+    """
+    m = int(features.n_source)
+    n = int(features.n_target)
+    kdim = int(features.n_features)
+    per_edge_bytes = 8 * max(1, kdim)
+    rows_per_block = max(1, int(byte_budget) // max(1, per_edge_bytes) // max(1, n))
+    cost = np.empty((m, n), dtype=np.float64)
+    for start in range(0, m, rows_per_block):
+        stop = min(m, start + rows_per_block)
+        rows = np.repeat(np.arange(start, stop, dtype=np.int64), n)
+        cols = np.tile(np.arange(n, dtype=np.int64), stop - start)
+        cost[start:stop] = np.asarray(features.costs(theta, rows, cols)).reshape(stop - start, n)
+    return cost
+
+
 def _build_problem(*, family: str, k: int, marginal: str, n: int, seed: int, num_itermax: int):
     """CN: 构造一个 (problem, F, |S|)。EN: Build one (problem, F, |S|)."""
     import ot
     from scipy import sparse
 
-    from iot import (
-        InverseOTProblem,
-        dense_cost_matrix,
-        mandatory_edges,
-        EdgeSet,
-    )
+    from iot import InverseOTProblem, mandatory_edges
 
     rng = np.random.default_rng(int(seed))
     spec = _family_for_k(family, int(k))
     features, theta_set, theta_star = build_family(spec, rng, int(n), int(n))
     source_mass = marginal_spec(marginal).weights(int(n))
     target_mass = marginal_spec(marginal).weights(int(n))
-    cost = dense_cost_matrix(features, theta_star)
+    cost = _cost_matrix(features, theta_star)
     plan = np.asarray(ot.emd(source_mass, target_mass, cost, numItermax=int(num_itermax)))
     problem = InverseOTProblem(features=features, theta_set=theta_set, plan=sparse.csr_matrix(plan))
     mandatory, _ = mandatory_edges(problem)
@@ -70,21 +84,66 @@ def _build_problem(*, family: str, k: int, marginal: str, n: int, seed: int, num
 
 
 def _time_backend(solver, problem, edges, repeats: int) -> tuple[float, float, str | None]:
-    """CN: 预热一次后重复计时，返回 (中位墙钟, delta, 错误)。EN: Warm up once, repeat, return (median wall, delta, error)."""
+    """CN: 预热一次后重复计时；即便抛错也记录墙钟（例如 HiGHS 命中 time_limit）。
+    EN: Warm up once then repeat; record the wall even on failure (e.g. a HiGHS time limit)."""
     from iot import InverseOTError
 
+    error: str | None = None
     try:
         solver.solve(problem, edges, tie_break="none")
-    except InverseOTError as error:
-        return float("nan"), float("nan"), str(error)[:200]
+    except InverseOTError as exc:
+        error = str(exc)[:200]
     walls: list[float] = []
     delta = float("nan")
     for _ in range(int(repeats)):
         started = time.perf_counter()
-        solution = solver.solve(problem, edges, tie_break="none")
+        try:
+            solution = solver.solve(problem, edges, tie_break="none")
+            delta = float(solution.delta)
+        except InverseOTError as exc:
+            error = str(exc)[:200]
         walls.append(time.perf_counter() - started)
-        delta = float(solution.delta)
-    return float(np.median(walls)), delta, None
+    wall = float(np.median(walls)) if walls else float("nan")
+    return wall, delta, error
+
+
+def _install_highs_time_limit(seconds: float | None):
+    """
+    CN: 给 `iot.master._solve_system` 注入 HiGHS `time_limit`，防止大 |F| 时无限迭代；
+        返回原始函数以便还原（None 表示未安装）。
+    EN: Inject a HiGHS `time_limit` into `iot.master._solve_system` so a large-|F| LP cannot
+        iterate forever; returns the original for restoration (None = not installed).
+    """
+    if seconds is None:
+        return None
+    import iot.master as master_module
+    from scipy.optimize import linprog
+    from scipy.sparse import csr_matrix, vstack
+
+    original = master_module._solve_system
+
+    def patched(system, objective, *, extra_eq=None, extra_eq_rhs=None, extra_ub=None,
+                extra_ub_rhs=None, bounds=None):
+        a_eq, b_eq, a_ub, b_ub = system.a_eq, system.b_eq, system.a_ub, system.b_ub
+        if extra_eq:
+            a_eq = vstack([a_eq, csr_matrix(np.vstack(extra_eq))], format="csr")
+            b_eq = np.concatenate([b_eq, np.asarray(extra_eq_rhs, dtype=np.float64)])
+        if extra_ub:
+            a_ub = vstack([a_ub, csr_matrix(np.vstack(extra_ub))], format="csr")
+            b_ub = np.concatenate([b_ub, np.asarray(extra_ub_rhs, dtype=np.float64)])
+        result = linprog(
+            np.asarray(objective, dtype=np.float64),
+            A_ub=(a_ub if a_ub.shape[0] else None), b_ub=(b_ub if a_ub.shape[0] else None),
+            A_eq=(a_eq if a_eq.shape[0] else None), b_eq=(b_eq if a_eq.shape[0] else None),
+            bounds=system.bounds if bounds is None else bounds,
+            method="highs", options={"time_limit": float(seconds)},
+        )
+        if not result.success or result.x is None:
+            return None, None, str(result.message)
+        return np.asarray(result.x, dtype=np.float64), float(result.fun), str(result.message)
+
+    master_module._solve_system = patched
+    return original
 
 
 def run_master_microbench(
@@ -98,13 +157,18 @@ def run_master_microbench(
     extra_edges: int = 0,
     backends: Sequence[str] = ("highs", "cupdlpx"),
     num_itermax: int = 2_000_000,
+    cupdlpx_params: dict[str, object] | None = None,
+    highs_time_limit: float | None = None,
 ) -> list[dict[str, object]]:
     """CN: 返回每条 (seed,K,backend) 的记录。EN: Return one record per (seed, K, backend)."""
     from iot import CuPdlpxMasterSolver, EdgeSet, RegularizedMasterSolver
 
+    cupdlpx_params = dict(cupdlpx_params or {})
     records: list[dict[str, object]] = []
+    _original_solve = _install_highs_time_limit(highs_time_limit)
     for seed in seeds:
         for k in ks:
+            build_started = time.perf_counter()
             problem, mandatory, support_size, rng = _build_problem(
                 family=family, k=int(k), marginal=marginal, n=int(n), seed=int(seed),
                 num_itermax=int(num_itermax),
@@ -115,19 +179,30 @@ def run_master_microbench(
                 cols = rng.integers(0, int(n), size=int(extra_edges))
                 edges = mandatory.union(EdgeSet.from_arrays(rows, cols, n_target=int(n)))
             n_edges = int(edges.size)
+            print(
+                f"[microbench] K={int(k)} seed={int(seed)} |F|={n_edges} "
+                f"build={time.perf_counter() - build_started:.2f}s",
+                flush=True,
+            )
             delta_ref = float("nan")
             for backend in backends:
                 if backend == "highs":
                     solver = RegularizedMasterSolver(epsilon=1e-4, random_seed=int(seed))
                 elif backend == "cupdlpx":
-                    solver = CuPdlpxMasterSolver()
+                    solver = CuPdlpxMasterSolver(params=dict(cupdlpx_params))
                 else:
                     raise ValueError(f"unknown backend {backend!r}")
                 wall, delta, error = _time_backend(solver, problem, edges, int(repeats))
                 if backend == "highs" and not math.isnan(delta):
                     delta_ref = delta
+                print(
+                    f"[microbench]   {backend:>8} wall={wall:.3f}s delta={delta:.6f} err={error}",
+                    flush=True,
+                )
                 records.append(
                     {
+                        "cupdlpx_params": (dict(cupdlpx_params) if backend == "cupdlpx" else {}),
+                        "highs_time_limit": (highs_time_limit if backend == "highs" else None),
                         "family": family,
                         "marginal": marginal,
                         "n": int(n),
@@ -147,6 +222,10 @@ def run_master_microbench(
                         "error": error,
                     }
                 )
+    if _original_solve is not None:
+        import iot.master as master_module
+
+        master_module._solve_system = _original_solve
     return records
 
 
@@ -163,6 +242,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--extra-edges", type=int, default=0)
     parser.add_argument("--backends", nargs="+", default=["highs", "cupdlpx"])
+    parser.add_argument("--cupdlpx-time-limit", type=float, default=None, help="CuPDLPx seconds cap")
+    parser.add_argument("--cupdlpx-iters", type=int, default=None, help="CuPDLPx iteration cap")
+    parser.add_argument("--highs-time-limit", type=float, default=None, help="HiGHS seconds cap")
     parser.add_argument("--gpu", default="auto")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -170,11 +252,17 @@ def main(argv: list[str] | None = None) -> int:
     from iot_experiments.gpu_bench import gpu
 
     gpu.configure(args.gpu)
+    cupdlpx_params: dict[str, object] = {}
+    if args.cupdlpx_time_limit is not None:
+        cupdlpx_params["time_sec_limit"] = float(args.cupdlpx_time_limit)
+    if args.cupdlpx_iters is not None:
+        cupdlpx_params["iteration_limit"] = int(args.cupdlpx_iters)
     records = run_master_microbench(
         family=str(args.family), marginal=str(args.marginal), n=int(args.n),
         ks=[int(v) for v in args.ks], seeds=[int(v) for v in args.seeds],
         repeats=int(args.repeats), extra_edges=int(args.extra_edges),
-        backends=[str(b) for b in args.backends],
+        backends=[str(b) for b in args.backends], cupdlpx_params=cupdlpx_params,
+        highs_time_limit=args.highs_time_limit,
     )
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps({"records": records}, indent=2) + "\n", encoding="utf-8")

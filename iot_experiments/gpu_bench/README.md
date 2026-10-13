@@ -33,6 +33,7 @@ one tiny validated run. **Do not proceed if this fails.**
 | `gpu.py` | idle-GPU selection + `CUDA_VISIBLE_DEVICES` + env manifest |
 | `run_batch.py` | the single entry point (`--batch env|gpu_master_k|e2e`) |
 | `master_microbench.py` | isolated master LP: HiGHS vs CuPDLPx on the same `F` |
+| `lp_build_probe.py` | build the master LP only (no solve); per-phase timing + `nnz` |
 | `run_batch.sh` | thin wrapper: `./run_batch.sh --batch ... --gpu auto` |
 | `BATCHES.md` | the recommended batches, configs, and cost |
 | `out/<batch>/` | git-ignored results (`manifest`/`records` json, csv, logs) |
@@ -46,5 +47,10 @@ back to me, plus a `server_env.txt` if you have one. Nothing else needs syncing.
 
 - A GPU LP returns *approximate* duals, so a `cupdlpx` run must use `prune=False`; correctness
   is read from `is_optimal`/the loop's `max_violation`, never the solver status.
+- **Always cap the solvers** with `--highs-time-limit` and `--cupdlpx-time-limit`. Without a cap
+  HiGHS iterated for >30 min on an `|F|≈9500` LP, and CuPDLPx can stall on this dense-in-`θ`
+  master. The wall is recorded even when a solve hits its cap (and the error string says so).
+- `--gpu auto` respects an already-set `CUDA_VISIBLE_DEVICES`, so `export CUDA_VISIBLE_DEVICES=3`
+  pins the whole session to one card.
 - The master microbenchmark deliberately uses `F = B` (mandatory) plus a fixed number of random
   extra edges, so it is independent of the loop trajectory and reproducible across backends.

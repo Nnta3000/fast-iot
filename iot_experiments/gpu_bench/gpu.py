@@ -65,8 +65,16 @@ def pick_idle_gpu(*, max_used_mb: int = 1024) -> int:
 def configure(choice: object) -> int:
     """
     CN: 解析 `--gpu`（"auto" 或物理序号），设置 `CUDA_VISIBLE_DEVICES`，并打印一次。
+        若环境里已有 `CUDA_VISIBLE_DEVICES` 且选择为 auto，则**尊重它**（便于整会话锁定单卡）。
     EN: Resolve `--gpu` ("auto" or a physical index), set `CUDA_VISIBLE_DEVICES`, print once.
+        If `CUDA_VISIBLE_DEVICES` is already set and the choice is auto, respect it (pins the
+        whole session to one card).
     """
+    existing = os.environ.get("CUDA_VISIBLE_DEVICES", "").strip()
+    if (choice is None or choice == "auto") and existing not in ("", "-1"):
+        first = existing.split(",")[0].strip()
+        print(f"[gpu] respecting existing CUDA_VISIBLE_DEVICES={existing}", flush=True)
+        return int(first)
     if choice is None or choice == "auto":
         index = pick_idle_gpu()
     else:

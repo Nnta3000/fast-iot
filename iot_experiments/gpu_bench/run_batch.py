@@ -85,11 +85,17 @@ def run_gpu_master_k(args: argparse.Namespace, out_dir: Path) -> dict[str, objec
     """CN: master LP 的隔离 K-sweep（前提检验）。EN: Isolated master-LP K-sweep (premise test)."""
     from iot_experiments.gpu_bench.master_microbench import run_master_microbench
 
+    cupdlpx_params: dict[str, object] = {}
+    if getattr(args, "cupdlpx_time_limit", None) is not None:
+        cupdlpx_params["time_sec_limit"] = float(args.cupdlpx_time_limit)
+    if getattr(args, "cupdlpx_iters", None) is not None:
+        cupdlpx_params["iteration_limit"] = int(args.cupdlpx_iters)
     records = run_master_microbench(
         family=str(args.family), marginal=str(args.marginal), n=int(args.n),
         ks=[int(v) for v in args.ks], seeds=[int(v) for v in args.seeds],
         repeats=int(args.repeats), extra_edges=int(args.extra_edges),
-        backends=[str(b) for b in args.backends],
+        backends=[str(b) for b in args.backends], cupdlpx_params=cupdlpx_params,
+        highs_time_limit=getattr(args, "highs_time_limit", None),
     )
     payload: dict[str, object] = {
         "batch": "gpu_master_k",
@@ -99,7 +105,8 @@ def run_gpu_master_k(args: argparse.Namespace, out_dir: Path) -> dict[str, objec
             "family": str(args.family), "marginal": str(args.marginal), "n": int(args.n),
             "ks": [int(v) for v in args.ks], "seeds": [int(v) for v in args.seeds],
             "repeats": int(args.repeats), "extra_edges": int(args.extra_edges),
-            "backends": [str(b) for b in args.backends],
+            "backends": [str(b) for b in args.backends], "cupdlpx_params": cupdlpx_params,
+            "highs_time_limit": getattr(args, "highs_time_limit", None),
         },
         "records": records,
     }
@@ -150,6 +157,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--extra-edges", type=int, default=0)
     parser.add_argument("--backends", nargs="+", default=["highs", "cupdlpx"])
+    parser.add_argument("--cupdlpx-time-limit", type=float, default=None,
+                        help="Cap CuPDLPx seconds per solve (prevents a runaway).")
+    parser.add_argument("--cupdlpx-iters", type=int, default=None,
+                        help="Cap CuPDLPx iterations per solve.")
+    parser.add_argument("--highs-time-limit", type=float, default=None,
+                        help="Cap HiGHS seconds per solve (prevents a runaway on large |F|).")
     # e2e
     parser.add_argument("--sizes", type=int, nargs="+", default=[800, 3200])
     parser.add_argument("--point-dimension", type=int, default=8)
