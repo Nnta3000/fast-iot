@@ -118,13 +118,23 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
     """CN: 端到端整环，比较 scan/master 后端。EN: End-to-end full loop comparing scan/master backends."""
     from iot_experiments.core import RunSpec, run_grid
 
+    try:
+        from iot import DiagonalWeightFeatures, fast_scan_supported
+
+        if str(args.family) != "diagonal":
+            print(
+                f"[gpu_bench] NOTE: hello scan only supports diagonal weights; "
+                f"family={args.family} will fall back to NumPy (not GPU-scalable).",
+                flush=True,
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
     specs: list[RunSpec] = []
     for master in args.masters:
         for scan in args.scans:
             for size in args.sizes:
                 for seed in args.seeds:
-                    # CN: 一阶 master 的 slack 精度不足，需关闭剪枝（见 CUPDLPX_MASTER_REPORT）。
-                    # EN: first-order master slacks break pruning, so disable it (see the report).
                     prune = master != "cupdlpx"
                     specs.append(
                         RunSpec(
@@ -134,6 +144,7 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
                             lowrank_k=int(args.lowrank_k), seed=int(seed),
                             solver=("regularized" if master == "highs" else str(master)),
                             scan_backend=str(scan), prune=bool(prune),
+                            cupdlpx_time_limit=getattr(args, "cupdlpx_time_limit", None),
                             max_iterations=int(args.max_iterations), validate=bool(args.validate),
                             tag=f"{master}-{scan}-{'prune' if prune else 'noprune'}",
                         )
@@ -167,8 +178,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--sizes", type=int, nargs="+", default=[800, 3200])
     parser.add_argument("--point-dimension", type=int, default=8)
     parser.add_argument("--lowrank-k", type=int, default=8)
-    parser.add_argument("--scans", nargs="+", default=["numpy", "hello"])
-    parser.add_argument("--masters", nargs="+", default=["highs", "cupdlpx"])
+    parser.add_argument("--scans", nargs="+", default=["hello"])
+    parser.add_argument("--masters", nargs="+", default=["cupdlpx"])
     parser.add_argument("--max-iterations", type=int, default=300)
     parser.add_argument("--validate", action="store_true")
     return parser.parse_args(argv)

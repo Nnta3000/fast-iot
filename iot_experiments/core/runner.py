@@ -88,7 +88,10 @@ def run_spec(spec: RunSpec) -> RunRecord:
     if solver_name == "sdp":
         solver = SdpMasterSolver()
     elif solver_name == "cupdlpx":
-        solver = CuPdlpxMasterSolver()
+        cupdlpx_params: dict[str, object] = {}
+        if spec.cupdlpx_time_limit is not None:
+            cupdlpx_params["time_sec_limit"] = float(spec.cupdlpx_time_limit)
+        solver = CuPdlpxMasterSolver(params=cupdlpx_params)
     else:
         solver = RegularizedMasterSolver(epsilon=EPSILON, random_seed=int(spec.seed))
     tol = SDP_TOL if solver_name == "sdp" else LP_TOL
@@ -105,6 +108,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
     final_max_violation = float("nan")
     master_seconds: list[float] = []
     oracle_seconds: list[float] = []
+    trajectory: tuple[dict[str, float], ...] = ()
     theta: np.ndarray | None = None
     try:
         result = solve_inverse_ot(
@@ -129,6 +133,21 @@ def run_spec(spec: RunSpec) -> RunRecord:
         final_max_violation = float(result.final_max_violation)
         master_seconds = [rec.master_time for rec in records]
         oracle_seconds = [rec.oracle_time for rec in records]
+        trajectory = tuple(
+            {
+                "index": float(rec.index),
+                "support_size": float(rec.support_size),
+                "delta": float(rec.delta),
+                "added": float(rec.added),
+                "violation_count": float(rec.violation_count),
+                "max_violation": float(rec.max_violation),
+                "wall_time": float(rec.wall_time),
+                "master_time": float(rec.master_time),
+                "oracle_time": float(rec.oracle_time),
+                "prune_time": float(rec.prune_time),
+            }
+            for rec in records
+        )
         theta = np.asarray(result.theta, dtype=np.float64)
         outcome = "converged" if converged else "max_iterations"
         if bool(spec.validate) and theta is not None:
@@ -166,6 +185,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
         solve_seconds=solve_seconds,
         mean_master_seconds=_mean(master_seconds),
         mean_oracle_seconds=_mean(oracle_seconds),
+        trajectory=trajectory,
     )
 
 

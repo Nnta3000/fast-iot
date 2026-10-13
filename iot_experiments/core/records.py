@@ -40,6 +40,7 @@ class RunSpec:
     solver: str = "auto"
     scan_backend: str = "numpy"
     prune: bool = True
+    cupdlpx_time_limit: float | None = None
     max_iterations: int = 300
     num_itermax: int = 2_000_000
     validate: bool = False
@@ -93,6 +94,7 @@ class RunRecord:
     solve_seconds: float
     mean_master_seconds: float
     mean_oracle_seconds: float
+    trajectory: tuple[dict[str, float], ...] = ()
 
     @property
     def run_id(self) -> str:
@@ -100,12 +102,12 @@ class RunRecord:
         return self.spec.run_id()
 
     def flatten(self) -> dict[str, object]:
-        """CN: 展平成 CSV 行（spec 字段加前缀 spec_）。EN: Flatten to a CSV row (spec_* prefixed)."""
+        """CN: 展平成 CSV 行（spec 字段加前缀 spec_；轨迹不进 CSV）。EN: Flatten to a CSV row (spec_* prefixed; trajectory excluded)."""
         row: dict[str, object] = {}
         for key, value in asdict(self.spec).items():
             row[f"spec_{key}"] = value
         for key, value in asdict(self).items():
-            if key != "spec":
+            if key not in ("spec", "trajectory"):
                 row[key] = value
         row["run_id"] = self.run_id
         return row
