@@ -50,6 +50,15 @@ python -m iot_experiments.gpu_bench.run_batch --batch e2e --gpu auto --family di
 ```
 (`--gpu auto` is fine: the queue already pinned `CUDA_VISIBLE_DEVICES`, which the runner respects.)
 
+## Split across tmux windows
+The locks make this safe — **use disjoint job files** (never the same file twice, or jobs run
+twice). The curated set is split into three:
+| window | file | covers |
+| --- | --- | --- |
+| A | `jobs/gpu_only_a_scaling.txt` | n-scaling (gmm, d=8) |
+| B | `jobs/gpu_only_b_dim_marginal.txt` | d-scaling + uniform marginal |
+| C | `jobs/gpu_only_c_ablation.txt` | warm-start/cap ablations + n=25600 stretch |
+
 ## Limits (honest)
 No reservation: a human can still start something on a card the queue is using, and the queue
 cannot preempt. It also cannot express dependencies (job B needs job A) — order them in the file
