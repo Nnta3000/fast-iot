@@ -144,7 +144,10 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
                             lowrank_k=int(args.lowrank_k), seed=int(seed),
                             solver=("regularized" if master == "highs" else str(master)),
                             scan_backend=str(scan), prune=bool(prune),
+                            plan_backend=str(getattr(args, "plan_backend", "auto")),
+                            scan_device=str(getattr(args, "scan_device", "auto")),
                             cupdlpx_time_limit=getattr(args, "cupdlpx_time_limit", None),
+                            cupdlpx_warm_start=bool(getattr(args, "cupdlpx_warm_start", False)),
                             max_iterations=int(args.max_iterations), validate=bool(args.validate),
                             tag=f"{master}-{scan}-{'prune' if prune else 'noprune'}",
                         )
@@ -180,6 +183,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--lowrank-k", type=int, default=8)
     parser.add_argument("--scans", nargs="+", default=["hello"])
     parser.add_argument("--masters", nargs="+", default=["cupdlpx"])
+    parser.add_argument("--plan-backend", default="auto", choices=("auto", "hello", "pot"))
+    parser.add_argument("--scan-device", default="auto")
+    parser.add_argument("--cupdlpx-warm-start", action="store_true")
     parser.add_argument("--max-iterations", type=int, default=300)
     parser.add_argument("--validate", action="store_true")
     return parser.parse_args(argv)

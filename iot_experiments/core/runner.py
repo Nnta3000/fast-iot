@@ -25,14 +25,15 @@ from iot import (
     InverseOTProblem,
     RegularizedMasterSolver,
     SdpMasterSolver,
-    dense_cost_matrix,
     dual_optimality_certificate,
+    hello_solver_supported,
     is_optimal_plan,
     mandatory_edges,
     solve_inverse_ot,
     support_components,
 )
 
+from .costs import DualFeasibility, blockwise_cost_matrix, dual_feasibility
 from .families import FamilySpec, build_family
 from .marginals import marginal_spec
 from .records import RunRecord, RunSpec, write_csv, write_json
@@ -42,6 +43,9 @@ LP_TOL: float = 1e-9
 SDP_TOL: float = 1e-8
 TAU_PRUNE: float = 1e-12
 GAMMA: int = 1
+# CN: POT 参照路径的硬上限（>此规模必须用 plan_backend="hello"，保证线性内存）。
+# EN: Hard cap for the POT reference path (>this must use plan_backend="hello" for linear memory).
+POT_MAX_ELEMENTS: int = 200_000_000
 
 
 def _mean(values: list[float]) -> float:
@@ -49,11 +53,41 @@ def _mean(values: list[float]) -> float:
     return float(np.mean(values)) if values else 0.0
 
 
+def _hello_plan(
+    features, theta_star: np.ndarray, source_mass: np.ndarray, target_mass: np.ndarray,
+    *, device: str, max_iterations: int,
+) -> tuple[object, np.ndarray, np.ndarray]:
+    """
+    CN: 用 HELLO-OT（GPU）生成真值方案：sqrt(theta) 重缩放点云，O(m+n) 内存，返回稀疏方案+对偶。
+    EN: Generate the ground-truth plan with HELLO-OT (GPU): rescale points by sqrt(theta), O(m+n)
+        memory; return the sparse plan plus duals.
+    """
+    import hello_ot
+    from hello_ot.config import SolverOptions
+
+    source = np.ascontiguousarray(features.source_points, dtype=np.float64)
+    target = np.ascontiguousarray(features.target_points, dtype=np.float64)
+    root = np.sqrt(np.clip(np.asarray(theta_star, dtype=np.float64).reshape(-1), 0.0, None))
+    scaled_source = np.ascontiguousarray(source * root[None, :], dtype=np.float32)
+    scaled_target = np.ascontiguousarray(target * root[None, :], dtype=np.float32)
+    options = SolverOptions(backend="torch", torch_device=str(device), verbose="off")
+    result = hello_ot.solve(
+        scaled_source, scaled_target, source_mass=np.asarray(source_mass, dtype=np.float64),
+        target_mass=np.asarray(target_mass, dtype=np.float64),
+        max_iterations=int(max_iterations), options=options,
+    )
+    solution = result.solution
+    plan = sparse.csr_matrix(
+        (solution.values, (solution.rows, solution.cols)), shape=solution.shape
+    )
+    return plan, np.asarray(solution.source_dual, dtype=np.float64), np.asarray(solution.target_dual, dtype=np.float64)
+
+
 def run_spec(spec: RunSpec) -> RunRecord:
     """
-    CN: 运行一个 `RunSpec`：建实例（POT 真值）→ 求解 → 认证/验证 → 记录。
-    EN: Run one `RunSpec`: build the instance (POT ground truth) -> solve -> certify/validate
-        -> record.
+    CN: 运行一个 `RunSpec`：建实例（默认 HELLO 真值，线性内存；POT 仅作小规模参照）→ 求解 → 认证。
+    EN: Run one `RunSpec`: build the instance (HELLO ground truth by default, linear memory; POT only
+        as a small-n reference) -> solve -> certify.
     """
     rng = np.random.default_rng(int(spec.seed))
     family_spec = FamilySpec(
@@ -63,20 +97,52 @@ def run_spec(spec: RunSpec) -> RunRecord:
 
     source_mass = marginal_spec(spec.marginal).weights(int(spec.m))
     target_mass = marginal_spec(spec.marginal).weights(int(spec.n))
-    cost = dense_cost_matrix(features, theta_star)
+
+    plan_backend = spec.plan_backend
+    if plan_backend == "auto":
+        # CN: 只有 GPU 扫描路径（scan_backend="hello"）默认配 HELLO 真值；CPU 参照研究仍用 POT。
+        # EN: only the GPU-scan path defaults to HELLO ground truth; CPU reference studies stay on POT.
+        plan_backend = (
+            "hello" if (str(spec.scan_backend) == "hello" and hello_solver_supported(features)) else "pot"
+        )
 
     scaffold_started = time.perf_counter()
-    plan = np.asarray(
-        ot.emd(source_mass, target_mass, cost, numItermax=int(spec.num_itermax)), dtype=np.float64
-    )
+    if plan_backend == "hello":
+        plan, source_dual, target_dual = _hello_plan(
+            features, theta_star, source_mass, target_mass,
+            device=str(spec.scan_device), max_iterations=int(spec.max_iterations),
+        )
+    else:
+        if int(spec.m) * int(spec.n) > POT_MAX_ELEMENTS:
+            raise InverseOTError(
+                f"POT reference path needs m*n <= {POT_MAX_ELEMENTS}; use plan_backend='hello' "
+                "(linear memory) for larger sizes."
+            )
+        cost = blockwise_cost_matrix(features, theta_star)
+        plan = sparse.csr_matrix(
+            np.asarray(ot.emd(source_mass, target_mass, cost, numItermax=int(spec.num_itermax)))
+        )
+        source_dual = target_dual = None
     scaffold_seconds = float(time.perf_counter() - scaffold_started)
 
-    problem = InverseOTProblem(
-        features=features, theta_set=theta_set, plan=sparse.csr_matrix(plan)
-    )
-    certificate = dual_optimality_certificate(
-        problem, theta_star, num_itermax=int(spec.num_itermax)
-    )
+    problem = InverseOTProblem(features=features, theta_set=theta_set, plan=plan)
+    support_rows, support_cols, _ = problem.support()
+    if source_dual is not None:
+        check = dual_feasibility(
+            features, theta_star, source_dual, target_dual, support_rows, support_cols
+        )
+        certificate = DualFeasibility(
+            certified=check.certified,
+            max_dual_violation=check.max_dual_violation,
+            support_residual=check.support_residual,
+        )
+    else:
+        pot_cert = dual_optimality_certificate(problem, theta_star, num_itermax=int(spec.num_itermax))
+        certificate = DualFeasibility(
+            certified=bool(pot_cert.certified),
+            max_dual_violation=float(pot_cert.max_dual_violation),
+            support_residual=float(pot_cert.support_residual),
+        )
     partition = support_components(problem)
     mandatory, _ = mandatory_edges(problem)
     positive = problem.plan.data[problem.plan.data > 0.0]
@@ -91,7 +157,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
         cupdlpx_params: dict[str, object] = {}
         if spec.cupdlpx_time_limit is not None:
             cupdlpx_params["time_sec_limit"] = float(spec.cupdlpx_time_limit)
-        solver = CuPdlpxMasterSolver(params=cupdlpx_params)
+        solver = CuPdlpxMasterSolver(params=cupdlpx_params, warm_start=bool(spec.cupdlpx_warm_start))
     else:
         solver = RegularizedMasterSolver(epsilon=EPSILON, random_seed=int(spec.seed))
     tol = SDP_TOL if solver_name == "sdp" else LP_TOL
@@ -124,6 +190,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
             prune=bool(spec.prune),
             prune_hysteresis=bool(spec.prune),
             scan_backend=str(spec.scan_backend),
+            scan_device=str(spec.scan_device),
         )
         iterations = int(result.n_iterations)
         converged = bool(result.converged)

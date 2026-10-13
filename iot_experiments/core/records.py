@@ -39,8 +39,11 @@ class RunSpec:
     seed: int = 0
     solver: str = "auto"
     scan_backend: str = "numpy"
+    plan_backend: str = "auto"
+    scan_device: str = "auto"
     prune: bool = True
     cupdlpx_time_limit: float | None = None
+    cupdlpx_warm_start: bool = False
     max_iterations: int = 300
     num_itermax: int = 2_000_000
     validate: bool = False
@@ -57,6 +60,8 @@ class RunSpec:
             raise ValueError("solver must be one of auto/regularized/sdp/cupdlpx")
         if self.scan_backend not in {"numpy", "hello"}:
             raise ValueError("scan_backend must be 'numpy' or 'hello'")
+        if self.plan_backend not in {"auto", "hello", "pot"}:
+            raise ValueError("plan_backend must be one of auto/hello/pot")
 
     def run_id(self) -> str:
         """CN: 稳定运行 id。EN: Stable run id."""

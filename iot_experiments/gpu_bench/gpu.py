@@ -64,29 +64,33 @@ def pick_idle_gpu(*, max_used_mb: int = 1024) -> int:
 
 def configure(choice: object) -> int:
     """
-    CN: 解析 `--gpu`（"auto" 或物理序号），设置 `CUDA_VISIBLE_DEVICES`，并打印一次。
-        若环境里已有 `CUDA_VISIBLE_DEVICES` 且选择为 auto，则**尊重它**（便于整会话锁定单卡）。
-    EN: Resolve `--gpu` ("auto" or a physical index), set `CUDA_VISIBLE_DEVICES`, print once.
-        If `CUDA_VISIBLE_DEVICES` is already set and the choice is auto, respect it (pins the
-        whole session to one card).
+    CN: 解析 `--gpu`（"auto" 或物理序号），设置 `CUDA_VISIBLE_DEVICES`。显式指定但**忙**的卡会被
+        拒绝（除非 `FASTIOT_ALLOW_BUSY_GPU=1`）；环境里已有 `CUDA_VISIBLE_DEVICES` 且为 auto 时
+        尊重它（便于整会话锁定单卡）。
+    EN: Resolve `--gpu` ("auto" or a physical index) and set `CUDA_VISIBLE_DEVICES`. An explicit
+        but **busy** card is refused (unless `FASTIOT_ALLOW_BUSY_GPU=1`); an existing
+        `CUDA_VISIBLE_DEVICES` is respected when the choice is auto.
     """
     existing = os.environ.get("CUDA_VISIBLE_DEVICES", "").strip()
     if (choice is None or choice == "auto") and existing not in ("", "-1"):
-        first = existing.split(",")[0].strip()
+        index = int(existing.split(",")[0].strip())
         print(f"[gpu] respecting existing CUDA_VISIBLE_DEVICES={existing}", flush=True)
-        return int(first)
-    if choice is None or choice == "auto":
+    elif choice is None or choice == "auto":
         index = pick_idle_gpu()
     else:
         index = int(choice)  # type: ignore[arg-type]
     os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
+
     match = next((g for g in query_gpus() if int(g["index"]) == index), None)
-    if match is not None and int(match["utilization"]) != 0:
-        print(
-            f"[gpu] WARNING: physical GPU {index} is busy "
-            f"(util={match['utilization']}%, used={match['memory_used_mb']}MiB)",
-            flush=True,
-        )
+    if match is not None:
+        used = int(match["memory_used_mb"])
+        util = int(match["utilization"])
+        busy = used > 1024 or util >= 50
+        if busy and os.environ.get("FASTIOT_ALLOW_BUSY_GPU", "") != "1":
+            raise SystemExit(
+                f"[gpu] refusing GPU {index}: busy (util={util}%, used={used}MiB). "
+                "Pick an idle card (nvidia-smi) or set FASTIOT_ALLOW_BUSY_GPU=1 to override."
+            )
     detail = "" if match is None else f" name={match['name']}"
     print(f"[gpu] pinned CUDA_VISIBLE_DEVICES={index}{detail}", flush=True)
     return index

@@ -26,6 +26,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from iot_experiments.core.costs import blockwise_cost_matrix
 from iot_experiments.core.families import FamilySpec, build_family
 from iot_experiments.core.marginals import marginal_spec
 
@@ -45,25 +46,6 @@ def _family_for_k(family: str, k: int) -> FamilySpec:
     raise ValueError(f"unsupported family for K-sweep: {family!r}")
 
 
-def _cost_matrix(features, theta, *, byte_budget: int = 256 * 1024 * 1024) -> np.ndarray:
-    """
-    CN: 分块构造 (m,n) 代价矩阵，避免一次性 (m*n, K) 中间张量（K~10^3 时那是数 GB）。
-    EN: Blockwise (m,n) cost matrix, avoiding a single (m*n, K) intermediate (GBs at K~10^3).
-    """
-    m = int(features.n_source)
-    n = int(features.n_target)
-    kdim = int(features.n_features)
-    per_edge_bytes = 8 * max(1, kdim)
-    rows_per_block = max(1, int(byte_budget) // max(1, per_edge_bytes) // max(1, n))
-    cost = np.empty((m, n), dtype=np.float64)
-    for start in range(0, m, rows_per_block):
-        stop = min(m, start + rows_per_block)
-        rows = np.repeat(np.arange(start, stop, dtype=np.int64), n)
-        cols = np.tile(np.arange(n, dtype=np.int64), stop - start)
-        cost[start:stop] = np.asarray(features.costs(theta, rows, cols)).reshape(stop - start, n)
-    return cost
-
-
 def _build_problem(*, family: str, k: int, marginal: str, n: int, seed: int, num_itermax: int):
     """CN: 构造一个 (problem, F, |S|)。EN: Build one (problem, F, |S|)."""
     import ot
@@ -76,7 +58,7 @@ def _build_problem(*, family: str, k: int, marginal: str, n: int, seed: int, num
     features, theta_set, theta_star = build_family(spec, rng, int(n), int(n))
     source_mass = marginal_spec(marginal).weights(int(n))
     target_mass = marginal_spec(marginal).weights(int(n))
-    cost = _cost_matrix(features, theta_star)
+    cost = blockwise_cost_matrix(features, theta_star)
     plan = np.asarray(ot.emd(source_mass, target_mass, cost, numItermax=int(num_itermax)))
     problem = InverseOTProblem(features=features, theta_set=theta_set, plan=sparse.csr_matrix(plan))
     mandatory, _ = mandatory_edges(problem)

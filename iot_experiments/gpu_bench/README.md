@@ -55,7 +55,10 @@ back to me, plus a `server_env.txt` if you have one. Nothing else needs syncing.
 - **Always cap the solvers** with `--highs-time-limit` and `--cupdlpx-time-limit`. Without a cap
   HiGHS iterated for >30 min on an `|F|≈9500` LP, and CuPDLPx can stall on this dense-in-`θ`
   master. The wall is recorded even when a solve hits its cap (and the error string says so).
-- `--gpu auto` respects an already-set `CUDA_VISIBLE_DEVICES`, so `export CUDA_VISIBLE_DEVICES=3`
-  pins the whole session to one card.
+- `--gpu auto` respects an already-set `CUDA_VISIBLE_DEVICES`; an explicit `--gpu <id>` now
+  **refuses a busy card** (override with `FASTIOT_ALLOW_BUSY_GPU=1`).
+- **Ground truth is HELLO, not POT, on the GPU path** (`--plan-backend hello`, the default when
+  `--scans hello`): `O(m+n)` sparse plan, blockwise dual certificate, no `m×n` cost. POT
+  (`--plan-backend pot`) is a small-`n` reference, capped at `m·n ≤ 2e8`.
 - The master microbenchmark deliberately uses `F = B` (mandatory) plus a fixed number of random
   extra edges, so it is independent of the loop trajectory and reproducible across backends.

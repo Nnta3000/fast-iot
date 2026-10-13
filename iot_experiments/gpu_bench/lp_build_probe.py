@@ -22,9 +22,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from iot_experiments.core.costs import blockwise_cost_matrix  # noqa: E402
 from iot_experiments.core.families import build_family  # noqa: E402
 from iot_experiments.core.marginals import marginal_spec  # noqa: E402
-from iot_experiments.gpu_bench.master_microbench import _cost_matrix, _family_for_k  # noqa: E402
+from iot_experiments.gpu_bench.master_microbench import _family_for_k  # noqa: E402
 
 
 def probe_one(
@@ -43,7 +44,7 @@ def probe_one(
     t_family = time.perf_counter() - started
 
     started = time.perf_counter()
-    cost = _cost_matrix(features, theta_star)
+    cost = blockwise_cost_matrix(features, theta_star)
     t_cost = time.perf_counter() - started
 
     source_mass = marginal_spec(marginal).weights(int(n))
