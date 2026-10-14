@@ -212,6 +212,8 @@ def run_spec(spec: RunSpec) -> RunRecord:
                 "master_time": float(rec.master_time),
                 "oracle_time": float(rec.oracle_time),
                 "prune_time": float(rec.prune_time),
+                "assembly_time": float(getattr(rec, "assembly_time", 0.0)),
+                "peak_memory_mb": float(getattr(rec, "peak_memory_mb", 0.0)),
             }
             for rec in records
         )

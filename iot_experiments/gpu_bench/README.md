@@ -40,6 +40,9 @@ one tiny validated run. **Do not proceed if this fails.**
 | `master_microbench.py` | isolated master LP: HiGHS vs CuPDLPx on the same `F` |
 | `lp_build_probe.py` | build the master LP only (no solve); per-phase timing + `nnz` |
 | `gpu_queue.sh` | user-space GPU job queue (one job per idle GPU; see `QUEUE.md`) |
+| `certify.py` | **HiGHS-free** certificate: one tight FP64 CuPDLPx solve + FP64 ε-bound over the grid |
+| `snapshots.py` | HELLO ground truth + frozen masters (F at early/half/last) + exact reference solves |
+| `solver_bench.py` | offline solver table on frozen masters (time, δ/vector error, tight flips, max viol.) |
 | `jobs/gpu_only.txt` | curated GPU-only e2e jobs (`scans hello` + `masters cupdlpx`) |
 | `run_batch.sh` | thin wrapper: `./run_batch.sh --batch ... --gpu auto` |
 | `BATCHES.md` | the recommended batches, configs, and cost |

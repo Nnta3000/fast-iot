@@ -531,7 +531,8 @@ def cmd_test6(args: argparse.Namespace) -> int:
     """
     CN: Test 6 —— (a) 精确收尾证书：GPU 终态 F 上用 HiGHS 解一次并 is_optimal_plan；
         (b) GPU 的 δ 是否正确：与同一 F 上的 HiGHS δ 比较，并跨 seed/family 检查 δ 随 n 的衰减。
-    EN: Test 6 -- (a) exact finisher certificate: one HiGHS solve on the GPU's final F + is_optimal_plan;
+    EN: Test 6 -- (a) VALIDATION reference only: one HiGHS solve on the GPU's final F + is_optimal_plan;
+        HiGHS is never a production finisher (see certify.py for the HiGHS-free certificate).
         (b) is the GPU's delta right: compare against HiGHS delta on the same F, and check the
         delta(n) decay across seeds/families.
     """
@@ -552,7 +553,7 @@ def cmd_test6(args: argparse.Namespace) -> int:
                     max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
                 )
                 final_F = rec_gpu.edge_sets[-1]
-                # (a) exact finisher on the frozen final F
+                # (a) HiGHS as a VALIDATION reference only (not a production finisher)
                 t0 = time.perf_counter()
                 exact_sol = LinearMasterSolver(random_seed=int(seed)).solve(problem, final_F, tie_break="none")
                 t_exact = time.perf_counter() - t0

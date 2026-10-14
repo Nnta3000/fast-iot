@@ -20,6 +20,13 @@ plan, no `m×n` cost. Certification is a **blockwise** dual check from HELLO's d
 (`core.costs.dual_feasibility`), also `O(m+n)` memory. `plan_backend="pot"` (dense, capped at
 `m·n ≤ 2e8`) is a small-`n` *reference* only.
 
+**HiGHS is validation-only and is NOT allowed in the production design.** It cannot run at the
+scale the GPU path targets (`n^2.1` LP cost) and it is excluded from the product on purpose. It
+appears only to *check* the GPU answer offline (e.g. `loop_diag test6` confirms the GPU-built `F`
+certifies). The production certificate is **HiGHS-free**: one tight FP64 CuPDLPx solve on the
+final `F`, then an FP64 `ε`-bound over the whole grid — `certify.py`, `v_max + r_support ≤ ε`
+(weak duality, total mass 1; this is the shifted-δ repair read as a bound).
+
 Run everything from the repo root. Use `--gpu auto` (first idle), `--gpu <id>`, or
 `export CUDA_VISIBLE_DEVICES=<id>` (now respected) to pin one card. An explicit `--gpu <id>`
 **refuses a busy card** now (override with `FASTIOT_ALLOW_BUSY_GPU=1`). **Always cap the solvers**

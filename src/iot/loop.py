@@ -32,6 +32,16 @@ from .validation import is_optimal_plan
 _LOGGER = logging.getLogger(__name__)
 
 
+def _peak_memory_mb() -> float:
+    """CN: 当前进程峰值 RSS(MB)，Linux 下 ru_maxrss 为 KB。EN: Peak RSS (MB); ru_maxrss is KB on Linux."""
+    try:
+        import resource
+
+        return float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1024.0
+    except Exception:  # noqa: BLE001 - platform without resource
+        return 0.0
+
+
 def _prune_by_slack(
     problem: InverseOTProblem,
     master_theta: np.ndarray,
@@ -158,6 +168,7 @@ def solve_inverse_ot(
                 max_tile_elements=int(max_tile_elements),
             )
         oracle_time = time.perf_counter() - oracle_started
+        peak_mb = _peak_memory_mb()
         final_max_violation = float(scan.max_violation)
         if not scan.has_violations:
             records.append(
@@ -172,6 +183,8 @@ def solve_inverse_ot(
                     master_time=float(master_time),
                     oracle_time=float(oracle_time),
                     prune_time=0.0,
+                    assembly_time=float(master_time + oracle_time),
+                    peak_memory_mb=peak_mb,
                 )
             )
             converged = True
@@ -213,8 +226,10 @@ def solve_inverse_ot(
                 tau_prune=float(tau_prune),
             )
         prune_time = time.perf_counter() - prune_started
+        assembly_started = time.perf_counter()
         new_edges = mandatory.union(pruned).union(candidates)
         added = int(new_edges.size) - int(edges.size)
+        assembly_time = time.perf_counter() - assembly_started
         records.append(
             IterationRecord(
                 index=iteration,
@@ -227,6 +242,8 @@ def solve_inverse_ot(
                 master_time=float(master_time),
                 oracle_time=float(oracle_time),
                 prune_time=float(prune_time),
+                assembly_time=float(assembly_time),
+                peak_memory_mb=_peak_memory_mb(),
             )
         )
         edges = new_edges

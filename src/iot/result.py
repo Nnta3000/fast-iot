@@ -27,6 +27,8 @@ class IterationRecord:
     master_time: float
     oracle_time: float
     prune_time: float
+    assembly_time: float = 0.0
+    peak_memory_mb: float = 0.0
 
 
 @dataclass(frozen=True)
