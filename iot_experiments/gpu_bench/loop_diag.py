@@ -31,8 +31,10 @@ if str(_REPO_ROOT) not in sys.path:
 from iot import (  # noqa: E402
     CuPdlpxMasterSolver,
     EdgeSet,
+    InverseOTError,
     InverseOTProblem,
     LinearMasterSolver,
+    MasterSolution,
 )
 from iot.loop import solve_inverse_ot  # noqa: E402
 from iot_experiments.core.costs import blockwise_cost_matrix  # noqa: E402
@@ -59,6 +61,7 @@ class RecordingSolver:
         self.hashes: list[str] = []
         self.sizes: list[int] = []
         self.seconds: list[float] = []
+        self.solutions: list[object] = []
 
     def solve(self, problem, edges, *, tie_break: str = "none"):
         self.edge_sets.append(edges)
@@ -67,7 +70,74 @@ class RecordingSolver:
         started = time.perf_counter()
         solution = self.inner.solve(problem, edges, tie_break=tie_break)
         self.seconds.append(time.perf_counter() - started)
+        self.solutions.append(solution)
         return solution
+
+
+class PenalizedMasterSolver:
+    """
+    CN: 目标改为 max δ - (ρ/2)·||(θ,f,g)||²（唯一最优解），用 HiGHS 的 QP 求解。
+        CuPDLPx 是 LP 一阶求解器，**不支持**二次目标（Test 2 的 GPU 部分到此为止）。
+    EN: Objective max δ - (ρ/2)·||(θ,f,g)||² (unique optimum), solved as a HiGHS QP. CuPDLPx is
+        a first-order **LP** solver and does **not** support a quadratic objective (Test 2 GPU
+        part stops here).
+    """
+
+    def __init__(self, rho: float) -> None:
+        self.rho = float(rho)
+
+    def solve(self, problem, edges, *, tie_break: str = "none"):
+        import highspy
+        from iot.master import build_master_system
+
+        system = build_master_system(problem, edges)
+        layout = system.layout
+        n = int(layout.size)
+        a = sparse.vstack([system.a_eq, system.a_ub], format="csr")
+        row_lower = np.concatenate([system.b_eq, np.full(int(system.a_ub.shape[0]), -np.inf)])
+        row_upper = np.concatenate([system.b_eq, system.b_ub])
+        col_lower = np.array([lo if lo is not None else -np.inf for lo, _ in system.bounds], dtype=float)
+        col_upper = np.array([hi if hi is not None else np.inf for _, hi in system.bounds], dtype=float)
+        c = np.zeros(n, dtype=float)
+        c[int(layout.delta)] = -1.0
+        highs = highspy.Highs()
+        highs.setOptionValue("output_flag", False)
+        lp = highspy.HighsLp()
+        lp.num_col_ = n
+        lp.num_row_ = int(a.shape[0])
+        lp.col_cost_ = c
+        lp.col_lower_ = col_lower
+        lp.col_upper_ = col_upper
+        lp.row_lower_ = row_lower
+        lp.row_upper_ = row_upper
+        lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+        lp.a_matrix_.start_ = np.asarray(a.indptr, dtype=np.int32)
+        lp.a_matrix_.index_ = np.asarray(a.indices, dtype=np.int32)
+        lp.a_matrix_.value_ = np.asarray(a.data, dtype=float)
+        highs.passModel(lp)
+        cols = np.arange(int(layout.theta_start), n)
+        start = np.zeros(n + 1, dtype=np.int32)
+        start[cols + 1] = 1
+        start = np.cumsum(start).astype(np.int32)
+        hessian = highspy.HighsHessian()
+        hessian.dim_ = n
+        hessian.format_ = highspy.HessianFormat.kTriangular
+        hessian.start_ = start
+        hessian.index_ = cols.astype(np.int32)
+        hessian.value_ = np.full(cols.size, self.rho, dtype=float)
+        highs.passHessian(hessian)
+        highs.run()
+        status = highs.getModelStatus()
+        if status != highspy.HighsModelStatus.kOptimal:
+            raise InverseOTError(f"penalized master not optimal: {status}")
+        x = np.asarray(highs.getSolution().col_value, dtype=float)
+        return MasterSolution(
+            delta=float(x[int(layout.delta)]),
+            theta=np.ascontiguousarray(x[int(layout.theta_start):int(layout.source_start)]),
+            source_dual=np.ascontiguousarray(x[int(layout.source_start):int(layout.target_start)]),
+            target_dual=np.ascontiguousarray(x[int(layout.target_start):]),
+            status="optimal",
+        )
 
 
 def build_problem(*, family: str, point_dimension: int, marginal: str, n: int, seed: int) -> InverseOTProblem:
@@ -219,16 +289,248 @@ def cmd_test1(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_test2(args: argparse.Namespace) -> int:
+    """CN: Test 2 —— 二次惩罚 master（唯一解），HiGHS QP，严格剪枝；CuPDLPx 无 QP，GPU 部分停止。
+    EN: Test 2 -- quadratic-penalty master (unique), HiGHS QP, strict pruning; CuPDLPx has no QP."""
+    problem = build_problem(
+        family=str(args.family), point_dimension=int(args.point_dimension),
+        marginal=str(args.marginal), n=int(args.n), seed=int(args.seed),
+    )
+    base_result, _base_rec, base_log = run_loop(
+        problem, inner=LinearMasterSolver(random_seed=int(args.seed)),
+        prune=True, hysteresis=False, max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+    )
+    payload: dict[str, object] = {
+        "test": "test2", "n": int(args.n), "seed": int(args.seed), "family": str(args.family),
+        "marginal": str(args.marginal),
+        "cupdlpx_qp_supported": False,
+        "cupdlpx_note": "CuPDLPx is a first-order LP solver (build_cupdlpx_lp is linear); it has "
+                        "no quadratic-objective/Hessian path, so the penalty master cannot run on it.",
+        "unpenalized": {
+            "converged": bool(base_result.converged), "iterations": int(base_result.n_iterations),
+            "final_delta": float(base_result.delta), "final_F": int(base_result.support_size),
+        },
+        "per_rho": {},
+    }
+    print(f"[test2] unpenalized (strict prune): converged={base_result.converged} "
+          f"iters={base_result.n_iterations} final_delta={base_result.delta:.6g} |F|={base_result.support_size}")
+
+    for rho in [float(v) for v in args.rho]:
+        result, rec, log = run_loop(
+            problem, inner=PenalizedMasterSolver(rho), prune=True, hysteresis=False,
+            max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+        )
+        objectives: list[float] = []
+        for solution in rec.solutions:
+            vec = np.concatenate([np.asarray(solution.theta), np.asarray(solution.source_dual),
+                                  np.asarray(solution.target_dual)])
+            objectives.append(float(solution.delta) - 0.5 * rho * float(vec @ vec))
+        deltas = [float(s.delta) for s in rec.solutions]
+        monotone = all(objectives[i + 1] <= objectives[i] + 1e-9 for i in range(len(objectives) - 1))
+        payload["per_rho"][str(rho)] = {
+            "converged": bool(result.converged), "iterations": int(result.n_iterations),
+            "final_delta": float(result.delta), "final_F": int(result.support_size),
+            "objectives": objectives, "deltas": deltas, "objective_monotone_nonincreasing": bool(monotone),
+            "log": log,
+        }
+        print(f"[test2] rho={rho:g}: converged={result.converged} iters={result.n_iterations} "
+              f"final_delta={result.delta:.6g} (unpen {base_result.delta:.6g}) |F|={result.support_size} "
+              f"obj_monotone={monotone} obj={[round(o, 5) for o in objectives]}")
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / f"test2_n{args.n}_seed{args.seed}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"[test2] wrote {out}")
+    return 0
+
+
+def cmd_test3(args: argparse.Namespace) -> int:
+    """CN: Test 3 —— GPU（CuPDLPx）关剪枝 vs HiGHS（同样关剪枝），n=200/400/800。
+    EN: Test 3 -- GPU (CuPDLPx) no-prune vs HiGHS (no-prune), n=200/400/800."""
+    rows: list[dict[str, object]] = []
+    for n in [int(v) for v in args.sizes]:
+        problem = build_problem(
+            family=str(args.family), point_dimension=int(args.point_dimension),
+            marginal=str(args.marginal), n=int(n), seed=int(args.seed),
+        )
+        for name, inner in (
+            ("highs_noprune", LinearMasterSolver(random_seed=int(args.seed))),
+            ("cupdlpx_noprune", CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)})),
+        ):
+            result, rec, log = run_loop(
+                problem, inner=inner, prune=False, hysteresis=False,
+                max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+            )
+            master = [float(e["master_seconds"]) for e in log]
+            scan = [float(e["scan_seconds"]) for e in log]
+            rows.append({
+                "n": int(n), "solver": name, "converged": bool(result.converged),
+                "iterations": int(result.n_iterations), "final_F": int(result.support_size),
+                "mean_master_s": float(np.mean(master)) if master else 0.0,
+                "mean_scan_s": float(np.mean(scan)) if scan else 0.0,
+                "mean_iter_s": float(np.mean([m + s for m, s in zip(master, scan)])) if master else 0.0,
+                "total_s": float(np.sum(master) + np.sum(scan)),
+                "edge_hashes": rec.hashes, "final_delta": float(result.delta),
+            })
+            r = rows[-1]
+            print(f"[test3] n={n:>4} {name:<18} conv={result.converged} it={result.n_iterations:>3} "
+                  f"|F|={result.support_size:>5} ms/iter={r['mean_iter_s']*1e3:>8.1f} total={r['total_s']:>7.2f}s")
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / f"test3_seed{args.seed}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"test": "test3", "rows": rows}, indent=2) + "\n", encoding="utf-8")
+    print(f"[test3] wrote {out}")
+    return 0
+
+
+class SwitchingSolver:
+    """CN: 前 `switch_at-1` 次 solve 用 GPU，之后改用精确 master（F 由循环延续，故是热启动）。
+    EN: GPU for the first `switch_at-1` solves, then the exact master (the loop carries F, so the
+        exact phase is warm-started)."""
+
+    def __init__(self, gpu, exact, switch_at: int) -> None:
+        self.gpu = gpu
+        self.exact = exact
+        self.switch_at = int(switch_at)
+        self.calls = 0
+
+    def solve(self, problem, edges, *, tie_break: str = "none"):
+        self.calls += 1
+        inner = self.gpu if self.calls < self.switch_at else self.exact
+        return inner.solve(problem, edges, tie_break=tie_break)
+
+
+def _final_repair(problem: InverseOTProblem, solution) -> dict[str, object]:
+    """CN: 廉价修复：全边最大违反 v=max(f+g-c+δ)；δ'=δ-v。δ'>=0 即为有效证书。
+    EN: Cheap repair: max all-edge violation v=max(f+g-c+δ); δ'=δ-v. δ'>=0 is a valid certificate."""
+    m, n = int(problem.n_source), int(problem.n_target)
+    f = np.asarray(solution.source_dual)
+    g = np.asarray(solution.target_dual)
+    worst = -np.inf
+    for start in range(0, m, 256):
+        stop = min(m, start + 256)
+        rr = np.repeat(np.arange(start, stop, dtype=np.int64), n)
+        cc = np.tile(np.arange(n, dtype=np.int64), stop - start)
+        cost = np.asarray(problem.features.costs(np.asarray(solution.theta), rr, cc))
+        worst = max(worst, float(np.max(f[rr] + g[cc] - cost + float(solution.delta))))
+    return {"max_all_edge_violation": worst, "delta": float(solution.delta),
+            "shifted_delta": float(solution.delta) - worst,
+            "shifted_nonnegative": bool(float(solution.delta) - worst >= -1e-12)}
+
+
+def cmd_test4(args: argparse.Namespace) -> int:
+    """CN: Test 4 —— GPU 全程不剪枝，maxviol<1e-3 后切换 HiGHS；并测廉价 δ 修复证书。
+    EN: Test 4 -- GPU no-prune throughout, switch to HiGHS once maxviol<1e-3; plus the cheap δ repair."""
+    from iot import is_optimal_plan
+
+    problem = build_problem(
+        family=str(args.family), point_dimension=int(args.point_dimension),
+        marginal=str(args.marginal), n=int(args.n), seed=int(args.seed),
+    )
+    gpu = CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)})
+    result1, rec1, log1 = run_loop(problem, inner=gpu, prune=False, hysteresis=False,
+                                   max_iterations=int(args.max_iterations), scan_backend=str(args.scan))
+    switch_at = next((i + 1 for i, e in enumerate(log1) if float(e["max_violation"]) < 1e-3), None)
+    print(f"[test4] phase1(GPU) iters={result1.n_iterations} converged={result1.converged}; "
+          f"first maxviol<1e-3 at call {switch_at}")
+    repair = _final_repair(problem, rec1.solutions[-1]) if rec1.solutions else {}
+    print(f"[test4] cheap repair on GPU final: {repair}")
+
+    payload: dict[str, object] = {
+        "test": "test4", "n": int(args.n), "seed": int(args.seed),
+        "phase1_gpu": {"iterations": int(result1.n_iterations), "converged": bool(result1.converged),
+                       "max_violation": [float(e["max_violation"]) for e in log1]},
+        "switch_at_call": switch_at, "cheap_repair_gpu_final": repair,
+    }
+    if switch_at is not None:
+        switch = SwitchingSolver(
+            CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)}),
+            LinearMasterSolver(random_seed=int(args.seed)), switch_at=int(switch_at),
+        )
+        result2, _rec2, log2 = run_loop(problem, inner=switch, prune=False, hysteresis=False,
+                                        max_iterations=int(args.max_iterations), scan_backend=str(args.scan))
+        nh = max(0, int(result2.n_iterations) - (int(switch_at) - 1))
+        check = is_optimal_plan(problem, np.asarray(result2.theta), tol=1e-7, num_itermax=2_000_000)
+        payload["phase2_switch"] = {
+            "gpu_solves": int(switch_at) - 1, "exact_solves": nh,
+            "F_at_switch": int(rec1.sizes[int(switch_at) - 1]) if int(switch_at) - 1 < len(rec1.sizes) else None,
+            "iterations": int(result2.n_iterations), "converged": bool(result2.converged),
+            "final_F": int(result2.support_size), "is_optimal": bool(check.is_optimal),
+            "relative_gap": float(check.relative_gap),
+        }
+        print(f"[test4] phase2: exact_solves={nh} F_at_switch={payload['phase2_switch']['F_at_switch']} "
+              f"iters={result2.n_iterations} is_optimal={check.is_optimal}")
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / f"test4_n{args.n}_seed{args.seed}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"[test4] wrote {out}")
+    return 0
+
+
+class ScheduleSolver:
+    """CN: 按预算把 CuPDLPx 的 eps 设为「当前最大违反/10」（夹在 [1e-4, 1e-2]）。
+    EN: Drive CuPDLPx's eps to "current max violation / 10" (clamped to [1e-4, 1e-2])."""
+
+    def __init__(self, eps_schedule: list[float], cap: float) -> None:
+        self.eps = [float(e) for e in eps_schedule]
+        self.cap = float(cap)
+        self.calls = 0
+
+    def solve(self, problem, edges, *, tie_break: str = "none"):
+        eps = self.eps[min(self.calls, len(self.eps) - 1)]
+        self.calls += 1
+        return CuPdlpxMasterSolver(
+            params={"eps_optimal_relative": eps, "eps_feasible_relative": eps,
+                    "time_sec_limit": self.cap}
+        ).solve(problem, edges, tie_break=tie_break)
+
+
+def cmd_test5(args: argparse.Namespace) -> int:
+    """CN: Test 5 —— GPU 的精度跟随进展：eps_k = clamp(maxviol_k/10, 1e-4, 1e-2)。
+    EN: Test 5 -- GPU accuracy follows progress: eps_k = clamp(maxviol_k/10, 1e-4, 1e-2)."""
+    problem = build_problem(
+        family=str(args.family), point_dimension=int(args.point_dimension),
+        marginal=str(args.marginal), n=int(args.n), seed=int(args.seed),
+    )
+    result1, rec1, log1 = run_loop(
+        problem, inner=CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)}),
+        prune=False, hysteresis=False, max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+    )
+    schedule = [float(np.clip(float(e["max_violation"]) / 10.0, 1e-4, 1e-2)) for e in log1]
+    result2, rec2, log2 = run_loop(
+        problem, inner=ScheduleSolver(schedule, float(args.cupdlpx_cap)),
+        prune=False, hysteresis=False, max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+    )
+    t1 = float(np.sum([e["master_seconds"] + e["scan_seconds"] for e in log1]))
+    t2 = float(np.sum([e["master_seconds"] + e["scan_seconds"] for e in log2]))
+    payload = {
+        "test": "test5", "n": int(args.n), "seed": int(args.seed),
+        "default": {"converged": bool(result1.converged), "iterations": int(result1.n_iterations),
+                    "total_s": t1, "final_F": int(result1.support_size)},
+        "schedule": {"eps_schedule": schedule, "converged": bool(result2.converged),
+                     "iterations": int(result2.n_iterations), "total_s": t2, "final_F": int(result2.support_size)},
+    }
+    print(f"[test5] default eps=1e-4: conv={result1.converged} it={result1.n_iterations} total={t1:.2f}s")
+    print(f"[test5] schedule eps: conv={result2.converged} it={result2.n_iterations} total={t2:.2f}s "
+          f"eps={[round(e,4) for e in schedule]}")
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / f"test5_n{args.n}_seed{args.seed}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"[test5] wrote {out}")
+    return 0
+
+
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="small-scale loop diagnostics")
-    parser.add_argument("test", choices=("test1",))
+    parser.add_argument("test", choices=("test1", "test2", "test3", "test4", "test5"))
     parser.add_argument("--family", default="diagonal")
     parser.add_argument("--point-dimension", type=int, default=8)
     parser.add_argument("--marginal", default="gmm")
     parser.add_argument("--n", type=int, default=200)
+    parser.add_argument("--sizes", type=int, nargs="+", default=[200, 400, 800])
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-iterations", type=int, default=200)
     parser.add_argument("--scan", default="numpy")
+    parser.add_argument("--rho", type=float, nargs="+", default=[1e-3, 1e-2, 1e-1])
+    parser.add_argument("--cupdlpx-cap", type=float, default=60.0)
     parser.add_argument("--out", type=Path, default=None)
     return parser.parse_args(argv)
 
@@ -237,6 +539,14 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.test == "test1":
         return cmd_test1(args)
+    if args.test == "test2":
+        return cmd_test2(args)
+    if args.test == "test3":
+        return cmd_test3(args)
+    if args.test == "test4":
+        return cmd_test4(args)
+    if args.test == "test5":
+        return cmd_test5(args)
     return 0
 
 
