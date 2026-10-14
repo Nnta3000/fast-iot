@@ -21,11 +21,12 @@ plan, no `m×n` cost. Certification is a **blockwise** dual check from HELLO's d
 `m·n ≤ 2e8`) is a small-`n` *reference* only.
 
 **HiGHS is validation-only and is NOT allowed in the production design.** It cannot run at the
-scale the GPU path targets (`n^2.1` LP cost) and it is excluded from the product on purpose. It
-appears only to *check* the GPU answer offline (e.g. `loop_diag test6` confirms the GPU-built `F`
-certifies). The production certificate is **HiGHS-free**: one tight FP64 CuPDLPx solve on the
-final `F`, then an FP64 `ε`-bound over the whole grid — `certify.py`, `v_max + r_support ≤ ε`
-(weak duality, total mass 1; this is the shifted-δ repair read as a bound).
+scale the GPU path targets (`n^2.1` LP cost) and it is excluded from the product on purpose. The
+production certificate is **HiGHS-free**: one tight FP64 CuPDLPx solve on the final `F`, then an
+FP64 `ε`-bound over the whole grid — `v_max + r_support ≤ ε` (weak duality, total mass 1; this is
+the shifted-δ repair read as a bound). *The driver for this (`certify.py`) is retired to
+`../legacy/gpu_bench_cpu/` because it ran its certificate on the CPU scan; a GPU-scan version is
+planned — see the A100 plan.*
 
 Run everything from the repo root. Use `--gpu auto` (first idle), `--gpu <id>`, or
 `export CUDA_VISIBLE_DEVICES=<id>` (now respected) to pin one card. An explicit `--gpu <id>`
@@ -63,32 +64,12 @@ Read it as:
 - **`|F|` growth** (`support_size` in the trajectory) — does `prune=False` let it blow up?
 - **iterations** — does it converge or hit `max_iterations`?
 
-## Batch 2 — master component ladder (why the GPU master matters)
+## Retired batches (moved to `../legacy/gpu_bench_cpu/`)
 
-Isolated master solve, same `F`, HiGHS vs CuPDLPx (HiGHS as the reference that fails):
-
-```bash
-for E in 0 2000 4000 8000 16000; do
-  python -m iot_experiments.gpu_bench.run_batch --batch gpu_master_k --gpu 3 \
-    --family lowrank --marginal gmm --n 800 --ks 1024 --extra-edges $E --repeats 1 \
-    --backends highs cupdlpx --highs-time-limit 60 --cupdlpx-time-limit 60 \
-    --out iot_experiments/gpu_bench/out/gpu_master_k/F$E
-done
-```
-
-Observed so far: crossover at `|F|≈2–3.5k` — HiGHS `1 → 50 → >60 s` while CuPDLPx stays
-`~8 → 14 s`. Caveat: the extra edges are random (degeneracy-prone); a `from-loop` F would be
-more representative (planned).
-
-## `lp_build_probe.py` — build-only scaling (no solve)
-
-Times family sampling, cost matrix, POT, mandatory edges, and `build_master_system`; reports
-`nnz = |F|·(K+3)`. Build is cheap (0.19 s at `K=1024`); the cost matrix grows linearly in `K`.
-
-```bash
-python iot_experiments/gpu_bench/lp_build_probe.py --family lowrank --n 800 \
-  --ks 256 1024 4096 --extra-edges 0 8000
-```
+The former **Master component ladder** (`--batch gpu_master_k`, was `master_microbench.py`) and
+the **build-only probe** (`lp_build_probe.py`) are retired — they are HiGHS-vs-CuPDLPx reference
+arms, CPU-bound, and their conclusions are settled (crossover at `|F|≈2–3.5k`; build is cheap).
+See `../legacy/gpu_bench_cpu/README.md`. Do not re-run them as target-path measurements.
 
 ## What to send back
-`iot_experiments/gpu_bench/out/` (the `e2e_gpu/`, `gpu_master_k/**`, `env/` dirs + logs).
+`iot_experiments/gpu_bench/out/` (the `e2e*/`, `env/` dirs + logs).

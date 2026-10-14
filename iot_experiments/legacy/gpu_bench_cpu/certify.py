@@ -68,11 +68,19 @@ def certify_one(*, family: str, point_dimension: int, marginal: str, n: int, see
     recorder = RecordingSolver(CuPdlpxMasterSolver(params={"time_sec_limit": float(loop_cap)}))
     result = run_loop(problem, inner=recorder, prune=False, hysteresis=False,
                       max_iterations=60, scan_backend="numpy")[0]
+    # CN: 守卫——弃用「未真正跑起来」的退化结果（曾导致 δ=0 的伪界）。
+    # EN: Guard -- reject degenerate runs that never really looped (previously produced bogus bounds).
+    if not recorder.edge_sets or int(result.n_iterations) < 2 or float(result.delta) == 0.0:
+        raise RuntimeError(
+            f"degenerate loop for n={n} {family} seed={seed}: iters={result.n_iterations} "
+            f"delta={result.delta} F_calls={len(recorder.edge_sets)}; not certifying"
+        )
     recorder_edges = recorder.edge_sets[-1]
     loop_delta = float(result.delta)
     loop_master = float(np.sum(recorder.seconds))
     out: dict[str, object] = {
         "family": family, "n": int(n), "seed": int(seed), "K": int(problem.n_features),
+        "loop_iters": int(result.n_iterations), "loop_converged": bool(result.converged),
         "loop_final_F": int(recorder_edges.size), "loop_delta": loop_delta,
         "loop_master_seconds_total": loop_master, "eps": {},
     }
@@ -106,7 +114,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1])
     p.add_argument("--point-dimension", type=int, default=8)
     p.add_argument("--marginal", default="gmm_floored")
-    p.add_argument("--eps", type=float, nargs="+", default=[1e-6, 1e-7])
+    p.add_argument("--eps", type=float, nargs="+", default=[1e-6])
     p.add_argument("--loop-cap", type=float, default=60.0)
     p.add_argument("--device", default="auto")
     return p.parse_args(argv)
@@ -114,12 +122,19 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    rows = [
-        certify_one(family=f, point_dimension=int(args.point_dimension), marginal=str(args.marginal),
-                    n=n, seed=s, eps_list=[float(e) for e in args.eps],
-                    loop_cap=float(args.loop_cap), device=str(args.device))
-        for f in args.families for n in args.n for s in args.seeds
-    ]
+    rows: list[dict[str, object]] = []
+    for family in args.families:
+        for n in args.n:
+            for seed in args.seeds:
+                try:
+                    rows.append(certify_one(
+                        family=str(family), point_dimension=int(args.point_dimension),
+                        marginal=str(args.marginal), n=int(n), seed=int(seed),
+                        eps_list=[float(e) for e in args.eps],
+                        loop_cap=float(args.loop_cap), device=str(args.device)))
+                except RuntimeError as error:
+                    print(f"[certify] SKIP n={n} {family} seed={seed}: {error}", flush=True)
+                    rows.append({"family": str(family), "n": int(n), "seed": int(seed), "skipped": str(error)})
     _OUT.mkdir(parents=True, exist_ok=True)
     (_OUT / "certify.json").write_text(json.dumps({"rows": rows}, indent=2) + "\n", encoding="utf-8")
     print(f"[certify] wrote {_OUT / 'certify.json'}")

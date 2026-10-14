@@ -81,39 +81,6 @@ def run_env(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
     return payload
 
 
-def run_gpu_master_k(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
-    """CN: master LP 的隔离 K-sweep（前提检验）。EN: Isolated master-LP K-sweep (premise test)."""
-    from iot_experiments.gpu_bench.master_microbench import run_master_microbench
-
-    cupdlpx_params: dict[str, object] = {}
-    if getattr(args, "cupdlpx_time_limit", None) is not None:
-        cupdlpx_params["time_sec_limit"] = float(args.cupdlpx_time_limit)
-    if getattr(args, "cupdlpx_iters", None) is not None:
-        cupdlpx_params["iteration_limit"] = int(args.cupdlpx_iters)
-    records = run_master_microbench(
-        family=str(args.family), marginal=str(args.marginal), n=int(args.n),
-        ks=[int(v) for v in args.ks], seeds=[int(v) for v in args.seeds],
-        repeats=int(args.repeats), extra_edges=int(args.extra_edges),
-        backends=[str(b) for b in args.backends], cupdlpx_params=cupdlpx_params,
-        highs_time_limit=getattr(args, "highs_time_limit", None),
-    )
-    payload: dict[str, object] = {
-        "batch": "gpu_master_k",
-        "git_sha": _git_sha(),
-        "device": gpu.device_info(),
-        "config": {
-            "family": str(args.family), "marginal": str(args.marginal), "n": int(args.n),
-            "ks": [int(v) for v in args.ks], "seeds": [int(v) for v in args.seeds],
-            "repeats": int(args.repeats), "extra_edges": int(args.extra_edges),
-            "backends": [str(b) for b in args.backends], "cupdlpx_params": cupdlpx_params,
-            "highs_time_limit": getattr(args, "highs_time_limit", None),
-        },
-        "records": records,
-    }
-    _write(out_dir / "master.json", payload)
-    return payload
-
-
 def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
     """CN: 端到端整环，比较 scan/master 后端。EN: End-to-end full loop comparing scan/master backends."""
     from iot_experiments.core import RunSpec, run_grid
@@ -159,24 +126,9 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="A100 batch entry point")
-    parser.add_argument("--batch", required=True, choices=("env", "gpu_master_k", "e2e"))
+    parser.add_argument("--batch", required=True, choices=("env", "e2e"))
     parser.add_argument("--gpu", default="auto", help='"auto" or a physical GPU index')
     parser.add_argument("--out", type=Path, default=None)
-    # master sweep
-    parser.add_argument("--family", default="lowrank")
-    parser.add_argument("--marginal", default="gmm")
-    parser.add_argument("--n", type=int, default=800)
-    parser.add_argument("--ks", type=int, nargs="+", default=[64, 128, 256, 512, 1024])
-    parser.add_argument("--seeds", type=int, nargs="+", default=[0])
-    parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--extra-edges", type=int, default=0)
-    parser.add_argument("--backends", nargs="+", default=["highs", "cupdlpx"])
-    parser.add_argument("--cupdlpx-time-limit", type=float, default=None,
-                        help="Cap CuPDLPx seconds per solve (prevents a runaway).")
-    parser.add_argument("--cupdlpx-iters", type=int, default=None,
-                        help="Cap CuPDLPx iterations per solve.")
-    parser.add_argument("--highs-time-limit", type=float, default=None,
-                        help="Cap HiGHS seconds per solve (prevents a runaway on large |F|).")
     # e2e
     parser.add_argument("--sizes", type=int, nargs="+", default=[800, 3200])
     parser.add_argument("--point-dimension", type=int, default=8)
@@ -197,8 +149,6 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = args.out or (_OUT_DIR / str(args.batch))
     if args.batch == "env":
         run_env(args, out_dir)
-    elif args.batch == "gpu_master_k":
-        run_gpu_master_k(args, out_dir)
     else:
         run_e2e(args, out_dir)
     print(f"[gpu_bench] batch={args.batch} done; outputs in {out_dir}", flush=True)

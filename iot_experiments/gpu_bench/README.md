@@ -33,21 +33,23 @@ one tiny validated run. **Do not proceed if this fails.**
 
 ## Files
 
+**Target path (kept):**
+
 | file | role |
 | --- | --- |
 | `gpu.py` | idle-GPU selection + `CUDA_VISIBLE_DEVICES` + env manifest |
-| `run_batch.py` | the single entry point (`--batch env|gpu_master_k|e2e`) |
-| `master_microbench.py` | isolated master LP: HiGHS vs CuPDLPx on the same `F` |
-| `lp_build_probe.py` | build the master LP only (no solve); per-phase timing + `nnz` |
+| `run_batch.py` | the single entry point (`--batch env|e2e`) |
 | `gpu_queue.sh` | user-space GPU job queue (one job per idle GPU; see `QUEUE.md`) |
-| `certify.py` | **HiGHS-free** certificate: one tight FP64 CuPDLPx solve + FP64 ε-bound over the grid |
-| `snapshots.py` | HELLO ground truth + frozen masters (F at early/half/last) + exact reference solves |
-| `solver_bench.py` | offline solver table on frozen masters (time, δ/vector error, tight flips, max viol.) |
-| `jobs/gpu_only.txt` | curated GPU-only e2e jobs (`scans hello` + `masters cupdlpx`) |
+| `jobs/*.txt` | curated GPU-only e2e jobs (`scans hello` + `masters cupdlpx`) |
 | `run_batch.sh` | thin wrapper: `./run_batch.sh --batch ... --gpu auto` |
 | `BATCHES.md` | the recommended batches, configs, and cost |
 | `QUEUE.md` | how to queue jobs on a SLURM-less box (one job per idle GPU) |
 | `out/<batch>/` | git-ignored results (`manifest`/`records` json, csv, logs) |
+
+**Retired (moved to `../legacy/gpu_bench_cpu/`, do not use):** `master_microbench.py`,
+`lp_build_probe.py`, `certify.py`, `snapshots.py`, `solver_bench.py`, `loop_diag.py` —
+CPU-bound (NumPy scan) and/or HiGHS/POT reference arms, plus a `certify.py` whose ε-certificate
+ran on the CPU scan. See that directory's `README.md` for the per-file reasons.
 
 ## Sync back
 
@@ -66,5 +68,3 @@ back to me, plus a `server_env.txt` if you have one. Nothing else needs syncing.
 - **Ground truth is HELLO, not POT, on the GPU path** (`--plan-backend hello`, the default when
   `--scans hello`): `O(m+n)` sparse plan, blockwise dual certificate, no `m×n` cost. POT
   (`--plan-backend pot`) is a small-`n` reference, capped at `m·n ≤ 2e8`.
-- The master microbenchmark deliberately uses `F = B` (mandatory) plus a fixed number of random
-  extra edges, so it is independent of the loop trajectory and reproducible across backends.
