@@ -527,15 +527,111 @@ def cmd_test5(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_test6(args: argparse.Namespace) -> int:
+    """
+    CN: Test 6 —— (a) 精确收尾证书：GPU 终态 F 上用 HiGHS 解一次并 is_optimal_plan；
+        (b) GPU 的 δ 是否正确：与同一 F 上的 HiGHS δ 比较，并跨 seed/family 检查 δ 随 n 的衰减。
+    EN: Test 6 -- (a) exact finisher certificate: one HiGHS solve on the GPU's final F + is_optimal_plan;
+        (b) is the GPU's delta right: compare against HiGHS delta on the same F, and check the
+        delta(n) decay across seeds/families.
+    """
+    from iot import is_optimal_plan
+
+    rows: list[dict[str, object]] = []
+    for n in [int(v) for v in args.sizes]:
+        for seed in [int(v) for v in args.seeds]:
+            for family in [str(v) for v in args.families]:
+                problem = build_problem(
+                    family=family, point_dimension=int(args.point_dimension),
+                    marginal=str(args.marginal), n=int(n), seed=int(seed),
+                )
+                # GPU (no prune) loop, capture the final F
+                gpu = CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)})
+                r_gpu, rec_gpu, log_gpu = run_loop(
+                    problem, inner=gpu, prune=False, hysteresis=False,
+                    max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+                )
+                final_F = rec_gpu.edge_sets[-1]
+                # (a) exact finisher on the frozen final F
+                t0 = time.perf_counter()
+                exact_sol = LinearMasterSolver(random_seed=int(seed)).solve(problem, final_F, tie_break="none")
+                t_exact = time.perf_counter() - t0
+                check = is_optimal_plan(problem, np.asarray(exact_sol.theta), tol=1e-7, num_itermax=2_000_000)
+                rows.append({
+                    "n": int(n), "seed": int(seed), "family": family,
+                    "gpu_delta": float(r_gpu.delta), "gpu_iters": int(r_gpu.n_iterations),
+                    "gpu_converged": bool(r_gpu.converged), "final_F": int(final_F.size),
+                    "highs_delta_on_F": float(exact_sol.delta),
+                    "delta_abs_diff": abs(float(r_gpu.delta) - float(exact_sol.delta)),
+                    "delta_rel_diff": abs(float(r_gpu.delta) - float(exact_sol.delta)) / max(1e-30, abs(float(exact_sol.delta))),
+                    "highs_finisher_seconds": t_exact,
+                    "is_optimal": bool(check.is_optimal), "relative_gap": float(check.relative_gap),
+                    "delta_over_eps": float(r_gpu.delta) / 1e-4,
+                })
+                r = rows[-1]
+                print(f"[test6] n={n:>5} seed={seed} {family:<9} gpu_delta={r['gpu_delta']:.4g} "
+                      f"highs_delta={r['highs_delta_on_F']:.4g} |diff|={r['delta_abs_diff']:.2e} "
+                      f"is_optimal={r['is_optimal']} finisher={t_exact:.2f}s", flush=True)
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / "test6_delta_cert.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"test": "test6", "rows": rows}, indent=2) + "\n", encoding="utf-8")
+    print(f"[test6] wrote {out}")
+    return 0
+
+
+def cmd_test7(args: argparse.Namespace) -> int:
+    """CN: Test 7 —— eps 扫描（冻结 F，避免循环差异）：每次 (n, eps) 解同一 F，记录时间、δ/eps、与 HiGHS 的差。
+    EN: Test 7 -- eps sweep on a FROZEN F (avoids loop variation): per (n, eps) solve the same F,
+        recording time, delta/eps, and the HiGHS delta gap."""
+    rows: list[dict[str, object]] = []
+    eps_list = [float(v) for v in args.eps]
+    for n in [int(v) for v in args.sizes]:
+        problem = build_problem(
+            family=str(args.family), point_dimension=int(args.point_dimension),
+            marginal=str(args.marginal), n=int(n), seed=int(args.seed),
+        )
+        r_ref, rec_ref, _log = run_loop(
+            problem, inner=CuPdlpxMasterSolver(params={"time_sec_limit": float(args.cupdlpx_cap)}),
+            prune=False, hysteresis=False, max_iterations=int(args.max_iterations), scan_backend=str(args.scan),
+        )
+        frozen_F = rec_ref.edge_sets[-1]
+        hs = LinearMasterSolver(random_seed=int(args.seed)).solve(problem, frozen_F, tie_break="none")
+        delta_highs = float(hs.delta)
+        print(f"[test7] n={n} frozen |F|={frozen_F.size} highs_delta={delta_highs:.6g}", flush=True)
+        for eps in eps_list:
+            solver = CuPdlpxMasterSolver(
+                params={"eps_optimal_relative": eps, "eps_feasible_relative": eps,
+                        "time_sec_limit": float(args.cupdlpx_cap)}
+            )
+            t0 = time.perf_counter()
+            sol = solver.solve(problem, frozen_F, tie_break="none")
+            secs = time.perf_counter() - t0
+            rows.append({
+                "n": int(n), "eps": eps, "delta": float(sol.delta), "seconds": secs,
+                "delta_over_eps": float(sol.delta) / eps,
+                "delta_abs_diff_vs_highs": abs(float(sol.delta) - delta_highs),
+            })
+            r = rows[-1]
+            print(f"[test7]   eps={eps:.0e} t={secs:7.2f}s delta={sol.delta:.6g} "
+                  f"delta/eps={r['delta_over_eps']:.3g} |diff_vs_highs|={r['delta_abs_diff_vs_highs']:.2e}", flush=True)
+    out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / "test7_eps_sweep.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"test": "test7", "rows": rows}, indent=2) + "\n", encoding="utf-8")
+    print(f"[test7] wrote {out}")
+    return 0
+
+
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="small-scale loop diagnostics")
-    parser.add_argument("test", choices=("test1", "test2", "test3", "test4", "test5"))
+    parser.add_argument("test", choices=("test1", "test2", "test3", "test4", "test5", "test6", "test7"))
     parser.add_argument("--family", default="diagonal")
+    parser.add_argument("--families", nargs="+", default=["diagonal", "quadratic", "lowrank"])
     parser.add_argument("--point-dimension", type=int, default=8)
     parser.add_argument("--marginal", default="gmm")
     parser.add_argument("--n", type=int, default=200)
     parser.add_argument("--sizes", type=int, nargs="+", default=[200, 400, 800])
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    parser.add_argument("--eps", type=float, nargs="+", default=[1e-4, 1e-5, 1e-6, 1e-7])
     parser.add_argument("--max-iterations", type=int, default=200)
     parser.add_argument("--scan", default="numpy")
     parser.add_argument("--rho", type=float, nargs="+", default=[1e-3, 1e-2, 1e-1])
@@ -557,6 +653,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_test4(args)
     if args.test == "test5":
         return cmd_test5(args)
+    if args.test == "test6":
+        return cmd_test6(args)
+    if args.test == "test7":
+        return cmd_test7(args)
     return 0
 
 

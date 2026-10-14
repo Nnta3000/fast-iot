@@ -1,0 +1,19 @@
+# Reusable, queueable assets — data & measurements (not algorithm variants).
+# Goal: whatever we change later, these stay useful. HELLO-OT ground truth (NOT POT).
+#
+# 1) Ground-truth + frozen-master snapshots (run first; everything reads these).
+#    Saves observed plan pi_hat (HELLO) + edge sets F at early/half/last + exact HiGHS solutions.
+#    Loop solver = cupdlpx (GPU, no prune); fall back to highs if the GPU is unavailable.
+python -m iot_experiments.gpu_bench.snapshots save --n 1600 3200 6400 --families diagonal quadratic --seeds 0 1 2 --loop-solver highs --max-iterations 60
+# (once a GPU is free, repeat with --loop-solver cupdlpx to get GPU-produced masters)
+#
+# 2) Offline solver benchmark on those snapshots: CuPDLPx vs HiGHS, eps 1e-4..1e-8,
+#    time / delta error / vector error / tight-flip counts / max violation.
+python -m iot_experiments.gpu_bench.solver_bench --eps 1e-4 1e-5 1e-6 1e-7 1e-8
+#
+# 3) delta-scaling + exact-certificate study (loop_diag test6): final delta, max |F|, iters,
+#    certificate pass/fail vs n, over seeds & families. GPU loop + HiGHS finisher + is_optimal_plan.
+python -m iot_experiments.gpu_bench.loop_diag test6 --sizes 1600 3200 --seeds 0 1 2 --families diagonal quadratic lowrank --max-iterations 60
+#
+# 4) eps sweep on a frozen F (loop_diag test7): cheapest eps in {1e-4,...,1e-7} with a clean certificate.
+python -m iot_experiments.gpu_bench.loop_diag test7 --sizes 1600 3200 --eps 1e-4 1e-5 1e-6 1e-7
