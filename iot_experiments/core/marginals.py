@@ -36,6 +36,7 @@ class MarginalSpec:
     center: float = 0.5
     width: float = 0.15
     components: tuple[tuple[float, float, float], ...] = ()
+    floor_frac: float = 0.0
 
     def __post_init__(self) -> None:
         if self.kind not in {"uniform", "gaussian", "gmm"}:
@@ -48,16 +49,20 @@ class MarginalSpec:
             for weight, _center, width in self.components:
                 if float(weight) <= 0.0 or not float(width) > 0.0:
                     raise ValueError("gmm components need positive weight and width")
+        if not 0.0 <= float(self.floor_frac) < 1.0:
+            raise ValueError("floor_frac must be in [0, 1)")
 
     @property
     def name(self) -> str:
-        """CN: 稳定名字（含参数）。EN: Stable name (parameters included)."""
+        """CN: 稳定名字（含参数与 floor）。EN: Stable name (parameters and floor included)."""
         if self.kind == "uniform":
-            return "uniform"
-        if self.kind == "gaussian":
-            return f"gaussian(c={self.center:g},w={self.width:g})"
-        parts = ",".join(f"{w:g}@{c:g}/{s:g}" for w, c, s in self.components)
-        return f"gmm({parts})"
+            base = "uniform"
+        elif self.kind == "gaussian":
+            base = f"gaussian(c={self.center:g},w={self.width:g})"
+        else:
+            parts = ",".join(f"{w:g}@{c:g}/{s:g}" for w, c, s in self.components)
+            base = f"gmm({parts})"
+        return base if self.floor_frac <= 0.0 else f"{base}[floor={self.floor_frac:g}]"
 
     def weights(self, n: int) -> np.ndarray:
         """CN: 长度为 n、和为 1 的质量向量。EN: Mass vector of length n summing to 1."""
@@ -79,7 +84,13 @@ class MarginalSpec:
         total = float(np.sum(weights, dtype=np.float64))
         if not np.isfinite(total) or total <= 0.0:
             raise ValueError("marginal weights must have positive finite total mass")
-        return np.ascontiguousarray(weights / total, dtype=np.float64)
+        normalized = weights / total
+        if self.floor_frac > 0.0:
+            # CN: 与均匀混合，保证最小质量 ~ floor_frac/n，避免极小质量被稀疏 OT 丢行/列。
+            # EN: Mix with uniform so the minimum mass is ~floor_frac/n; avoids the sparse OT
+            #     solver dropping tiny-mass rows/columns.
+            normalized = (1.0 - self.floor_frac) * normalized + self.floor_frac / float(size)
+        return np.ascontiguousarray(normalized, dtype=np.float64)
 
 
 # CN: 命名预设。`gaussian` 是「单个高斯」，`gmm` 是「二分量高斯混合」。
@@ -88,6 +99,11 @@ PRESETS: dict[str, MarginalSpec] = {
     "uniform": MarginalSpec("uniform"),
     "gaussian": MarginalSpec("gaussian", center=0.5, width=0.15),
     "gmm": MarginalSpec("gmm", components=((0.5, 0.30, 0.07), (0.5, 0.72, 0.09))),
+    # CN: 与均匀混合 1%，保证最小质量 ~1e-2/n（GPU/HELLO 真值放大规模时必需）。
+    # EN: 1% uniform mixing so the minimum mass is ~1e-2/n (needed for the GPU/HELLO path at scale).
+    "gmm_floored": MarginalSpec(
+        "gmm", components=((0.5, 0.30, 0.07), (0.5, 0.72, 0.09)), floor_frac=0.01
+    ),
 }
 
 
