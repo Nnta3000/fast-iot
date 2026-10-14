@@ -130,13 +130,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--gpu", default="auto", help='"auto" or a physical GPU index')
     parser.add_argument("--out", type=Path, default=None)
     # e2e
+    parser.add_argument("--family", default="diagonal")
+    parser.add_argument("--marginal", default="gmm_floored")
     parser.add_argument("--sizes", type=int, nargs="+", default=[800, 3200])
+    parser.add_argument("--seeds", type=int, nargs="+", default=[0])
     parser.add_argument("--point-dimension", type=int, default=8)
     parser.add_argument("--lowrank-k", type=int, default=8)
     parser.add_argument("--scans", nargs="+", default=["hello"])
     parser.add_argument("--masters", nargs="+", default=["cupdlpx"])
     parser.add_argument("--plan-backend", default="auto", choices=("auto", "hello", "pot"))
     parser.add_argument("--scan-device", default="auto")
+    parser.add_argument("--cupdlpx-time-limit", type=float, default=None,
+                        help="Cap CuPDLPx seconds per master solve.")
     parser.add_argument("--cupdlpx-warm-start", action="store_true")
     parser.add_argument("--max-iterations", type=int, default=300)
     parser.add_argument("--validate", action="store_true")
