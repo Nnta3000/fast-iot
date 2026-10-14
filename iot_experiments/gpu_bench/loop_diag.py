@@ -254,8 +254,11 @@ def cmd_test1(args: argparse.Namespace) -> int:
     )
     iters = int(result.n_iterations)
     half = max(1, (iters + 1) // 2)
-    F_half = recorder.edge_sets[half - 1]
-    print(f"[test1] HiGHS loop: converged={result.converged} iters={iters}; freeze F at iter {half} (|F|={F_half.size})", flush=True)
+    freeze_index = (iters - 1) if str(getattr(args, "freeze", "half")) == "last" else (half - 1)
+    F_half = recorder.edge_sets[freeze_index]
+    print(f"[test1] HiGHS loop: converged={result.converged} iters={iters}; freeze F at iter {freeze_index + 1} "
+          f"(mode={getattr(args, 'freeze', 'half')}, |F|={F_half.size}, "
+          f"maxviol={float(log[freeze_index]['max_violation']):.3e})", flush=True)
 
     solutions: dict[str, object] = {}
     solutions["highs_lex"] = LinearMasterSolver(random_seed=int(args.seed)).solve(problem, F_half, tie_break="lex")
@@ -362,6 +365,7 @@ def cmd_test3(args: argparse.Namespace) -> int:
             )
             master = [float(e["master_seconds"]) for e in log]
             scan = [float(e["scan_seconds"]) for e in log]
+            solver_eps = 1e-4 if name.startswith("cupdlpx") else 1e-12
             rows.append({
                 "n": int(n), "solver": name, "converged": bool(result.converged),
                 "iterations": int(result.n_iterations), "final_F": int(result.support_size),
@@ -370,10 +374,15 @@ def cmd_test3(args: argparse.Namespace) -> int:
                 "mean_iter_s": float(np.mean([m + s for m, s in zip(master, scan)])) if master else 0.0,
                 "total_s": float(np.sum(master) + np.sum(scan)),
                 "edge_hashes": rec.hashes, "final_delta": float(result.delta),
+                "solver_eps": solver_eps,
+                "delta_over_eps": float(result.delta) / solver_eps if solver_eps > 0 else float("nan"),
+                "maxviol_traj": [float(e["max_violation"]) for e in log],
+                "F_traj": [int(e["n_edges"]) for e in log],
             })
             r = rows[-1]
             print(f"[test3] n={n:>4} {name:<18} conv={result.converged} it={result.n_iterations:>3} "
-                  f"|F|={result.support_size:>5} ms/iter={r['mean_iter_s']*1e3:>8.1f} total={r['total_s']:>7.2f}s")
+                  f"|F|={result.support_size:>5} ms/iter={r['mean_iter_s']*1e3:>8.1f} total={r['total_s']:>7.2f}s "
+                  f"delta={result.delta:.4g} delta/eps={r['delta_over_eps']:.3g}")
     out = Path(args.out) if args.out else (_REPO_ROOT / "iot_experiments" / "gpu_bench" / "out" / "diag" / f"test3_seed{args.seed}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"test": "test3", "rows": rows}, indent=2) + "\n", encoding="utf-8")
@@ -531,6 +540,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--scan", default="numpy")
     parser.add_argument("--rho", type=float, nargs="+", default=[1e-3, 1e-2, 1e-1])
     parser.add_argument("--cupdlpx-cap", type=float, default=60.0)
+    parser.add_argument("--freeze", choices=("half", "last"), default="half")
     parser.add_argument("--out", type=Path, default=None)
     return parser.parse_args(argv)
 
