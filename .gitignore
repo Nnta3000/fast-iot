@@ -218,6 +218,7 @@ __pycache__/
 /iot_experiments/marginals/out/
 /iot_experiments/families/out/
 /iot_experiments/external/out/
+/iot_experiments/core/out/
 
 # CN: legacy（历史）实验整目录不推送（含不适合公开的报告/脚本）
 # EN: the whole legacy experiments directory is not pushed (holds files unfit for public)
