@@ -25,9 +25,27 @@ from iot_experiments.core import (  # noqa: E402
 )
 
 
-def test_uniform_marginal_is_flat_and_normalised() -> None:
+def test_uniform_marginal_is_flat_unit_weight() -> None:
+    # CN: uniform 质量恒为 1（不归一化）——见 marginals.py 的设计说明。
+    # EN: uniform masses are identically 1 (not normalised) -- see the design note in marginals.py.
     weights = marginal_spec("uniform").weights(16)
-    np.testing.assert_allclose(weights, np.full(16, 1.0 / 16.0))
+    np.testing.assert_allclose(weights, np.full(16, 1.0))
+
+
+def test_gmm_cloud_is_a_mixture_and_weights_are_unit() -> None:
+    # CN: gmm 的形状由**点云**（d 维高斯混合）承载；质量为 1。
+    # EN: gmm's shape lives in the *cloud* (a d-dim Gaussian mixture); masses are 1.
+    import numpy as _np
+
+    spec = marginal_spec("gmm")
+    np.testing.assert_allclose(spec.weights(32), _np.ones(32))
+    rng = _np.random.default_rng(0)
+    points = spec.sample_points(4000, rng)
+    assert points.shape == (4000, spec.point_dimension)
+    # Bimodal along coordinate 0, roughly balanced (equal component weights).
+    frac_negative = float((points[:, 0] < 0.0).mean())
+    assert 0.4 < frac_negative < 0.6
+    assert float(points[:, 0].std()) > 1.0  # centres spread it much wider than N(0,1)
 
 
 def test_gaussian_marginal_is_peaked_and_normalised() -> None:

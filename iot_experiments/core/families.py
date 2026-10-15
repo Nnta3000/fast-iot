@@ -26,6 +26,8 @@ from iot import (
 )
 from iot_experiments.benchmark.lowrank import LowRankFeatures
 
+from .marginals import MarginalSpec
+
 LP_FAMILIES: tuple[str, ...] = ("diagonal", "quadratic", "lowrank")
 ALL_FAMILIES: tuple[str, ...] = ("diagonal", "quadratic", "lowrank", "bilinear-psd")
 
@@ -70,24 +72,35 @@ class FamilySpec:
 
 
 def build_family(
-    spec: FamilySpec, rng: np.random.Generator, m: int, n: int
+    spec: FamilySpec, rng: np.random.Generator, m: int, n: int, *, marginal: MarginalSpec | None = None
 ) -> tuple[FeatureMap, ThetaSet, np.ndarray]:
     """
     CN: 抽样一个族的 (features, theta_set, theta_star)；theta_star 先抽，再抽点云/因子。
+        `marginal` 可选：若给出且其 `kind=="gmm"`，点云由该混合的 `sample_points` 生成（几何承载混合），
+        否则点云为 i.i.d. N(0, I)（向后兼容）。
     EN: Draw one family's (features, theta_set, theta_star); theta_star first, then points/factors.
+        `marginal` is optional: when given and `marginal.kind == "gmm"`, the cloud is drawn from that
+        mixture's `sample_points` (geometry carries the mixture); otherwise the cloud is i.i.d. N(0, I)
+        (backward compatible).
     """
     d = int(spec.point_dimension)
+
+    def _cloud(size: int) -> np.ndarray:
+        if marginal is not None and marginal.kind == "gmm":
+            return marginal.sample_points(size, rng, dimension=d)
+        return np.ascontiguousarray(rng.normal(size=(int(size), d)), dtype=np.float64)
+
     if spec.name == "diagonal":
         theta_set = SimplexTheta(d)
         theta_star = theta_set.sample(rng)
-        source = rng.normal(size=(int(m), d))
-        target = rng.normal(size=(int(n), d))
+        source = _cloud(int(m))
+        target = _cloud(int(n))
         return DiagonalWeightFeatures(source, target), theta_set, theta_star
     if spec.name == "quadratic":
         theta_set = SimplexTheta(spec.n_features())
         theta_star = theta_set.sample(rng)
-        source = rng.normal(size=(int(m), d))
-        target = rng.normal(size=(int(n), d))
+        source = _cloud(int(m))
+        target = _cloud(int(n))
         return QuadraticFeatures(source, target), theta_set, theta_star
     if spec.name == "lowrank":
         theta_set = SimplexTheta(int(spec.lowrank_k))
@@ -97,8 +110,8 @@ def build_family(
         return LowRankFeatures(source_factors, target_factors), theta_set, theta_star
     theta_set = BilinearPSDTheta(d)
     theta_star = theta_set.sample(rng)
-    source = rng.normal(size=(int(m), d))
-    target = rng.normal(size=(int(n), d))
+    source = _cloud(int(m))
+    target = _cloud(int(n))
     return BilinearPSDFeatures(source, target), theta_set, theta_star
 
 

@@ -93,10 +93,13 @@ def run_spec(spec: RunSpec) -> RunRecord:
     family_spec = FamilySpec(
         spec.family, point_dimension=int(spec.point_dimension), lowrank_k=int(spec.lowrank_k)
     )
-    features, theta_set, theta_star = build_family(family_spec, rng, int(spec.m), int(spec.n))
+    marginal = marginal_spec(spec.marginal)
+    features, theta_set, theta_star = build_family(
+        family_spec, rng, int(spec.m), int(spec.n), marginal=marginal
+    )
 
-    source_mass = marginal_spec(spec.marginal).weights(int(spec.m))
-    target_mass = marginal_spec(spec.marginal).weights(int(spec.n))
+    source_mass = marginal.weights(int(spec.m))
+    target_mass = marginal.weights(int(spec.n))
 
     plan_backend = spec.plan_backend
     if plan_backend == "auto":
