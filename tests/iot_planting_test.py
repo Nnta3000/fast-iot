@@ -53,6 +53,28 @@ def test_planted_loop_converges_without_pruning() -> None:
     assert result.is_optimal is True
 
 
+def test_planted_default_tie_break_none_cycles_but_lex_generic_converges() -> None:
+    # CN: **关键发现**——种入的 Monge 实例在默认 tie_break="none" 下会循环（即使开迟滞剪枝），
+    #     而 tie_break="lex_generic"（证明覆盖的两步规则）总能收敛，且可以保持剪枝开启。
+    # EN: **key finding** -- the planted Monge instances CYCLE under the default tie_break="none" (even
+    #     with hysteresis pruning), while tie_break="lex_generic" (the proof-covered two-solve rule)
+    #     always converges, with pruning kept on.
+    planted = plant_instance(family="diagonal", n=200, point_dimension=8, seed=0)
+    cycling = solve_inverse_ot(
+        planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="none",
+        max_iterations=150, scan_backend="numpy", validate=True,
+        prune=True, prune_hysteresis=True,
+    )
+    fixed = solve_inverse_ot(
+        planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="lex_generic",
+        max_iterations=150, scan_backend="numpy", validate=True,
+        prune=True, prune_hysteresis=True,
+    )
+    assert not cycling.converged          # hits the iteration cap
+    assert fixed.converged                # proof-covered tie-break closes the loop
+    assert fixed.is_optimal is True
+
+
 def test_planted_small_margin_regime_is_flagged() -> None:
     # CN: gap 分位数必须被报告（用于区分"求解失败"与"实例几乎不可辨识"）。
     # EN: gap quantiles are reported (to tell "solver failed" from "instance barely identifiable").

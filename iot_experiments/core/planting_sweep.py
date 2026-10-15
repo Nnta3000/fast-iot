@@ -28,12 +28,13 @@ from iot.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
 from iot_experiments.core.planting import plant_instance  # noqa: E402
 
 
-def _solve(planted, *, strategy: str, scan: str, solver: str, max_iterations: int) -> dict[str, object]:
+def _solve(planted, *, strategy: str, scan: str, solver: str, tie_break: str,
+           max_iterations: int) -> dict[str, object]:
     prune = strategy in ("tolerance", "hysteresis")
     master = (CuPdlpxMasterSolver() if solver == "cupdlpx" else LinearMasterSolver(random_seed=0))
     t0 = time.perf_counter()
     result = solve_inverse_ot(
-        planted.problem, solver=master, tie_break="none",
+        planted.problem, solver=master, tie_break=str(tie_break),
         max_iterations=int(max_iterations), scan_backend=str(scan), validate=True,
         prune=bool(prune), prune_hysteresis=(strategy == "hysteresis"),
     )
@@ -57,7 +58,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="separation backend (hello/torch are GPU/linear-memory)")
     parser.add_argument("--solver", default="highs", choices=("highs", "cupdlpx"),
                         help="master solver (cupdlpx is the GPU first-order master)")
-    parser.add_argument("--prune-strategy", default="none", choices=("none", "tolerance", "hysteresis"))
+    parser.add_argument("--prune-strategy", default="hysteresis", choices=("none", "tolerance", "hysteresis"))
+    parser.add_argument("--tie-break", default="lex_generic", choices=("none", "lex_generic"),
+                        help="tie_break='lex_generic' is the proof-covered rule and stops cycling")
     parser.add_argument("--out", type=Path, default=_REPO_ROOT / "iot_experiments" / "core" / "out" / "planting")
     args = parser.parse_args(argv)
 
@@ -72,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
                         planted = plant_instance(
                             family=family, n=int(n), point_dimension=int(d), seed=int(seed), g=g)
                         record: dict[str, object] = {
-                            "family": family, "d": int(d), "n": int(n), "seed": int(seed),
+                            "family": family, "d": int(d), "n_requested": int(n), "seed": int(seed),
                             "g_profile": g_profile, "problem_type": planted.problem_type,
                             "mass_splitting": planted.mass_splitting,
                             "n_eff": planted.n_eff, "m_eff": planted.m_eff,
@@ -82,17 +85,20 @@ def main(argv: list[str] | None = None) -> int:
                             "gap_quantiles": planted.gap_quantiles,
                             "g_norm": planted.g_norm, "feature_scale": planted.feature_scale,
                             "prune_false": _solve(planted, strategy="none", scan=str(args.scan),
-                                                  solver=str(args.solver), max_iterations=int(args.max_iterations)),
+                                                  solver=str(args.solver), tie_break="none",
+                                                  max_iterations=int(args.max_iterations)),
                             "default": _solve(planted, strategy=str(args.prune_strategy), scan=str(args.scan),
-                                              solver=str(args.solver), max_iterations=int(args.max_iterations)),
+                                              solver=str(args.solver), tie_break=str(args.tie_break),
+                                              max_iterations=int(args.max_iterations)),
                         }
                         records.append(record)
                         df = record["prune_false"]
-                        print(f"{family:10s} d={d} n={n} seed={seed} g={g_profile:6s}: "
-                              f"|S|={planted.support_size} m_eff={planted.m_eff} "
+                        print(f"{family:10s} d={d} n_req={n} n_eff={planted.n_eff} m_eff={planted.m_eff} "
+                              f"seed={seed} g={g_profile:6s}: |S|={planted.support_size} "
                               f"cert={planted.max_dual_violation:.1e} gap50={planted.gap_quantiles['0.50']:.2e} | "
                               f"noprune conv={df['converged']} it={df['iterations']} isopt={df['is_optimal']} | "
-                              f"default conv={record['default']['converged']} it={record['default']['iterations']}",
+                              f"strat={args.prune_strategy} tie={args.tie_break} "
+                              f"conv={record['default']['converged']} it={record['default']['iterations']}",
                               flush=True)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "planting_sweep.json").write_text(json.dumps({"records": records}, indent=2) + "\n", encoding="utf-8")
