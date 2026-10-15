@@ -46,7 +46,13 @@ import numpy as np
 from scipy import sparse
 
 from .edges import EdgeSet
-from .master import MasterSolution, TieBreak, _MasterSystem, build_master_system
+from .master import (
+    MasterSolution,
+    TieBreak,
+    _MasterSystem,
+    build_master_system,
+    draw_generic_direction,
+)
 from .problem import InverseOTError, InverseOTProblem
 from .sinkhorn_theta import project_theta
 from .theta import SimplexTheta
@@ -110,11 +116,21 @@ class CuPdlpxLp:
         return int(self.rhs.size)
 
 
-def build_cupdlpx_lp(problem: InverseOTProblem, edges: EdgeSet) -> CuPdlpxLp:
+def build_cupdlpx_lp(
+    problem: InverseOTProblem, edges: EdgeSet, *,
+    epsilon: float = 0.0, generic_direction: np.ndarray | None = None,
+) -> CuPdlpxLp:
     """
     CN: 由既有 `build_master_system` 构造 CuPDLPx 形式的同一 master LP（等式行在前）。
+        `epsilon > 0` 时把目标改为 `delta + eps*<r, (theta,f,g)>`（r 为整轮固定的通用方向）：
+        可行集与最优值不变，只在水面（delta = delta*）上选出唯一顶点——这是 CuPDLPx 版
+        `RegularizedMasterSolver` 的 tie-break（单次求解，无需精确面，故适用于一阶 master）。
     EN: Build the same master LP in CuPDLPx form from the existing `build_master_system`
-        (equality rows first).
+        (equality rows first). With `epsilon > 0` the objective becomes
+        `delta + eps*<r, (theta,f,g)>` (r the run-fixed generic direction): the feasible set and the
+        optimal value are unchanged, so it only selects a unique vertex on the face delta = delta* --
+        the CuPDLPx analogue of `RegularizedMasterSolver`'s tie-break (one solve, no exact face needed,
+        hence valid for a first-order master).
     """
     system: _MasterSystem = build_master_system(problem, edges)
     layout = system.layout
@@ -123,6 +139,15 @@ def build_cupdlpx_lp(problem: InverseOTProblem, edges: EdgeSet) -> CuPdlpxLp:
     # EN: `min c^T x` with `c[delta] = -1` is `max delta`.
     c = np.zeros(size, dtype=np.float64)
     c[int(layout.delta)] = -1.0
+    if float(epsilon) > 0.0 and generic_direction is not None:
+        direction = np.asarray(generic_direction, dtype=np.float64).reshape(-1)
+        expected = size - int(layout.theta_start)
+        if direction.size != expected:
+            raise ValueError(
+                f"generic_direction must have {expected} entries (theta, f, g); got {direction.size}"
+            )
+        scale = float(np.abs(direction).max()) or 1.0
+        c[int(layout.theta_start) :] += -float(epsilon) * (direction / scale)
     a_csc = sparse.csc_matrix(sparse.vstack([system.a_eq, system.a_ub], format="csc"))
     rhs = np.ascontiguousarray(np.concatenate([system.b_eq, system.b_ub]), dtype=np.float64)
     n_eqs = int(system.b_eq.size)
@@ -140,15 +165,29 @@ def build_cupdlpx_lp(problem: InverseOTProblem, edges: EdgeSet) -> CuPdlpxLp:
 @dataclass(frozen=True)
 class CuPdlpxMasterSolver:
     """
-    CN: CuPDLPx master 求解器（新增可选）。默认纯 `max delta`；`tie_break` 只支持 `"none"`
-    （CuPDLPx 没有字典序重解，和 LP 的 `none` 一样不在终止性证明覆盖范围内）。
-    EN: CuPDLPx master solver (new option). Pure `max delta` by default; only
-        `tie_break="none"` is supported (CuPDLPx has no lexicographic re-solve, so like the LP
-        `none` mode it is outside the termination proof).
+    CN: CuPDLPx master 求解器（新增可选）。默认纯 `max delta`；`tie_break` 支持 `"none"` 与
+        `"regularized"`。
+          - `"none"`：纯 `max delta`（不在终止性证明覆盖范围内，可能循环）。
+          - `"regularized"`：目标 `delta + eps*<r,(theta,f,g)>`，r 整轮固定、单次求解。可行集与
+            最优值不变，只在 delta=delta* 的水面上选出唯一顶点——`"lex_generic"`/`"random"` 的
+            一阶可行替代（无需精确面，因而 CuPDLPx 能做）。
+        注意：`"lex_generic"`/`"lex"`/`"random"` 需要精确面的两步重解，CuPDLPx 不支持。
+    EN: CuPDLPx master solver (optional). Pure `max delta` by default; `tie_break` supports `"none"`
+        and `"regularized"`.
+          - `"none"`: pure `max delta` (outside the termination proof; may cycle).
+          - `"regularized"`: objective `delta + eps*<r,(theta,f,g)>` with r run-fixed, one solve. The
+            feasible set and optimal value are unchanged, so it just selects a unique vertex on the face
+            delta = delta* -- a first-order-viable stand-in for `lex_generic`/`"random"` (it needs no
+            exact face, hence CuPDLPx can do it).
+        Note: `"lex_generic"`/`"lex"`/`"random"` need an exact-face two-stage re-solve; CuPDLPx does not
+        support them.
     """
 
     params: dict[str, Any] = field(default_factory=dict)
     warm_start: bool = False
+    epsilon: float = 0.0
+    random_seed: int = 0
+    generic_direction: tuple[float, ...] | None = None
 
     def solve(
         self,
@@ -157,13 +196,29 @@ class CuPdlpxMasterSolver:
         *,
         tie_break: TieBreak = "none",
     ) -> MasterSolution:
-        if str(tie_break) != "none":
+        if str(tie_break) not in {"none", "regularized"}:
             raise InverseOTError(
-                "CuPdlpxMasterSolver supports tie_break='none' only; CuPDLPx has no "
-                "lexicographic re-solve."
+                "CuPdlpxMasterSolver supports tie_break='none' or 'regularized' only; CuPDLPx has no "
+                "lexicographic re-solve (no exact delta-optimal face)."
             )
+        direction: np.ndarray | None = None
+        epsilon = float(self.epsilon)
+        if str(tie_break) == "regularized":
+            if epsilon <= 0.0:
+                raise InverseOTError("tie_break='regularized' requires epsilon > 0")
+            if self.generic_direction is None:
+                direction = draw_generic_direction(
+                    random_seed=int(self.random_seed),
+                    n_features=int(problem.n_features),
+                    n_source=int(problem.n_source),
+                    n_target=int(problem.n_target),
+                )
+            else:
+                direction = np.asarray(self.generic_direction, dtype=np.float64).reshape(-1)
+        else:
+            epsilon = 0.0
         pycupdlpx = _load_pycupdlpx()
-        lp = build_cupdlpx_lp(problem, edges)
+        lp = build_cupdlpx_lp(problem, edges, epsilon=epsilon, generic_direction=direction)
         solver = pycupdlpx.cupdlpx()
         solver.loadData(
             A=lp.a_csc,

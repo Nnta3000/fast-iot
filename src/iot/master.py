@@ -27,7 +27,7 @@ from .theta import LinearThetaSet
 # EN: "lex_generic" is the two-solve tie-break of proof section 6: maximise delta, then
 #     maximise one generic direction r on the face delta = delta*, with r drawn once for
 #     the whole run and held fixed.
-TieBreak = Literal["lex", "random", "none", "lex_generic"]
+TieBreak = Literal["lex", "random", "none", "lex_generic", "regularized"]
 _DEFAULT_RANDOM_SEED = 0
 
 
