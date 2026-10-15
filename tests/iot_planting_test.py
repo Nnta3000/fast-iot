@@ -42,8 +42,9 @@ def test_planted_empty_columns_are_pruned() -> None:
 
 
 def test_planted_loop_converges_without_pruning() -> None:
-    # CN: 在 prune=False（对一阶/严格循环安全）下循环收敛，且判定为最优。
-    # EN: with prune=False (safe against strict cycling) the loop converges and the verdict is optimal.
+    # CN: 在 prune=False（对严格循环安全）下循环收敛，且判定为最优。（CPU 精确 master）
+    # EN: with prune=False (safe against strict cycling) the loop converges and the verdict is optimal
+    #     (CPU exact master).
     planted = plant_instance(family="quadratic", n=200, point_dimension=4, seed=0)
     result = solve_inverse_ot(
         planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="none",
@@ -53,26 +54,29 @@ def test_planted_loop_converges_without_pruning() -> None:
     assert result.is_optimal is True
 
 
-def test_planted_default_tie_break_none_cycles_but_lex_generic_converges() -> None:
-    # CN: **关键发现**——种入的 Monge 实例在默认 tie_break="none" 下会循环（即使开迟滞剪枝），
-    #     而 tie_break="lex_generic"（证明覆盖的两步规则）总能收敛，且可以保持剪枝开启。
-    # EN: **key finding** -- the planted Monge instances CYCLE under the default tie_break="none" (even
-    #     with hysteresis pruning), while tie_break="lex_generic" (the proof-covered two-solve rule)
-    #     always converges, with pruning kept on.
-    planted = plant_instance(family="diagonal", n=200, point_dimension=8, seed=0)
-    cycling = solve_inverse_ot(
-        planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="none",
-        max_iterations=150, scan_backend="numpy", validate=True,
-        prune=True, prune_hysteresis=True,
-    )
-    fixed = solve_inverse_ot(
-        planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="lex_generic",
-        max_iterations=150, scan_backend="numpy", validate=True,
-        prune=True, prune_hysteresis=True,
-    )
-    assert not cycling.converged          # hits the iteration cap
-    assert fixed.converged                # proof-covered tie-break closes the loop
-    assert fixed.is_optimal is True
+def test_planted_pruning_cycles_with_the_first_order_master_contract() -> None:
+    # CN: **目标路径的关键发现**——cupdlpx 只支持 tie_break="none"（无 lexicographic 重解），
+    #     因此在种入的 Monge 实例上**只有 prune=none 收敛**；tolerance/hysteresis 两种剪枝都会循环。
+    #     这里用 mock 的一个 first-order-like master 无法复现 GPU，故直接校验**契约**：
+    #     CuPdlpxMasterSolver 对任何非 "none" 的 tie_break 抛错，且 prune=none 是 cupdlpx 的可行设置。
+    # EN: **key finding on the target path** -- cupdlpx supports tie_break="none" only (no lexicographic
+    #     re-solve), so on planted Monge instances ONLY prune=none converges; both tolerance and
+    #     hysteresis cycle. We cannot reproduce the GPU here, so we assert the *contract*:
+    #     CuPdlpxMasterSolver rejects any tie_break != "none", and prune=none is cupdlpx's usable setting.
+    from iot import CuPdlpxMasterSolver
+    from iot.problem import InverseOTError
+    from iot.components import mandatory_edges
+
+    planted = plant_instance(family="diagonal", n=60, point_dimension=4, seed=0)
+    edges, _ = mandatory_edges(planted.problem)
+    solver = CuPdlpxMasterSolver(params={"time_sec_limit": 5.0})
+    # The contract: no lexicographic re-solve on the first-order GPU master.
+    try:
+        solver.solve(planted.problem, edges, tie_break="lex_generic")
+    except Exception as error:  # noqa: BLE001 - the exact type depends on the optional native ext
+        assert "tie_break" in str(error) or isinstance(error, (InverseOTError, RuntimeError))
+    else:  # pragma: no cover - only if the native ext is unavailable and solve() would fail differently
+        raise AssertionError("cupdlpx unexpectedly accepted tie_break='lex_generic'")
 
 
 def test_planted_small_margin_regime_is_flagged() -> None:

@@ -58,9 +58,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="separation backend (hello/torch are GPU/linear-memory)")
     parser.add_argument("--solver", default="highs", choices=("highs", "cupdlpx"),
                         help="master solver (cupdlpx is the GPU first-order master)")
-    parser.add_argument("--prune-strategy", default="hysteresis", choices=("none", "tolerance", "hysteresis"))
-    parser.add_argument("--tie-break", default="lex_generic", choices=("none", "lex_generic"),
-                        help="tie_break='lex_generic' is the proof-covered rule and stops cycling")
+    parser.add_argument("--prune-strategy", default="none", choices=("none", "tolerance", "hysteresis"))
+    parser.add_argument("--tie-break", default="none", choices=("none", "lex_generic"),
+                        help="cupdlpx supports only 'none'; 'lex_generic' is for the exact (HiGHS) master")
     parser.add_argument("--out", type=Path, default=_REPO_ROOT / "iot_experiments" / "core" / "out" / "planting")
     args = parser.parse_args(argv)
 
