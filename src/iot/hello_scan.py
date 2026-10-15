@@ -80,7 +80,17 @@ def scan_violations_fast(
         blockwise scan; fall back to CPU when unsupported.
     """
     if not fast_scan_supported(problem.features):
-        return scan_violations(problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma))
+        # CN: 非对角族：HELLO 内积扫描不适用，回退到通用 torch 扫描（仍是 GPU/线性内存），
+        #     而不是 CPU numpy。这样 hello 后端对任意族都保持 GPU-bound。
+        # EN: non-diagonal families: HELLO's inner-product scan does not apply; fall back to the generic
+        #     torch scan (still GPU / linear memory) rather than CPU numpy, so the hello backend stays
+        #     GPU-bound for any family.
+        from .generic_scan import scan_violations_torch
+
+        return scan_violations_torch(
+            problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma),
+            device=str(device), max_tile_bytes=int(max_tile_bytes),
+        )
     if int(gamma) < 1:
         raise ValueError("gamma must be >= 1")
 
@@ -134,9 +144,15 @@ def scan_violations_fast(
         rows = rows[keep]
         cols = cols[keep]
     if rows.size == 0:
-        # CN: 没有候选 -> 停机；用 CPU 扫描给出权威的 maxviol（仅此一次）。
-        # EN: No candidates -> stop; use one CPU scan for the authoritative max violation.
-        return scan_violations(problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma))
+        # CN: 没有候选 -> 停机；用通用 torch 扫描给出权威的 maxviol（GPU/线性内存，非 CPU numpy）。
+        # EN: No candidates -> stop; use the generic torch scan for the authoritative max violation
+        #     (GPU / linear memory, not CPU numpy).
+        from .generic_scan import scan_violations_torch
+
+        return scan_violations_torch(
+            problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma),
+            device=str(device), max_tile_bytes=int(max_tile_bytes),
+        )
 
     costs = features.costs(theta, rows, cols)
     sigma = master.source_dual[rows] + master.target_dual[cols] - costs

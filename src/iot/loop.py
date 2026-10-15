@@ -92,10 +92,14 @@ def solve_inverse_ot(
         constraint generation.
 
     CN: `scan_backend="hello"` 用 HELLO-OT 的 torch/GPU 分块扫描替代 NumPy 扫描（仅对
-        `DiagonalWeightFeatures` 生效，其余自动回退）；`scan_device` 透传给它（"auto"/"cpu"/"cuda"）。
-    EN: `scan_backend="hello"` uses HELLO-OT's torch/GPU blockwise scan instead of the NumPy
-        scan (only for `DiagonalWeightFeatures`; otherwise it falls back); `scan_device` is
-        forwarded ("auto"/"cpu"/"cuda").
+        `DiagonalWeightFeatures` 生效，其余自动回退）；`scan_backend="torch"` 用 `src/iot` 自带的
+        通用 torch 扫描，对**任意**线性于 theta 的代价都可用（有双线性嵌入时走 `O(m n d)` matmul，
+        否则 `O(m n K)`），且**不需要** native 扩展。`scan_device` 透传（"auto"/"cpu"/"cuda"）。
+    EN: `scan_backend="hello"` uses HELLO-OT's torch/GPU blockwise scan instead of the NumPy scan
+        (only for `DiagonalWeightFeatures`; otherwise it falls back); `scan_backend="torch"` uses the
+        generic torch scan shipped in `src/iot`, valid for **any** cost linear in theta (the `O(m n d)`
+        matmul path when a bilinear embedding exists, else `O(m n K)`), and needs **no** native
+        extension. `scan_device` is forwarded ("auto"/"cpu"/"cuda").
     """
     if int(max_iterations) < 1:
         raise ValueError("max_iterations must be >= 1")
@@ -103,8 +107,8 @@ def solve_inverse_ot(
         raise ValueError("gamma must be >= 1")
     if float(tol) < 0.0 or float(tau_prune) < 0.0:
         raise ValueError("tol and tau_prune must be nonnegative")
-    if str(scan_backend) not in ("numpy", "hello"):
-        raise ValueError("scan_backend must be 'numpy' or 'hello'")
+    if str(scan_backend) not in ("numpy", "hello", "torch"):
+        raise ValueError("scan_backend must be 'numpy', 'hello' or 'torch'")
     if solver is not None:
         master_solver: MasterSolver = solver
     elif tie_break == "lex_generic":
@@ -146,7 +150,21 @@ def solve_inverse_ot(
         master = master_solver.solve(problem, edges, tie_break=tie_break)
         master_time = time.perf_counter() - master_started
         oracle_started = time.perf_counter()
-        if str(scan_backend) == "hello":
+        if str(scan_backend) == "torch":
+            # CN: 通用 torch 扫描：任意线性于 theta 的代价；有嵌入走 O(m n d)，否则 O(m n K)。
+            # EN: generic torch scan: any cost linear in theta; O(m n d) with an embedding, else O(m n K).
+            from .generic_scan import scan_violations_torch
+
+            scan = scan_violations_torch(
+                problem,
+                master,
+                excluded=edges,
+                tol=float(tol),
+                gamma=int(gamma),
+                device=str(scan_device),
+                max_tile_bytes=int(scan_max_tile_bytes),
+            )
+        elif str(scan_backend) == "hello":
             from .hello_scan import scan_violations_fast
 
             scan = scan_violations_fast(

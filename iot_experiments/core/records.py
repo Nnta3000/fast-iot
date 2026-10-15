@@ -59,8 +59,8 @@ class RunSpec:
             raise ValueError("num_itermax must be >= 1")
         if self.solver not in {"auto", "regularized", "sdp", "cupdlpx"}:
             raise ValueError("solver must be one of auto/regularized/sdp/cupdlpx")
-        if self.scan_backend not in {"numpy", "hello"}:
-            raise ValueError("scan_backend must be 'numpy' or 'hello'")
+        if self.scan_backend not in {"numpy", "hello", "torch"}:
+            raise ValueError("scan_backend must be 'numpy', 'hello' or 'torch'")
         if self.plan_backend not in {"auto", "hello", "pot"}:
             raise ValueError("plan_backend must be one of auto/hello/pot")
 

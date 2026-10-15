@@ -63,5 +63,23 @@ class LowRankFeatures:
         value = np.asarray(theta, dtype=np.float64).reshape(-1)
         return np.ascontiguousarray(self.features(rows, cols) @ value, dtype=np.float64)
 
+    def bilinear_embedding(self, theta: np.ndarray):  # noqa: ANN201 - BilinearEmbedding (avoid import cycle)
+        """
+        CN: `sum_k theta_k U_ik V_jk = <sqrt(theta)<U_i, sqrt(theta)<V_j>`，`O(m n k)` matmul。
+        EN: `sum_k theta_k U_ik V_jk = <sqrt(theta)<U_i, sqrt(theta)<V_j>`, an `O(m n k)` matmul.
+        """
+        from iot.bilinear import BilinearEmbedding
+
+        value = np.asarray(theta, dtype=np.float64).reshape(-1)
+        root = np.sqrt(np.clip(value, 0.0, None))
+        source = np.ascontiguousarray(self.source_factors * root[None, :], dtype=np.float64)
+        target = np.ascontiguousarray(self.target_factors * root[None, :], dtype=np.float64)
+        zeros_s = np.zeros(source.shape[0], dtype=np.float64)
+        zeros_t = np.zeros(target.shape[0], dtype=np.float64)
+        # CN: c_ij = <u_i, v_j> = 0 + 0 - (-1) * <u_i, v_j>，故 dot_scale = -1。
+        # EN: c_ij = <u_i, v_j> = 0 + 0 - (-1) * <u_i, v_j>, hence dot_scale = -1.
+        return BilinearEmbedding(source=source, target=target, source_offset=zeros_s,
+                                 target_offset=zeros_t, dot_scale=-1.0)
+
 
 __all__ = ["LowRankFeatures"]

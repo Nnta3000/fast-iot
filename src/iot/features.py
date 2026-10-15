@@ -313,6 +313,39 @@ class QuadraticFeatures:
             out[start:stop] = np.einsum("ea,ab,eb->e", difference, matrix, difference, optimize=True)
         return np.ascontiguousarray(out, dtype=np.float64)
 
+    def bilinear_embedding(self, theta: np.ndarray):  # noqa: ANN201 - BilinearEmbedding (avoid import cycle)
+        """
+        CN: `O(m n d)` 快速路径：`c = (x-y)^T M (x-y) = a_i + b_j - 2<M x_i, y_j>`，
+            其中 `M` 由 theta 给出，`a_i = x_i^T M x_i`，`b_j = y_j^T M y_j`。
+        EN: `O(m n d)` fast path: `c = (x-y)^T M (x-y) = a_i + b_j - 2<M x_i, y_j>`, with `M` built from
+            theta, `a_i = x_i^T M x_i`, `b_j = y_j^T M y_j`.
+        """
+        from .bilinear import BilinearEmbedding
+
+        value = np.asarray(theta, dtype=np.float64).reshape(-1)
+        if value.size != self.n_features:
+            raise ValueError(
+                f"theta has length {value.size} but quadratic features have {self.n_features}"
+            )
+        d = int(self.point_dimension)
+        matrix = np.zeros((d, d), dtype=np.float64)
+        for index, (a, b) in enumerate(self.pairs()):
+            if a == b:
+                matrix[a, a] = value[index]
+            else:
+                matrix[a, b] = 0.5 * value[index]
+                matrix[b, a] = 0.5 * value[index]
+        source = np.ascontiguousarray(self.source_points @ matrix, dtype=np.float64)   # M x_i (symmetric)
+        target = np.ascontiguousarray(self.target_points, dtype=np.float64)            # y_j
+        source_offset = np.ascontiguousarray(
+            np.einsum("ia,ab,ib->i", self.source_points, matrix, self.source_points, optimize=True)
+        )
+        target_offset = np.ascontiguousarray(
+            np.einsum("ja,ab,jb->j", self.target_points, matrix, self.target_points, optimize=True)
+        )
+        return BilinearEmbedding(source=source, target=target, source_offset=source_offset,
+                                 target_offset=target_offset, dot_scale=2.0)
+
 
 def dense_cost_matrix(
     feature_map: FeatureMap,

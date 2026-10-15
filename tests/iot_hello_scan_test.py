@@ -52,10 +52,13 @@ def test_fast_scan_matches_numpy_scan() -> None:
     assert abs(fast.max_violation - reference.max_violation) < 1e-6
 
 
-def test_fast_scan_falls_back_for_non_inner_product_family() -> None:
+def test_fast_scan_falls_back_to_torch_for_non_inner_product_family() -> None:
+    # CN: 非对角族（这里 LowRankFeatures）现在走通用 torch 扫描（GPU/线性内存），而不是 CPU numpy；
+    #     它必须与 numpy 参考在**停机判据**与**最大违反量**上一致（候选集允许 γ 边界上的并列差异）。
+    # EN: a non-diagonal family (here LowRankFeatures) now routes to the generic torch scan
+    #     (GPU / linear memory) instead of CPU numpy; it must match the numpy reference on the
+    #     stop criterion and the max violation (candidate sets may differ on gamma-boundary ties).
     rng = np.random.default_rng(3)
-    source = rng.normal(size=(20, 3))
-    target = rng.normal(size=(20, 3))
     features = LowRankFeatures(rng.normal(size=(20, 2)), rng.normal(size=(20, 2)))
     from iot import InverseOTProblem, SimplexTheta, dense_cost_matrix
 
@@ -71,8 +74,38 @@ def test_fast_scan_falls_back_for_non_inner_product_family() -> None:
     master = LinearMasterSolver().solve(problem, edges, tie_break="none")
     reference = scan_violations(problem, master, excluded=edges, tol=1e-9, gamma=1)
     fast = scan_violations_fast(problem, master, excluded=edges, tol=1e-9, gamma=1, device="cpu")
-    assert _pairs(fast) == _pairs(reference)
-    assert fast.max_violation == reference.max_violation
+    assert abs(fast.max_violation - reference.max_violation) < 1e-9
+    assert fast.scanned_edges == reference.scanned_edges
+
+
+def test_torch_scan_matches_numpy_on_quadratic() -> None:
+    # CN: 二次代价（项目的基础族）的通用 torch 扫描必须与 numpy 在停机判据/最大违反量上一致。
+    # EN: the generic torch scan on the quadratic cost (the project's base family) must match numpy
+    #     on the stop criterion and the max violation.
+    from iot import QuadraticFeatures, scan_violations_torch
+
+    rng = np.random.default_rng(11)
+    features = QuadraticFeatures(rng.normal(size=(40, 4)), rng.normal(size=(40, 4)))
+    from iot import InverseOTProblem, SimplexTheta, dense_cost_matrix
+
+    theta_set = SimplexTheta(features.n_features)
+    theta_star = theta_set.sample(rng)
+    import ot
+    from scipy import sparse
+
+    cost = dense_cost_matrix(features, theta_star)
+    plan = ot.emd(np.full(40, 1 / 40), np.full(40, 1 / 40), cost, numItermax=2_000_000)
+    problem = InverseOTProblem(features, theta_set, sparse.csr_matrix(plan))
+    edges, _ = mandatory_edges(problem)
+    master = LinearMasterSolver().solve(problem, edges, tie_break="none")
+    reference = scan_violations(problem, master, excluded=edges, tol=1e-9, gamma=1)
+    fast = scan_violations_torch(problem, master, excluded=edges, tol=1e-9, gamma=1, device="cpu")
+    assert abs(fast.max_violation - reference.max_violation) < 1e-9
+    assert fast.scanned_edges == reference.scanned_edges
+    # CN: 每个返回的候选都必须是真违例（sigma > tol），即 max_violation > tol。
+    # EN: every returned candidate must be a genuine violation (sigma > tol), i.e. max_violation > tol.
+    if fast.rows.size:
+        assert fast.max_violation > 1e-9
 
 
 def test_loop_hello_scan_matches_numpy_backend() -> None:

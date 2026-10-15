@@ -44,6 +44,13 @@ from .features import (
     QuadraticFeatures,
     dense_cost_matrix,
 )
+from .bilinear import (
+    BilinearEmbeddable,
+    BilinearEmbedding,
+    bilinear_embedding,
+    features_support_bilinear,
+)
+from .generic_scan import scan_violations_torch
 from .grounded import (
     GroundedInstance,
     make_bilinear_psd_grounded_instance,
@@ -52,6 +59,12 @@ from .grounded import (
 from .hello_scan import fast_scan_supported, scan_violations_fast
 from .hello_solver import hello_solver_supported, make_hello_solver
 from .loop import solve_inverse_ot
+from .torch_runtime import (
+    cuda_available,
+    describe_backend,
+    resolve_torch_device,
+    torch_available,
+)
 from .master import (
     CanonicalGaugeMasterSolver,
     LinearMasterSolver,
@@ -146,6 +159,15 @@ __all__ = [
     "fit_psd_moment_entropic",
     "fixed_dual_theta_ranges",
     "fast_scan_supported",
+    "features_support_bilinear",
+    "bilinear_embedding",
+    "BilinearEmbedding",
+    "BilinearEmbeddable",
+    "scan_violations_torch",
+    "torch_available",
+    "cuda_available",
+    "resolve_torch_device",
+    "describe_backend",
     "hello_solver_supported",
     "is_optimal_plan",
     "make_bilinear_psd_grounded_instance",
