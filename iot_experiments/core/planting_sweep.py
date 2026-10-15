@@ -29,19 +29,26 @@ from iot_experiments.core.planting import plant_instance  # noqa: E402
 
 
 def _solve(planted, *, strategy: str, scan: str, solver: str, tie_break: str,
-           max_iterations: int) -> dict[str, object]:
+           epsilon: float, tau_prune: float, max_iterations: int) -> dict[str, object]:
     prune = strategy in ("tolerance", "hysteresis")
-    master = (CuPdlpxMasterSolver() if solver == "cupdlpx" else LinearMasterSolver(random_seed=0))
+    if solver == "cupdlpx":
+        master = CuPdlpxMasterSolver(params={"time_sec_limit": 60.0}, epsilon=float(epsilon))
+    else:
+        master = LinearMasterSolver(random_seed=0)
     t0 = time.perf_counter()
     result = solve_inverse_ot(
         planted.problem, solver=master, tie_break=str(tie_break),
         max_iterations=int(max_iterations), scan_backend=str(scan), validate=True,
         prune=bool(prune), prune_hysteresis=(strategy == "hysteresis"),
+        tau_prune=float(tau_prune),
     )
     return {
         "converged": bool(result.converged), "iterations": int(result.n_iterations),
         "delta": float(result.delta), "final_max_violation": float(result.final_max_violation),
         "is_optimal": None if result.is_optimal is None else bool(result.is_optimal),
+        "max_support_over_m_plus_n": float(
+            max((rec.support_size for rec in result.iterations), default=result.support_size)
+        ) / float(planted.n_eff + planted.m_eff),
         "solve_seconds": float(time.perf_counter() - t0),
     }
 
@@ -59,8 +66,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--solver", default="highs", choices=("highs", "cupdlpx"),
                         help="master solver (cupdlpx is the GPU first-order master)")
     parser.add_argument("--prune-strategy", default="none", choices=("none", "tolerance", "hysteresis"))
-    parser.add_argument("--tie-break", default="none", choices=("none", "lex_generic"),
-                        help="cupdlpx supports only 'none'; 'lex_generic' is for the exact (HiGHS) master")
+    parser.add_argument("--tau-prune", type=float, default=1e-12,
+                        help="slack threshold for tolerance/hysteresis pruning (conservative = larger)")
+    parser.add_argument("--tie-break", default="none", choices=("none", "regularized", "lex_generic"),
+                        help="cupdlpx: 'none' or 'regularized'; 'lex_generic' is HiGHS-only")
+    parser.add_argument("--epsilon", type=float, default=0.0,
+                        help="regularizer weight for tie_break='regularized'")
     parser.add_argument("--out", type=Path, default=_REPO_ROOT / "iot_experiments" / "core" / "out" / "planting")
     args = parser.parse_args(argv)
 
@@ -86,9 +97,11 @@ def main(argv: list[str] | None = None) -> int:
                             "g_norm": planted.g_norm, "feature_scale": planted.feature_scale,
                             "prune_false": _solve(planted, strategy="none", scan=str(args.scan),
                                                   solver=str(args.solver), tie_break="none",
+                                                  epsilon=0.0, tau_prune=float(args.tau_prune),
                                                   max_iterations=int(args.max_iterations)),
                             "default": _solve(planted, strategy=str(args.prune_strategy), scan=str(args.scan),
                                               solver=str(args.solver), tie_break=str(args.tie_break),
+                                              epsilon=float(args.epsilon), tau_prune=float(args.tau_prune),
                                               max_iterations=int(args.max_iterations)),
                         }
                         records.append(record)
@@ -97,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
                               f"seed={seed} g={g_profile:6s}: |S|={planted.support_size} "
                               f"cert={planted.max_dual_violation:.1e} gap50={planted.gap_quantiles['0.50']:.2e} | "
                               f"noprune conv={df['converged']} it={df['iterations']} isopt={df['is_optimal']} | "
-                              f"strat={args.prune_strategy} tie={args.tie_break} "
+                              f"strat={args.prune_strategy} tie={args.tie_break} eps={args.epsilon:g} tau={args.tau_prune:g} "
                               f"conv={record['default']['converged']} it={record['default']['iterations']}",
                               flush=True)
     args.out.mkdir(parents=True, exist_ok=True)
