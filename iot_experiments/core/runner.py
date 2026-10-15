@@ -191,7 +191,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
             gamma=GAMMA,
             validate=False,
             prune=bool(spec.prune),
-            prune_hysteresis=bool(spec.prune),
+            prune_hysteresis=bool(spec.prune_hysteresis),
             scan_backend=str(spec.scan_backend),
             scan_device=str(spec.scan_device),
         )

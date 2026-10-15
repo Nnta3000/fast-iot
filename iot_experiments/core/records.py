@@ -38,10 +38,11 @@ class RunSpec:
     lowrank_k: int = 8
     seed: int = 0
     solver: str = "auto"
-    scan_backend: str = "numpy"
+    scan_backend: str = "hello"
     plan_backend: str = "auto"
     scan_device: str = "auto"
     prune: bool = True
+    prune_hysteresis: bool = True
     cupdlpx_time_limit: float | None = None
     cupdlpx_warm_start: bool = False
     max_iterations: int = 300

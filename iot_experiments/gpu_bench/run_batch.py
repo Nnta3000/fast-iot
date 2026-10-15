@@ -102,7 +102,11 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
         for scan in args.scans:
             for size in args.sizes:
                 for seed in args.seeds:
-                    prune = master != "cupdlpx"
+                    # CN: 剪枝策略显式化：none / tolerance / hysteresis。
+                    # EN: pruning strategy is explicit: none / tolerance / hysteresis.
+                    strategy = str(getattr(args, "prune_strategy", "none"))
+                    prune = strategy in ("tolerance", "hysteresis")
+                    hysteresis = strategy == "hysteresis"
                     specs.append(
                         RunSpec(
                             family=str(args.family), marginal=str(args.marginal),
@@ -111,12 +115,13 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
                             lowrank_k=int(args.lowrank_k), seed=int(seed),
                             solver=("regularized" if master == "highs" else str(master)),
                             scan_backend=str(scan), prune=bool(prune),
+                            prune_hysteresis=bool(hysteresis),
                             plan_backend=str(getattr(args, "plan_backend", "auto")),
                             scan_device=str(getattr(args, "scan_device", "auto")),
                             cupdlpx_time_limit=getattr(args, "cupdlpx_time_limit", None),
                             cupdlpx_warm_start=bool(getattr(args, "cupdlpx_warm_start", False)),
                             max_iterations=int(args.max_iterations), validate=bool(args.validate),
-                            tag=f"{master}-{scan}-{'prune' if prune else 'noprune'}",
+                            tag=f"{master}-{scan}-prune{strategy}",
                         )
                     )
     meta = {"batch": "e2e", "git_sha": _git_sha(), "device": gpu.device_info()}
@@ -130,8 +135,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--gpu", default="auto", help='"auto" or a physical GPU index')
     parser.add_argument("--out", type=Path, default=None)
     # e2e
-    parser.add_argument("--family", default="diagonal")
-    parser.add_argument("--marginal", default="gmm_floored")
+    parser.add_argument("--family", default="quadratic")
+    parser.add_argument("--marginal", default="gmm")
     parser.add_argument("--sizes", type=int, nargs="+", default=[800, 3200])
     parser.add_argument("--seeds", type=int, nargs="+", default=[0])
     parser.add_argument("--point-dimension", type=int, default=8)
@@ -144,7 +149,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
                         help="Cap CuPDLPx seconds per master solve.")
     parser.add_argument("--cupdlpx-warm-start", action="store_true")
     parser.add_argument("--max-iterations", type=int, default=300)
-    parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--prune-strategy", choices=("none", "tolerance", "hysteresis"), default="none",
+                        help="Pruning strategy: none (default for first-order masters), tolerance, hysteresis.")
     return parser.parse_args(argv)
 
 

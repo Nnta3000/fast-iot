@@ -1,12 +1,17 @@
 # HELLO-OT as the separation oracle — GPU scan, bit-identical and 10–70× faster
 
-**Status: CURRENT, empirical (2026-10-09).** Optional backend `scan_backend="hello"` in
+**Status: CURRENT-but-SCOPED (2026-10-15).** This report covers the GPU scan for
+`DiagonalWeightFeatures` **only**. Under the project framing, the **base cost family is
+`quadratic`**, which has **no GPU scan yet**; this report is therefore the *diagonal* case.
+`scan_backend="hello"` is now the **default**, not an optional non-default backend.
+
+Original finding (2026-10-09): the optional backend `scan_backend="hello"` in
 `solve_inverse_ot` replaces the NumPy blockwise separation scan with HELLO-OT's torch GPU scan
 (`hello_ot.kernels.torch_scan.bidirectional_violation_scan`) for `DiagonalWeightFeatures`. It is
 **bit-identical** to the NumPy scan (same stop decision, same candidate set, same whole-loop
-trajectory) and **removes the scan bottleneck**. The master LP (HiGHS, CPU) now dominates.
+trajectory) and **removes the scan bottleneck**. The master LP now dominates.
 
-Method label: `scan_backend=hello` (optional, non-default).
+Method label: `scan_backend=hello` (now the default).
 
 ## 1. Why it works: the reduced cost is an inner-product scan
 

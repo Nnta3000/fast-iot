@@ -1,13 +1,13 @@
 # gpu_bench — A100 batches (SLURM-less)
 
-**Goal (shifted): a GPU-scalable inverse-OT solver.** The target path is `scan_backend="hello"`
-(GPU separation) + a GPU master (`cupdlpx`) — **no NumPy oracle, no CPU HiGHS**. HiGHS/`numpy`
-remain only as *references*. This module holds the A100 batches and component probes; it is not
-the CPU three-axis studies (`../scaling`, `../marginals`, `../families`).
+**Goal (binding): a GPU-bound inverse-OT solver.** The target path is `scan_backend="hello"`
+(GPU separation) + a GPU master (`cupdlpx`) — **no NumPy oracle, no CPU HiGHS**. The base cost
+family is **`quadratic`**; `diagonal` is an *optional test* only. HiGHS/`numpy` survive only as
+explicit, flagged references and their results are `legacy`. This module holds the A100 batches and
+component probes; it is not the CPU three-axis studies (`../scaling`, `../marginals`, `../families`).
 
-Runs the three-axis machinery on an A100 with GPU backends, and isolates the master LP to test
-the "GPU LP wins as the problem grows" premise. Kept deliberately small: the goal is a few
-decisive measurements per GPU session, not a broad sweep.
+Runs the three-axis machinery on an A100 with GPU backends. Kept deliberately small: the goal is a
+few decisive measurements per GPU session, not a broad sweep.
 
 ## GPU pinning without SLURM
 
