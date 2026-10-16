@@ -1,5 +1,9 @@
 # Cost families — diagonal, quadratic, low-rank (+ tiny-n PSD)
 
+> **Status: HISTORICAL (CPU path) — do NOT cite as current.** NumPy scan + HiGHS/SDP CPU masters.
+> The `bilinear-PSD` family here is a **tiny-n prototype and is not exact-OT at scale**. For the GPU
+> path (quadratic base) see `SERVER_TESTS_REPORT.md`.
+
 **Status: CURRENT, empirical.** Study 3. Backing data:
 `../families/out/families_gmm.{json,csv}`, `../families/out/psd_gmm.{json,csv}`,
 `../families/out/psd_uniform.{json,csv}` (git-ignored), from `../families/run.py`.

@@ -1,5 +1,9 @@
 # Cutting-plane inverse OT — classic Kelley cuts with one OT solve per cut
 
+> **Status: HISTORICAL (other algorithm) — do NOT cite as current.** This is a *different* method
+> (Kelley cutting plane), not the constraint-generation loop. It is not a GPU-path result. For the
+> target path see `SERVER_TESTS_REPORT.md`.
+
 **Status: CURRENT, empirical.** This is a *new* method arm, not a replacement for the shipped
 exact solver. Method label: `cutting-plane-ot-oracle`.
 

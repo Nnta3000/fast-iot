@@ -1,5 +1,9 @@
 # Benchmark measurement hygiene — measure the algorithm, not the scaffolding
 
+> **Status: HISTORICAL (other method) — do NOT cite as current.** These notes concern the
+> gradient/entropic arm, not the constraint-generation loop on the GPU path. For GPU results see
+> `SERVER_TESTS_REPORT.md`.
+
 ## What was wrong
 
 `exact_benchmark_runner` built the instance (POT ground truth + `dual_optimality_certificate`)

@@ -1,5 +1,10 @@
 # Marginals — uniform vs Gaussian / GMM mass vectors
 
+> **Status: HISTORICAL (CPU path) — do NOT cite as current.** NumPy scan + HiGHS master, **POT**
+> ground truth. Also note the GMM construction here is the **pre-fix** one (mixture applied along the
+> sample generation order; see `SERVER_TESTS_REPORT.md` §6). For GPU-path marginals see
+> `SERVER_TESTS_REPORT.md`.
+
 **Status: CURRENT, empirical.** Study 2. Backing data:
 `../marginals/out/marginals_n800.{json,csv}` (git-ignored), from `../marginals/run.py`.
 

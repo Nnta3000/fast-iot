@@ -1,5 +1,10 @@
 # Scaling — growth in K, m, n
 
+> **Status: HISTORICAL (CPU path) — do NOT cite as current.** These runs use the NumPy separation
+> scan and the **HiGHS** master, and POT ground truth, i.e. the CPU reference path that the binding
+> project framing (`AGENTS.md`) excludes from the target. For GPU-path scaling see
+> `SERVER_TESTS_REPORT.md`.
+
 **Status: CURRENT, empirical.** Study 1. Backing data:
 `../scaling/out/quadratic_gmm.{json,csv}` and `../scaling/out/quadratic_gmm_ksweep.{json,csv}`
 (git-ignored), produced by `../scaling/run.py` (driver) and summarised by

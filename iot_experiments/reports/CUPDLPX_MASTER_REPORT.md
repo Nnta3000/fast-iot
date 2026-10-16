@@ -1,5 +1,10 @@
 # CuPDLPx as an inverse-OT master backend — built and measured
 
+> **Status: PARTIAL.** The **adapter** described here is current (it is the master on the target
+> path). The **measurements** were taken against **HiGHS** and with the old `tie_break="none"`
+> framing; treat the numbers as historical. For current GPU-path results see
+> `SERVER_TESTS_REPORT.md`.
+
 **Status: CURRENT, empirical (2026-10-09, local CUDA-13.4 build).** The adapter, the native
 extension, and the in-loop comparison all execute. CuPDLPx returns valid optima
 (`is_optimal_plan=True`, `delta` matching HiGHS to ~1e-4) but is **slower than HiGHS at the
