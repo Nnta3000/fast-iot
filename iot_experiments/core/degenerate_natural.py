@@ -20,6 +20,7 @@ EN: **Natural-degeneracy probe** -- instead of a hand-built constant block, prod
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -136,11 +137,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--gamma", type=int, default=1)
     p.add_argument("--scan", default="hello", choices=("hello", "torch", "numpy"))
     p.add_argument("--max-iterations", type=int, default=60)
+    p.add_argument("--out", type=Path,
+                   default=_REPO_ROOT / "iot_experiments" / "core" / "out" / "degenerate",
+                   help="directory for the JSON record")
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    args.out.mkdir(parents=True, exist_ok=True)
+    records: list[dict[str, object]] = []
     print(f"{'kind':10s} {'fam':10s} {'d':>2} {'n':>6} {'m_eff':>6} {'|S|/(2n)':>9} "
           f"{'T':>3} {'conv':>5} {'F/(m+n)':>8} {'delta':>10} {'maxviol':>10} {'wall':>6}")
     for kind in args.kinds:
@@ -152,12 +158,16 @@ def main(argv: list[str] | None = None) -> int:
                                  prune=str(args.prune_strategy), tau_prune=float(args.tau_prune),
                                  tau_sep=float(args.tau_sep), gamma=int(args.gamma), scan=str(args.scan),
                                  max_iterations=int(args.max_iterations))
+                        records.append(r)
                         print(f"{r['kind']:10s} {r['family']:10s} {r['d']:>2} {r['n']:>6} {r['m_eff']:>6} "
                               f"{r['n_support']:>9.2f} {r['T']:>3} {str(r['conv']):>5} {r['F_over_N']:>8.2f} "
                               f"{r['delta']:>10.3e} {r['maxviol']:>10.2e} {r['wall']:>5.0f}s", flush=True)
                     except Exception as error:  # noqa: BLE001
                         print(f"{kind:10s} {args.family:10s} {d:>2} {n:>6}  EXC {type(error).__name__}: "
                               f"{str(error)[:60]}", flush=True)
+    (args.out / "degenerate_natural.json").write_text(
+        json.dumps({"records": records}, indent=2) + "\n", encoding="utf-8")
+    print(f"[degenerate_natural] wrote {args.out / 'degenerate_natural.json'}")
     return 0
 
 
