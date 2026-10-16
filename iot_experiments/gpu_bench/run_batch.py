@@ -116,6 +116,8 @@ def run_e2e(args: argparse.Namespace, out_dir: Path) -> dict[str, object]:
                             solver=("regularized" if master == "highs" else str(master)),
                             scan_backend=str(scan), prune=bool(prune),
                             prune_hysteresis=bool(hysteresis),
+                            tau_prune=float(args.tau_prune),
+                            tol_sep=float(args.tol_sep), gamma=int(args.gamma),
                             plan_backend=str(getattr(args, "plan_backend", "auto")),
                             scan_device=str(getattr(args, "scan_device", "auto")),
                             cupdlpx_time_limit=getattr(args, "cupdlpx_time_limit", None),
@@ -151,6 +153,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--max-iterations", type=int, default=300)
     parser.add_argument("--prune-strategy", choices=("none", "tolerance", "hysteresis"), default="none",
                         help="Pruning strategy: none (default for first-order masters), tolerance, hysteresis.")
+    parser.add_argument("--tau-prune", type=float, default=1e-12,
+                        help="Pruning slack tolerance tau_prune: drop F\\S edges with slack > tau_prune.")
+    parser.add_argument("--tol-sep", type=float, default=1e-9,
+                        help="Separation tolerance in Separate: an edge is a candidate iff sigma + delta > tol-sep.")
+    parser.add_argument("--gamma", type=int, default=1,
+                        help="Select: keep the top-gamma violated edges per row and per column.")
     return parser.parse_args(argv)
 
 

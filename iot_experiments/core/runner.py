@@ -163,7 +163,9 @@ def run_spec(spec: RunSpec) -> RunRecord:
         solver = CuPdlpxMasterSolver(params=cupdlpx_params, warm_start=bool(spec.cupdlpx_warm_start))
     else:
         solver = RegularizedMasterSolver(epsilon=EPSILON, random_seed=int(spec.seed))
-    tol = SDP_TOL if solver_name == "sdp" else LP_TOL
+    tol = float(spec.tol_sep)
+    if solver_name == "sdp" and tol == LP_TOL:
+        tol = SDP_TOL  # keep the SDP-specific default when tol_sep was not overridden
 
     solve_started = time.perf_counter()
     outcome = "converged"
@@ -187,8 +189,8 @@ def run_spec(spec: RunSpec) -> RunRecord:
             max_iterations=int(spec.max_iterations),
             random_seed=int(spec.seed),
             tol=tol,
-            tau_prune=TAU_PRUNE,
-            gamma=GAMMA,
+            tau_prune=float(spec.tau_prune),
+            gamma=int(spec.gamma),
             validate=False,
             prune=bool(spec.prune),
             prune_hysteresis=bool(spec.prune_hysteresis),

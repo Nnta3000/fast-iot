@@ -233,3 +233,27 @@ row from them must never be mixed into a table above.
    labelled* option) is the only way to exercise it.
 4. **`|F|` growth** on the *fractional* regime, measured (needs the JSONs synced, §6.6).
 5. **Validation above n≈7000** — needs a HiGHS-free GPU certificate (not implemented).
+
+**Batch `jobs/pruning_sweep.txt` (13 jobs, staged)** addresses 1, 4 and two never-tested knobs:
+- `hysteresis + regularized` vs `prune=none`, at n=3200/12800/51200, read-out `max|F|/(m+n)`,
+  `peak_memory_mb`, mean master/scan time;
+- **ε window** (3e-5, 1e-4, 3e-4) and **τ_prune** (1e-12, 1e-3, 1e-1) around the winner;
+- **time budget t** (60 vs 300 s) at the previously cap-bound n=12800;
+- **`tol_sep`** (1e-9 vs 1e-3) and **`gamma`** (1 vs 2) — the two knobs that were never exposed
+  before this revision (now `RunSpec.tol_sep` / `RunSpec.gamma`), and the ones most likely to
+  change `|F|` structurally;
+- the **large run at n=51200** (§7's sizing report: ~15–20 min/run).
+
+## 10. Newly exposed knobs (this revision)
+
+`RunSpec` gained three fields (defaults preserve the old behaviour exactly):
+
+| field | meaning | was |
+| --- | --- | --- |
+| `tol_sep` | separation tolerance (Separate: candidate iff `σ + δ > tol_sep`) | hardcoded `LP_TOL = 1e-9` |
+| `gamma` | Select: top-γ violated edges per row/column | hardcoded `GAMMA = 1` |
+| `tau_prune` | Pruning slack tolerance | was already reachable via the loop, now in the spec |
+
+CLI: `run_batch --tol-sep/--gamma/--tau-prune`; `planting_sweep --tol-sep/--gamma/--tau-prune/
+--epsilon/--master-time-limit`. All runs before this revision used the hardcoded defaults.
+

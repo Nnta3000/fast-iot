@@ -43,6 +43,9 @@ class RunSpec:
     scan_device: str = "auto"
     prune: bool = True
     prune_hysteresis: bool = True
+    tau_prune: float = 1e-12
+    tol_sep: float = 1e-9
+    gamma: int = 1
     cupdlpx_time_limit: float | None = None
     cupdlpx_warm_start: bool = False
     max_iterations: int = 300
@@ -55,6 +58,12 @@ class RunSpec:
             raise ValueError("m and n must be >= 2")
         if int(self.max_iterations) < 1:
             raise ValueError("max_iterations must be >= 1")
+        if int(self.gamma) < 1:
+            raise ValueError("gamma (top-gamma in Select) must be >= 1")
+        if float(self.tol_sep) < 0.0:
+            raise ValueError("tol_sep (separation tolerance) must be nonnegative")
+        if float(self.tau_prune) < 0.0:
+            raise ValueError("tau_prune (pruning slack tolerance) must be nonnegative")
         if int(self.num_itermax) < 1:
             raise ValueError("num_itermax must be >= 1")
         if self.solver not in {"auto", "regularized", "sdp", "cupdlpx"}:

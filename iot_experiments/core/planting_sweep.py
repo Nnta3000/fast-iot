@@ -29,10 +29,12 @@ from iot_experiments.core.planting import plant_instance  # noqa: E402
 
 
 def _solve(planted, *, strategy: str, scan: str, solver: str, tie_break: str,
-           epsilon: float, tau_prune: float, max_iterations: int) -> dict[str, object]:
+           epsilon: float, tau_prune: float, tol_sep: float, gamma: int,
+           master_time_limit: float, max_iterations: int) -> dict[str, object]:
     prune = strategy in ("tolerance", "hysteresis")
     if solver == "cupdlpx":
-        master = CuPdlpxMasterSolver(params={"time_sec_limit": 60.0}, epsilon=float(epsilon))
+        master = CuPdlpxMasterSolver(params={"time_sec_limit": float(master_time_limit)},
+                                     epsilon=float(epsilon))
     else:
         master = LinearMasterSolver(random_seed=0)
     t0 = time.perf_counter()
@@ -40,7 +42,7 @@ def _solve(planted, *, strategy: str, scan: str, solver: str, tie_break: str,
         planted.problem, solver=master, tie_break=str(tie_break),
         max_iterations=int(max_iterations), scan_backend=str(scan), validate=True,
         prune=bool(prune), prune_hysteresis=(strategy == "hysteresis"),
-        tau_prune=float(tau_prune),
+        tau_prune=float(tau_prune), tol=float(tol_sep), gamma=int(gamma),
     )
     return {
         "converged": bool(result.converged), "iterations": int(result.n_iterations),
@@ -49,6 +51,8 @@ def _solve(planted, *, strategy: str, scan: str, solver: str, tie_break: str,
         "max_support_over_m_plus_n": float(
             max((rec.support_size for rec in result.iterations), default=result.support_size)
         ) / float(planted.n_eff + planted.m_eff),
+        "final_support_over_m_plus_n": float(result.support_size) / float(planted.n_eff + planted.m_eff),
+        "peak_memory_mb": float(max((getattr(rec, "peak_memory_mb", 0.0) for rec in result.iterations), default=0.0)),
         "solve_seconds": float(time.perf_counter() - t0),
     }
 
@@ -67,7 +71,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="master solver (cupdlpx is the GPU first-order master)")
     parser.add_argument("--prune-strategy", default="none", choices=("none", "tolerance", "hysteresis"))
     parser.add_argument("--tau-prune", type=float, default=1e-12,
-                        help="slack threshold for tolerance/hysteresis pruning (conservative = larger)")
+                        help="Pruning slack tolerance tau_prune: drop F\\S edges with slack > tau_prune.")
+    parser.add_argument("--tol-sep", type=float, default=1e-9,
+                        help="Separation tolerance in Separate: candidate iff sigma + delta > tol-sep.")
+    parser.add_argument("--gamma", type=int, default=1,
+                        help="Select: top-gamma violated edges per row and per column.")
+    parser.add_argument("--master-time-limit", type=float, default=60.0,
+                        help="Per-master-solve CuPDLPx time budget t (seconds).")
     parser.add_argument("--tie-break", default="none", choices=("none", "regularized", "lex_generic"),
                         help="cupdlpx: 'none' or 'regularized'; 'lex_generic' is HiGHS-only")
     parser.add_argument("--epsilon", type=float, default=0.0,
@@ -98,20 +108,30 @@ def main(argv: list[str] | None = None) -> int:
                             "prune_false": _solve(planted, strategy="none", scan=str(args.scan),
                                                   solver=str(args.solver), tie_break="none",
                                                   epsilon=0.0, tau_prune=float(args.tau_prune),
+                                                  tol_sep=float(args.tol_sep), gamma=int(args.gamma),
+                                                  master_time_limit=float(args.master_time_limit),
                                                   max_iterations=int(args.max_iterations)),
                             "default": _solve(planted, strategy=str(args.prune_strategy), scan=str(args.scan),
                                               solver=str(args.solver), tie_break=str(args.tie_break),
                                               epsilon=float(args.epsilon), tau_prune=float(args.tau_prune),
+                                              tol_sep=float(args.tol_sep), gamma=int(args.gamma),
+                                              master_time_limit=float(args.master_time_limit),
                                               max_iterations=int(args.max_iterations)),
                         }
                         records.append(record)
                         df = record["prune_false"]
+                        dflt = record["default"]
                         print(f"{family:10s} d={d} n_req={n} n_eff={planted.n_eff} m_eff={planted.m_eff} "
                               f"seed={seed} g={g_profile:6s}: |S|={planted.support_size} "
                               f"cert={planted.max_dual_violation:.1e} gap50={planted.gap_quantiles['0.50']:.2e} | "
-                              f"noprune conv={df['converged']} it={df['iterations']} isopt={df['is_optimal']} | "
-                              f"strat={args.prune_strategy} tie={args.tie_break} eps={args.epsilon:g} tau={args.tau_prune:g} "
-                              f"conv={record['default']['converged']} it={record['default']['iterations']}",
+                              f"noprune: conv={df['converged']} it={df['iterations']} "
+                              f"F/(m+n)={df['max_support_over_m_plus_n']:.2f} t={df['solve_seconds']:.0f}s "
+                              f"mem={df['peak_memory_mb']:.0f}MB | "
+                              f"strat={args.prune_strategy} tie={args.tie_break} eps={args.epsilon:g} "
+                              f"tau={args.tau_prune:g} tolsep={args.tol_sep:g} gamma={args.gamma}: "
+                              f"conv={dflt['converged']} it={dflt['iterations']} "
+                              f"F/(m+n)={dflt['max_support_over_m_plus_n']:.2f} t={dflt['solve_seconds']:.0f}s "
+                              f"mem={dflt['peak_memory_mb']:.0f}MB",
                               flush=True)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "planting_sweep.json").write_text(json.dumps({"records": records}, indent=2) + "\n", encoding="utf-8")
