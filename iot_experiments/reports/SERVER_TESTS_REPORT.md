@@ -155,6 +155,53 @@ Each job records **both** a `prune=none` baseline **and** the requested strategy
 - **Cost profile is CPU-bound.** Jobs took 13–120 min with the GPU ≈3 % busy; all-time is spent in
   CPU-side master-LP assembly and edge bookkeeping, not the GPU solve.
 
+### 4.4 `queue 2026-10-16_112747` — pruning-sweep grid (`jobs/pruning_sweep.txt`)
+
+Driver `planting_sweep.py`; planted Monge, quadratic, `d=8`, seed 0, `g=0`; `cupdlpx` + `hello`.
+**All 13 jobs completed.** Read-out: per-job `prune=none` baseline vs the strategy, on the same instance.
+
+| job | n | strategy (knob) | conv | iters `none`→strat | **`\|F\|/(m+n)` `none`→strat** | wall | peak mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 | 3200 | `none` (baseline) | ✅ | 8 | 3.22 | 58 s | 3493 MB |
+| A1 | 12800 | `none` (baseline) | ✅ | 10 | 3.82 | 196 s | 6077 MB |
+| A2 | 3200 | hysteresis τ=1e-3, tie `none` | ❌ | 8→cap 60 | 3.22→2.77 | 207 s | 3515 MB |
+| A2 | 12800 | hysteresis τ=1e-3, tie `none` | ❌ | 10→cap 60 | 3.82→2.88 | 647 s | 6088 MB |
+| **A3** | 3200 | **hyst+reg ε=1e-4 τ=1e-3** | ✅ | 8→**13** | 3.22→**2.84** | 135 s | 3519 MB |
+| **A3** | 12800 | **hyst+reg ε=1e-4 τ=1e-3** | ✅ | 10→**11** | 3.82→**2.86** | 184 s | 6093 MB |
+| B1 | 3200 | hyst+reg **ε=3e-5** | ✅ | 8→15 | 3.22→2.82 | 106 s | 3532 MB |
+| B2 | 3200 | hyst+reg **ε=3e-4** | ❌ | 9→cap 60 | 3.22→2.87 | 3654 s | 3517 MB |
+| C1 | 3200 | hyst+reg **τ=1e-12** | ❌ | 8→cap 60 | 3.22→2.93 | 512 s | 3521 MB |
+| **C2** | 3200 | hyst+reg **τ=1e-1** | ✅ | 8→**12** | 3.22→**2.84** | **62 s** | 3516 MB |
+| D2 | 12800 | `none`, cap 300 | ✅ | 10 | 3.82 | 196 s | 3730 MB |
+| E1 | 12800 | `none`, **tol_sep=1e-3** | ✅ | 11 | 3.81 | 247 s | 3725 MB |
+| E2 | 12800 | `none`, **γ=2** | ✅ | 8 | **5.35** | 191 s | 3736 MB |
+| **F1** | 51200 | `none` (baseline) | ✅ | 10 | **4.13** | 657 s | 10218 MB |
+| F2 | 51200 | hyst+reg ε=1e-4 τ=1e-3 | ❌ | 10→cap 60 | 4.13→3.00 | 6968 s | 10216 MB |
+
+**Takeaways.**
+- **Pruning makes `|F|/(m+n)` size-independent; no-pruning drifts up.** `hyst+reg` gives
+  **2.84 / 2.86 / 3.00** at n = 3200 / 12800 / 51200, while `prune=none` gives **3.22 / 3.82 / 4.13**.
+  The pruned value is ~constant across a **16×** size range; the unpruned one rises monotonically.
+  This is the strongest `O(1)` signal in the report — and it is a statement about `|F|`, not about
+  iteration count.
+- **`τ_prune = 1e-1` is the practical winner (C2).** Same `|F|` (2.84) and convergence as A3, but
+  **62 s vs 135 s (2.2×)**, and fastest converging arm at every size. τ = 1e-12 fails (C1).
+- **ε window is on the LOW side.** Server: **1e-4 and 3e-5 converge; 3e-4 FAILS** (cap, 3654 s).
+  This **contradicts the local n=1000 result** (where 3e-4 was fastest) — the local ε guidance was
+  wrong; use **ε ≤ 1e-4**.
+- **`tol_sep = 1e-3` does not help on the server** (E1: `|F|` 3.81 vs 3.82, wall 247 s vs 196 s).
+  The local n=1000 speed-up did **not** replicate — a small-`n` artifact.
+- **`γ = 2` grows `|F|` ~40 %** (E2: 3.82 → 5.35), no convergence benefit. Confirms γ as the intake
+  throttle.
+- **At n = 51200 the regularized arm FAILED to converge** (cap 60, 3905 s) while the `prune=none`
+  baseline converged in 10 it / 660 s. The n≤12800 pattern **reverses at the largest size** — the
+  regularizer's advantage does not extend to 51200.
+- **Peak memory 10.2 GB at n=51200** — but this includes the dense validation scaffold; the loop's own
+  footprint is smaller (`peak_memory_mb` is process RSS, and `--validate` builds a dense `m·n` cost).
+- **Cap-bound runs dominate wall-clock** (3654 s, 3905 s, 6968 s) — 60 iterations of a first-order
+  master. The scan is never the cost.
+
+
 ---
 
 ## 5. Generators (ground truth) — what each instance is
@@ -188,6 +235,21 @@ support), so they do **not** exercise the `|S| ≈ 2n−1` fractional regime.
    have no exact verdict**.
 6. **No `|F|` in the synced results.** The queue logs carry iterations and δ but not `|F|`; the sweep
    JSONs (which do) are not synced back. Some `|F|` claims are inferred from iteration counts.
+   *(The `planting_sweep.py` stdout line now prints `F/(m+n)`, `t`, `mem` per arm — §4.4 uses those.)*
+7. **Natural degeneracy makes `T` and `|F|/N` rise (local, not yet on the server).** Probe
+   `core/degenerate_natural.py`, family quadratic, `cupdlpx`+`hello`, `prune=none`, γ=1:
+
+   | kind | d | n | T | conv | \|F\|/(m+n) | δ |
+   | --- | --- | --- | --- | --- | --- | --- |
+   | duplicate | 1 | 200 / 1000 / 2000 / 4000 | 10 / 14 / 28 / 22 | ✅✅✅✅ | 5.67 / 7.35 / 8.50 / 8.63 | 0 |
+   | lattice1d | 1 | 200 / 1000 / 2000 / 4000 | 7 / 15 / 23 / 16 | ✅✅✅✅ | 5.34 / 5.23 / 5.46 / 7.46 | 0 mostly |
+   | grid | 2 | 1000 / 2000 | 14 / 12 | ✅✅ | 4.39 / 5.05 | >0 |
+
+   Contrast: random-point planted Monge stays `T ≈ 8–10`, `|F|/(m+n) ≈ 2.8–3.6`. So **ties in the
+   cloud itself** (duplicate points, or `d=1` where cost depends on one coordinate) are the first family
+   that inflates both. All converge (no cycling), and `δ = 0` in 13/14 runs. The trend is **noisy**
+   (T dips at n=4000) and there are only 4 points — an exponent fit is not yet possible. **This is the
+   live risk for `Θ(N^c)`.**
 
 ---
 
@@ -218,21 +280,31 @@ row from them must never be mixed into a table above.
 | GPU-only loop runs end-to-end on the target path | §2, §3, §4 | **established** |
 | 3200-point instances are **validated optimal** (both regimes) | §3 (V1, V3, V5, V6) | **established** |
 | The **master** (not the scan) is the bottleneck | §2 (14–23 vs 0.4–3 s/it) | **established** |
-| First-order master is **cap-truncated at scale** | §3 (≈300 s/iter, cap-bound) | **established** |
+| First-order master is **cap-truncated at scale** | §3 (≈300 s/it), §4.4 (51200: 3905 s) | **established** |
 | `δ=0` in the fractional regime | §2, §3 | **explained** (pre-fix GMM; see §6) |
-| τ_prune can rescue pruning | §4.1 | **refuted** (0/4 for all τ) |
-| `regularized` tie-break makes conservative pruning work | §4.2 (4/4) | **established, single ε** (needs a sweep) |
-| `|F|`/iterations explode on planted instances | §4.3 | **refuted** (flat 8–10 it to n_eff=12800) |
-| Pruning is needed for **growth** | — | **unresolved** (planted instances don't stress it; fractional HELLO runs grow `|F|` to ~5.6×, §3 V6) |
+| τ_prune can rescue pruning | §4.1, §4.4 (C1 τ=1e-12 fails) | **refuted** |
+| `regularized` tie-break makes conservative pruning work | §4.2, §4.4 (A3/B1/C2) | **established up to n=12800**; **fails at n=51200** (F2) |
+| Safe ε is on the **low** side (≤1e-4); 3e-4 fails | §4.4 (B1 ✅, A3 ✅, B2 ❌) | **established** (contradicts the local n=1000 run) |
+| `tol_sep` largening speeds things up | §4.4 (E1) | **refuted** (local n=1000 artifact) |
+| γ is the `|F|` intake throttle | §4.4 (E2: +40 %) | **established** |
+| Pruning holds `\|F\|/(m+n)` ~constant in `n` on planted Monge | §4.4 (2.84→2.86→3.00 vs 3.22→3.82→4.13) | **established (planted Monge only)** |
+| `\|F\|`/iterations explode on planted instances | §4.3, §4.4 | **refuted** (10 it at n=51200) |
+| Pruning is needed for **growth** | §6.7 (natural degeneracy) | **open — new evidence that it IS needed** |
 
 ## 9. Open questions
 
-1. **ε window** around 1e-4 (3e-5, 1e-4, 3e-4) at τ=1e-3 — is it robust or lucky?
-2. **Regenerate all `gmm` rows** with the fixed GMM (§6).
-3. **Fractional/Monge gap**: planting cannot produce `|S| ≈ 2n−1`. Mass splitting (a *separate,
-   labelled* option) is the only way to exercise it.
-4. **`|F|` growth** on the *fractional* regime, measured (needs the JSONs synced, §6.6).
-5. **Validation above n≈7000** — needs a HiGHS-free GPU certificate (not implemented).
+1. **The `T(N)` growth question (highest priority).** The natural-degeneracy probe
+   (`core/degenerate_natural.py`, *not* yet in a batched server run) found the **first** instances where
+   both `T` and `|F|/(m+n)` rise with `n`: duplicate points and a 1-D lattice, at `d ∈ {1,2}`
+   (`T` up to 28, `|F|/(m+n)` up to 8.6, all `δ=0`). If `T` keeps rising at scale,
+   `|F|/N = Θ(N^c)` with `c>0` and the LP's `~N¹·⁹·|F|²` cost becomes `N⁴`. **This is the one
+   mechanism that could invalidate the `O(1)` result below.**
+2. **Fractional/Monge gap**: planting cannot produce `|S| ≈ 2n−1`. Mass splitting (a *separate,
+   labelled* option) is the only way to exercise the regime the loop was designed for.
+3. **Regenerate all `gmm` rows** with the fixed GMM (§6).
+4. **Validation above n≈7000** — needs a HiGHS-free GPU certificate (not implemented).
+5. **Why does `hyst+reg` fail at n=51200 but not ≤12800?** (F2 vs A3) — is it τ, ε, or size?
+
 
 **Batch `jobs/pruning_sweep.txt` (13 jobs, staged)** addresses 1, 4 and two never-tested knobs:
 - `hysteresis + regularized` vs `prune=none`, at n=3200/12800/51200, read-out `max|F|/(m+n)`,
