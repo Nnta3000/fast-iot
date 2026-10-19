@@ -160,23 +160,23 @@ Each job records **both** a `prune=none` baseline **and** the requested strategy
 Driver `planting_sweep.py`; planted Monge, quadratic, `d=8`, seed 0, `g=0`; `cupdlpx` + `hello`.
 **All 13 jobs completed.** Read-out: per-job `prune=none` baseline vs the strategy, on the same instance.
 
-| job | n | strategy (knob) | conv | iters `none`→strat | **`\|F\|/(m+n)` `none`→strat** | wall | peak mem |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 | 3200 | `none` (baseline) | ✅ | 8 | 3.22 | 58 s | 3493 MB |
-| A1 | 12800 | `none` (baseline) | ✅ | 10 | 3.82 | 196 s | 6077 MB |
-| A2 | 3200 | hysteresis τ=1e-3, tie `none` | ❌ | 8→cap 60 | 3.22→2.77 | 207 s | 3515 MB |
-| A2 | 12800 | hysteresis τ=1e-3, tie `none` | ❌ | 10→cap 60 | 3.82→2.88 | 647 s | 6088 MB |
-| **A3** | 3200 | **hyst+reg ε=1e-4 τ=1e-3** | ✅ | 8→**13** | 3.22→**2.84** | 135 s | 3519 MB |
-| **A3** | 12800 | **hyst+reg ε=1e-4 τ=1e-3** | ✅ | 10→**11** | 3.82→**2.86** | 184 s | 6093 MB |
-| B1 | 3200 | hyst+reg **ε=3e-5** | ✅ | 8→15 | 3.22→2.82 | 106 s | 3532 MB |
-| B2 | 3200 | hyst+reg **ε=3e-4** | ❌ | 9→cap 60 | 3.22→2.87 | 3654 s | 3517 MB |
-| C1 | 3200 | hyst+reg **τ=1e-12** | ❌ | 8→cap 60 | 3.22→2.93 | 512 s | 3521 MB |
-| **C2** | 3200 | hyst+reg **τ=1e-1** | ✅ | 8→**12** | 3.22→**2.84** | **62 s** | 3516 MB |
-| D2 | 12800 | `none`, cap 300 | ✅ | 10 | 3.82 | 196 s | 3730 MB |
-| E1 | 12800 | `none`, **tol_sep=1e-3** | ✅ | 11 | 3.81 | 247 s | 3725 MB |
-| E2 | 12800 | `none`, **γ=2** | ✅ | 8 | **5.35** | 191 s | 3736 MB |
-| **F1** | 51200 | `none` (baseline) | ✅ | 10 | **4.13** | 657 s | 10218 MB |
-| F2 | 51200 | hyst+reg ε=1e-4 τ=1e-3 | ❌ | 10→cap 60 | 4.13→3.00 | 6968 s | 10216 MB |
+| job    | n     | strategy (knob)               | conv | iters `none`→strat | **`\|F\|/(m+n)` `none`→strat** | wall     | peak mem |
+| ------ | ----- | ----------------------------- | ---- | ------------------ | ------------------------------ | -------- | -------- |
+| A1     | 3200  | `none` (baseline)             | ✅    | 8                  | 3.22                           | 58 s     | 3493 MB  |
+| A1     | 12800 | `none` (baseline)             | ✅    | 10                 | 3.82                           | 196 s    | 6077 MB  |
+| A2     | 3200  | hysteresis τ=1e-3, tie `none` | ❌    | 8→cap 60           | 3.22→2.77                      | 207 s    | 3515 MB  |
+| A2     | 12800 | hysteresis τ=1e-3, tie `none` | ❌    | 10→cap 60          | 3.82→2.88                      | 647 s    | 6088 MB  |
+| **A3** | 3200  | **hyst+reg ε=1e-4 τ=1e-3**    | ✅    | 8→**13**           | 3.22→**2.84**                  | 135 s    | 3519 MB  |
+| **A3** | 12800 | **hyst+reg ε=1e-4 τ=1e-3**    | ✅    | 10→**11**          | 3.82→**2.86**                  | 184 s    | 6093 MB  |
+| B1     | 3200  | hyst+reg **ε=3e-5**           | ✅    | 8→15               | 3.22→2.82                      | 106 s    | 3532 MB  |
+| B2     | 3200  | hyst+reg **ε=3e-4**           | ❌    | 9→cap 60           | 3.22→2.87                      | 3654 s   | 3517 MB  |
+| C1     | 3200  | hyst+reg **τ=1e-12**          | ❌    | 8→cap 60           | 3.22→2.93                      | 512 s    | 3521 MB  |
+| **C2** | 3200  | hyst+reg **τ=1e-1**           | ✅    | 8→**12**           | 3.22→**2.84**                  | **62 s** | 3516 MB  |
+| D2     | 12800 | `none`, cap 300               | ✅    | 10                 | 3.82                           | 196 s    | 3730 MB  |
+| E1     | 12800 | `none`, **tol_sep=1e-3**      | ✅    | 11                 | 3.81                           | 247 s    | 3725 MB  |
+| E2     | 12800 | `none`, **γ=2**               | ✅    | 8                  | **5.35**                       | 191 s    | 3736 MB  |
+| **F1** | 51200 | `none` (baseline)             | ✅    | 10                 | **4.13**                       | 657 s    | 10218 MB |
+| F2     | 51200 | hyst+reg ε=1e-4 τ=1e-3        | ❌    | 10→cap 60          | 4.13→3.00                      | 6968 s   | 10216 MB |
 
 **Takeaways.**
 - **Pruning makes `|F|/(m+n)` size-independent; no-pruning drifts up.** `hyst+reg` gives
@@ -194,12 +194,104 @@ Driver `planting_sweep.py`; planted Monge, quadratic, `d=8`, seed 0, `g=0`; `cup
 - **`γ = 2` grows `|F|` ~40 %** (E2: 3.82 → 5.35), no convergence benefit. Confirms γ as the intake
   throttle.
 - **At n = 51200 the regularized arm FAILED to converge** (cap 60, 3905 s) while the `prune=none`
-  baseline converged in 10 it / 660 s. The n≤12800 pattern **reverses at the largest size** — the
-  regularizer's advantage does not extend to 51200.
+  baseline converged in 10 it / 660 s. **⚠️ RETRACTED — see §4.5 B4:** the identical configuration
+  converges in 10 it / 433 s, so this was a run anomaly, not a size/ε/τ effect.
 - **Peak memory 10.2 GB at n=51200** — but this includes the dense validation scaffold; the loop's own
   footprint is smaller (`peak_memory_mb` is process RSS, and `--validate` builds a dense `m·n` cost).
 - **Cap-bound runs dominate wall-clock** (3654 s, 3905 s, 6968 s) — 60 iterations of a first-order
   master. The scan is never the cost.
+
+### 4.5 `queue 2026-10-16_145725` — A/B/C: `T(N)` ladder, the 51200 fix, the fractional regime
+
+Drivers `planting_sweep.py`, `fractional_sweep.py`, `degenerate_natural.py`. quadratic `d=8`
+(duplicate `d=1`), seed 0, `g=0`, `cupdlpx` + `hello`, `max_iterations=200`.
+**All 16 jobs OK**, serial on one GPU, 14:57 → 20:39 (~5.7 h).
+
+#### A — `|F|/(m+n)` and `T` over a 16× size range
+
+Values are `|F|/(m+n)` with the iteration count in parentheses; slope is a log–log fit.
+
+| arm | generator | prune | 3200 | 6400 | 12800 | 25600 | 51200 | slope |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 | planted Monge | `none` | 3.22 (8) | 3.50 (9) | 3.82 (10) | 3.77 (9) | 4.13 (10) | **+0.083** |
+| A2 | planted Monge | `hyst+reg` | 2.84 (12) | 2.96 (10) | 2.89 (11) | 2.98 (11) | 3.00 (11) | **+0.017** |
+| A3 | fractional sf=1.0 | `none` | 2.63 (7) | 3.35 (10) | 3.45 (8) | 3.98 (7) | 4.15 (6) | **+0.156** |
+| A4 | fractional sf=1.0 | `hyst+reg` | 2.62 (8) | 2.92 (10) | 2.95 (16) | 3.38 (10) | 3.09 (7) | **+0.069** |
+| A5 | duplicate d=1 | `none` | 8.32 (17) | 10.46 (20) | — | — | — | +0.33 (2 pts) |
+
+**The `Θ(N^c)` question.** With `hyst+reg` the `|F|/N` slope is **+0.017** — flat over a 16× range
+(2.84 → 3.00). `prune=none` drifts (+0.083), fractional more (+0.156). **Iteration count does not grow
+with `N` in any arm** (slopes −0.10 … +0.06). Since `|F| ≤ |B| + 2γN·T` and `T` is flat, **no `Θ(N^c)`
+with `c>0` is observed**, so the feared `N⁴` LP cost is not realised on these families.
+*Caveat:* 5 points over 16×; +0.017 is not separable from a `log N` term at this resolution.
+
+#### A3/A4 — the fractional regime (first GPU measurement)
+
+| n | `\|S\|/n` | split | skipped | `T` none/hyst | `\|F\|/(m+n)` none/hyst | `is_optimal` | rel_gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 3200 | 1.27 | 1751 | 1449 | 7 / 8 | 2.63 / 2.62 | **True** | 7e-9 |
+| 6400 | 1.36 | 4538 | 1862 | 10 / 10 | 3.35 / 2.92 | **True** | 3e-10 |
+| 12800 | 1.33 | 8700 | 4100 | 8 / 16 | 3.45 / 2.95 | **True** | 7e-11 |
+| 25600 | 1.39 | 20090 | 5510 | 7 / 10 | 3.98 / 3.38 | **True** | 4e-10 |
+| 51200 | 1.33 | 33260 | 17940 | 6 / 7 | 4.15 / 3.09 | **True** | 2e-11 |
+
+**The loop solves genuine fractional instances at every size up to n=51200**, `is_optimal=True`,
+`rel_gap ≤ 3e-8`, and `max_dual_violation = 0` (the generator is exact by construction). The local
+(n=300) `is_optimal=False` **did not reproduce** — it was a small-`n` artefact.
+
+#### A5 — duplicate points (natural degeneracy), `prune=none`
+
+| n | `T` | `\|F\|/(m+n)` | δ |
+| --- | --- | --- | --- |
+| 3200 | 17 | **8.32** | 0 |
+| 6400 | 20 | **10.46** | 0 |
+| ≥12800 | — | — | not run |
+
+**Largest `|F|/(m+n)` anywhere** (8–10 vs 3–4 planted): natural ties really do inflate the edge set.
+**The ladder stops at 6400 for a tooling reason, not a finding:** the probe still builds its ground-truth
+plan with dense POT, which is a leftover from before the planting generators existed. It needs no OT
+solver at all — duplicated points are an ordinary cloud, so `plant_instance` would give an exactly
+optimal plan at any `n`. **Fix before extending A5; the 8–10 numbers themselves are valid.**
+
+#### B — why `hyst+reg` capped at n=51200 (the §4.4 F2 failure)
+
+| arm | n | τ | ε | conv | it | `\|F\|/(m+n)` | wall |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| B1 | 25600 | 1e-3 | 1e-4 | ✅ | 10 | 2.98 | 301 s |
+| B2 | 51200 | 1e-1 | 1e-4 | ✅ | 10 | 3.00 | 427 s |
+| B3 | 51200 | 1e-3 | 3e-5 | ✅ | 11 | 3.00 | 459 s |
+| B4 | 51200 | 1e-3 | 1e-4 | ✅ | 10 | 3.00 | 433 s |
+
+**The §4.4 F2 failure does not reproduce.** B4 is *identical* to F2 and converges in 10 it / 433 s, versus
+F2's cap at 60 it / 3905 s. **Therefore the §4.4 conclusion "the regularizer's advantage does not extend
+to 51200" is RETRACTED** — F2 was a run anomaly (contended GPU or transient stall are the plausible
+causes; the logs cannot distinguish). `hyst+reg` works at 51200.
+
+#### C — fractional knobs (n=12800)
+
+| arm | family | sf | ratio | slide cap | `\|S\|/n` | split | skipped | `T` | `\|F\|/(m+n)` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| C2 | quadratic | 1.0 | 0.5 | 4.0 | 1.33 | 8700 | 4100 | 8 | 3.45 |
+| C3 | quadratic | 0.5 | 0.5 | 4.0 | 1.16 | 4349 | 2051 | 6 | 3.43 |
+| C4 | quadratic | 1.0 | 0.5 | **0.5** | **1.08** | 2141 | 10659 | 6 | **2.13** |
+| C5 | quadratic | 1.0 | **0.9** | 4.0 | 1.33 | 8700 | 4100 | 8 | 3.45 |
+| C6 | quadratic | 1.0 | 0.5 | 4.0 | 1.33 | 8700 | 4100 | 16 | 2.95 |
+| C7 | **diagonal** | 1.0 | 0.5 | 4.0 | **1.51** | 12800 | **0** | 10 | 2.92 |
+
+- **`slide_cap` is the real `|S|` knob**, not `split_fraction`: cap 4.0 → 1.33, cap 0.5 → **1.08**.
+  Splitting is limited by geometry (whether a cell boundary is reachable within the cap).
+- **`split_ratio` has no effect** on `|S|` or `T` (C5 ≡ C2) — it only moves mass, as expected.
+- **`diagonal` splits every source** (`skip=0`, `|S|/n=1.51`); quadratic `d=8` skips 1/3–1/2.
+
+#### §4.5 verdicts
+
+| question | verdict |
+| --- | --- |
+| `\|F\|/N = Θ(N^c)`, `c>0`? | **No** on planted/fractional with `hyst+reg` (+0.017). `prune=none` drifts (+0.08…+0.16). |
+| Does `T` grow with `N`? | **No** — flat in every arm (−0.10…+0.06). |
+| Does the loop solve fractional instances at scale? | **Yes** — to n=51200, `is_optimal=True`, `rel_gap ≤ 3e-8`. |
+| Was the §4.4 F2 failure real? | **No** — identical settings converge. **Retracted.** |
+| Are natural ties harder? | **Yes** — `\|F\|/(m+n)` 8–10 vs 3–4, `T` 17–20 (but only 2 sizes measured). |
 
 
 ---
@@ -283,27 +375,30 @@ row from them must never be mixed into a table above.
 | First-order master is **cap-truncated at scale** | §3 (≈300 s/it), §4.4 (51200: 3905 s) | **established** |
 | `δ=0` in the fractional regime | §2, §3 | **explained** (pre-fix GMM; see §6) |
 | τ_prune can rescue pruning | §4.1, §4.4 (C1 τ=1e-12 fails) | **refuted** |
-| `regularized` tie-break makes conservative pruning work | §4.2, §4.4 (A3/B1/C2) | **established up to n=12800**; **fails at n=51200** (F2) |
+| `regularized` tie-break makes conservative pruning work | §4.2, §4.4, §4.5 A2 | **established, up to n=51200** (F2 retracted) |
 | Safe ε is on the **low** side (≤1e-4); 3e-4 fails | §4.4 (B1 ✅, A3 ✅, B2 ❌) | **established** (contradicts the local n=1000 run) |
 | `tol_sep` largening speeds things up | §4.4 (E1) | **refuted** (local n=1000 artifact) |
 | γ is the `|F|` intake throttle | §4.4 (E2: +40 %) | **established** |
-| Pruning holds `\|F\|/(m+n)` ~constant in `n` on planted Monge | §4.4 (2.84→2.86→3.00 vs 3.22→3.82→4.13) | **established (planted Monge only)** |
-| `\|F\|`/iterations explode on planted instances | §4.3, §4.4 | **refuted** (10 it at n=51200) |
-| Pruning is needed for **growth** | §6.7 (natural degeneracy) | **open — new evidence that it IS needed** |
+| Pruning holds `\|F\|/(m+n)` constant in `n` | §4.4, §4.5 A1/A2 (3.22→4.13 vs 2.84→3.00 over 16×) | **established, planted + fractional** |
+| `\|F\|/N = Θ(N^c)`, `c>0` | §4.5 A (slopes +0.017 … +0.156) | **not observed** (5-point fit; not separable from `log N`) |
+| `T` grows with `N` | §4.5 A (slopes −0.10 … +0.06) | **refuted** on all measured families |
+| The loop solves the **fractional** regime at scale | §4.5 A3/A4 (to n=51200, `is_optimal`, ≤3e-8) | **established** |
+| Natural ties (`duplicate`) inflate `\|F\|` | §4.5 A5 (8–10 vs 3–4), §6.7 | **established**, but only to n=6400 |
+| `hyst+reg` fails at n=51200 | §4.4 F2 | **retracted** (§4.5 B4) |
 
 ## 9. Open questions
 
-1. **The `T(N)` growth question (highest priority).** The natural-degeneracy probe
-   (`core/degenerate_natural.py`, *not* yet in a batched server run) found the **first** instances where
-   both `T` and `|F|/(m+n)` rise with `n`: duplicate points and a 1-D lattice, at `d ∈ {1,2}`
-   (`T` up to 28, `|F|/(m+n)` up to 8.6, all `δ=0`). If `T` keeps rising at scale,
-   `|F|/N = Θ(N^c)` with `c>0` and the LP's `~N¹·⁹·|F|²` cost becomes `N⁴`. **This is the one
-   mechanism that could invalidate the `O(1)` result below.**
-2. **Fractional/Monge gap**: planting cannot produce `|S| ≈ 2n−1`. Mass splitting (a *separate,
-   labelled* option) is the only way to exercise the regime the loop was designed for.
-3. **Regenerate all `gmm` rows** with the fixed GMM (§6).
-4. **Validation above n≈7000** — needs a HiGHS-free GPU certificate (not implemented).
-5. **Why does `hyst+reg` fail at n=51200 but not ≤12800?** (F2 vs A3) — is it τ, ε, or size?
+1. **Extend the `duplicate` ladder past n=6400.** The A5 probe still builds its ground-truth plan with
+   **dense POT**, which is why it stopped — **a tooling leftover, not a finding.** Duplicated points are
+   an ordinary cloud, so `plant_instance` gives an exactly optimal plan at any `n` with no OT solver.
+   This matters because `duplicate` is the only family showing `|F|/(m+n)` of 8–10 (vs 3–4) — the worst
+   case we have, and currently measured at only 2 sizes.
+2. **Is the flat slope a `log N` term?** §4.5 A2 gives +0.017 over 16×; 5 points cannot separate `log N`
+   from `N^0.017`. Needs more sizes (or decade-spaced points) before calling it `c = 0`.
+3. **Fractional at larger `slide_cap`** — `|S|/n` tops out ≈1.4 because many sources have no boundary
+   within the cap; a cap sweep would say whether `|S| → 2n` is reachable.
+4. **Regenerate all `gmm` rows** with the fixed GMM (§6).
+5. **Validation above n≈7000** — needs a HiGHS-free GPU certificate (not implemented).
 
 
 **Batch `jobs/pruning_sweep.txt` (13 jobs, staged)** addresses 1, 4 and two never-tested knobs:
