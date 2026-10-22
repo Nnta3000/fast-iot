@@ -345,6 +345,68 @@ support), so they do **not** exercise the `|S| ≈ 2n−1` fractional regime.
 
 ---
 
+## 6.5 `queue 2026-10-21_113400` — upstream Brenier / correlated ladder (paper toys)
+
+Config for every row (`iot_experiments/gpu_bench/jobs/brenier_ladder.txt`): `scan=hello`,
+`solver=cupdlpx`, `tie_break=regularized` (ε=1e-4), `prune=none`, `max_iterations=200`,
+`master_time_limit=300 s`, `tol=1e-9`, seed 0. Instances are the **upstream constructions** in
+`export_experiments/synthetic.py` (`make_brenier_problem`, `make_correlated_brenier_problem`), driven
+by `iot_experiments/core/brenier_toy.py`; the plan is the known permutation (`|S| = n`). JSONs:
+`iot_experiments/core/out/brenier_toy/brenier_toy.<tag>.json` (server clone; mirrored via `core/out`).
+
+**brenier, d=2** (target = source + 0.1·tanh, permuted):
+
+| n | T | `|F|/(m+n)` | δ | is_opt | rel_gap | wall |
+|---|---|---|---|---|---|---|
+| 800 | 12 | 4.69 | 5.16e-6 | True | 0.0 | 42 s |
+| 1600 | 11 | 4.95 | 2.70e-6 | True | 0.0 | 27 s |
+| 3200 | 14 | 7.05 | 1.30e-7 | True | 0.0 | 195 s |
+| 6400 | 19 | 7.84 | 2.18e-7 | True | 0.0 | 460 s |
+
+**brenier, d=8:** `T` 5/5/9/5, `|F|/(m+n)` 3.92/3.57/4.74/3.43 at n = 800/1600/3200/6400.
+No growth; all certify.
+
+**correlated, d=2** (ρ=0.999, latent_dim=4, linear_scale=2):
+
+| n | T | `|F|/(m+n)` | δ | is_opt | rel_gap | wall |
+|---|---|---|---|---|---|---|
+| 800 | 21 | 9.15 | 5.63e-6 | True | 0.0 | 645 s |
+| 1600 | 19 | 9.50 | 0.0 | True | 0.0 | 727 s |
+| 3200 | 28 | 9.91 | 3.73e-7 | True | 0.0 | 402 s |
+| 6400 | 31 | 11.34 | 1.12e-7 | True | 0.0 | 1044 s |
+
+**correlated, d=8:** `T` 42/29/33/**200 (cap)**, `|F|/(m+n)` 9.06/10.11/11.12/**27.20** at
+n = 800/1600/3200/6400; wall 3612 s / 3983 s / 7668 s / 61288 s. The n=6400 row **hit the 200-iteration
+cap** — it still reports `is_optimal=True, rel_gap=0`, but the trace was truncated by the budget, so
+`|F|/(m+n)=27.2` is a *lower bound* on what it would need.
+
+**Seed spread (correlated d=2, n=800):** T = 15/15, `|F|/(m+n)` = 7.29/7.20 for seeds 1/2, against
+`|F|/(m+n)=9.15` at seed 0. **`|F|/(m+n)` varies by ~2 at fixed n**, i.e. the seed-to-seed spread is
+larger than any single-step move down the ladder. Any exponent claim needs seeds, not one run per n.
+
+What this establishes:
+
+- **`|F|` grows with `n` in both `correlated` cells** (9.15→11.34 at d=2; 9.06→11.12 at d=8 up to
+  n=3200), which is the strongest growth signal in this report: roughly +0.3–0.4 per decade of `n`,
+  against +0.017–0.083 on the planted A/B/C ladder (§4.5).
+- **It is not universal:** `brenier d=8` is flat (3.4–4.7) across the same range.
+- **The `correlated` cell is expensive at d=8** — 61288 s for one n=6400 run, and that run did not
+  finish within budget.
+- **All completed rows certify** (`is_optimal=True`, `rel_gap=0.0`) up to n=6400.
+
+Caveats to carry:
+
+- **δ is not comparable across cells.** `brenier` costs are O(1e-3) and `correlated` O(1), while
+  `tol=1e-9` is **absolute**, so the two cells are held to different *relative* accuracy (the
+  `linear_scale` effect). `δ` should be read as `δ/median(c)`; that column is not yet recorded in the
+  JSONs.
+- The seed spread above (≈2 in `|F|/(m+n)` at fixed n) is comparable to the total ladder drift, so the
+  trend should be read as "grows", not as a fitted exponent.
+- `brenier`'s permutation is *recovered* by nearest-neighbour matching (upstream does not return it);
+  `correlated`'s is returned directly by upstream.
+
+---
+
 ## 7. Historical reports off the GPU/exact path — DO NOT CITE AS CURRENT
 
 These predate the GPU reframing and/or are **not exact-OT** results. They are kept for provenance; a
@@ -385,6 +447,10 @@ row from them must never be mixed into a table above.
 | The loop solves the **fractional** regime at scale | §4.5 A3/A4 (to n=51200, `is_optimal`, ≤3e-8) | **established** |
 | Natural ties (`duplicate`) inflate `\|F\|` | §4.5 A5 (8–10 vs 3–4), §6.7 | **established**, but only to n=6400 |
 | `hyst+reg` fails at n=51200 | §4.4 F2 | **retracted** (§4.5 B4) |
+| Upstream `correlated` toys inflate `\|F\|` with n (9.15→11.34 / 9.06→11.12) | §6.5 | **established**, 2 cells, 1 seed each |
+| Upstream `brenier` d=8 is flat in n (3.4–4.7) | §6.5 | **established** — growth is not universal |
+| The loop solves the paper's toys exactly | §6.5 (11/12 `is_optimal`, `rel_gap=0`) | **established** to n=6400 |
+| `correlated` d=8 n=6400 needs > 200 iterations | §6.5 (cap hit, `\|F\|/(m+n)`=27.2) | **established** (budget-limited, lower bound) |
 
 ## 9. Open questions
 
