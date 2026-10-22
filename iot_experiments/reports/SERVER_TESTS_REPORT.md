@@ -377,8 +377,10 @@ No growth; all certify.
 
 **correlated, d=8:** `T` 42/29/33/**200 (cap)**, `|F|/(m+n)` 9.06/10.11/11.12/**27.20** at
 n = 800/1600/3200/6400; wall 3612 s / 3983 s / 7668 s / 61288 s. The n=6400 row **hit the 200-iteration
-cap** — it still reports `is_optimal=True, rel_gap=0`, but the trace was truncated by the budget, so
-`|F|/(m+n)=27.2` is a *lower bound* on what it would need.
+cap with `converged=false` and a POSITIVE dual violation (`maxviol = +5.15e-3`)**: it is **NOT
+certified**, and `|F|/(m+n)=27.2` is a lower bound on what it would need. The JSON's `is_optimal=true`
+for that row is a forward-POT check on the returned theta, not a dual-feasibility certificate, and must
+not be cited as certification.
 
 **Seed spread (correlated d=2, n=800):** T = 15/15, `|F|/(m+n)` = 7.29/7.20 for seeds 1/2, against
 `|F|/(m+n)=9.15` at seed 0. **`|F|/(m+n)` varies by ~2 at fixed n**, i.e. the seed-to-seed spread is
@@ -392,7 +394,8 @@ What this establishes:
 - **It is not universal:** `brenier d=8` is flat (3.4–4.7) across the same range.
 - **The `correlated` cell is expensive at d=8** — 61288 s for one n=6400 run, and that run did not
   finish within budget.
-- **All completed rows certify** (`is_optimal=True`, `rel_gap=0.0`) up to n=6400.
+- **11 of 12 rows certify** (`is_optimal=True`, `rel_gap=0.0`) up to n=6400. The exception is
+  `correlated d=8 n=6400`, which hit the iteration cap **uncertified** (`maxviol=+5.15e-3`).
 
 Caveats to carry:
 
@@ -449,8 +452,8 @@ row from them must never be mixed into a table above.
 | `hyst+reg` fails at n=51200 | §4.4 F2 | **retracted** (§4.5 B4) |
 | Upstream `correlated` toys inflate `\|F\|` with n (9.15→11.34 / 9.06→11.12) | §6.5 | **established**, 2 cells, 1 seed each |
 | Upstream `brenier` d=8 is flat in n (3.4–4.7) | §6.5 | **established** — growth is not universal |
-| The loop solves the paper's toys exactly | §6.5 (11/12 `is_optimal`, `rel_gap=0`) | **established** to n=6400 |
-| `correlated` d=8 n=6400 needs > 200 iterations | §6.5 (cap hit, `\|F\|/(m+n)`=27.2) | **established** (budget-limited, lower bound) |
+| The loop solves the paper's toys exactly | §6.5 (11/12 certified; the 12th hit the iteration cap uncertified) | **established** to n=6400 |
+| `correlated` d=8 n=6400 needs > 200 iterations | §6.5 (`converged=false`, `maxviol`=+5.2e-3, `\|F\|/(m+n)`=27.2 lower bound) | **established** (budget-limited, NOT certified) |
 
 ## 9. Open questions
 
