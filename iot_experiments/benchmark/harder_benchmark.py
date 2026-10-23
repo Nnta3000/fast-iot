@@ -48,8 +48,8 @@ from iot import (  # noqa: E402
     solve_cutting_plane,
     solve_inverse_ot,
 )
-from iot.sinkhorn_theta import fit_theta_sinkhorn  # noqa: E402
-from iot.subgradient import SubgradientConfig, fit_theta_subgradient  # noqa: E402
+from iot.alternatives.sinkhorn_theta import fit_theta_sinkhorn  # noqa: E402
+from iot.alternatives.subgradient import SubgradientConfig, fit_theta_subgradient  # noqa: E402
 from iot_experiments.benchmark.hard_instances import (  # noqa: E402
     LP_FAMILIES,
     HardInstance,

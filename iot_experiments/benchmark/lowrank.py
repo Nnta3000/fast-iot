@@ -68,7 +68,7 @@ class LowRankFeatures:
         CN: `sum_k theta_k U_ik V_jk = <sqrt(theta)<U_i, sqrt(theta)<V_j>`，`O(m n k)` matmul。
         EN: `sum_k theta_k U_ik V_jk = <sqrt(theta)<U_i, sqrt(theta)<V_j>`, an `O(m n k)` matmul.
         """
-        from iot.bilinear import BilinearEmbedding
+        from iot.backends.bilinear import BilinearEmbedding
 
         value = np.asarray(theta, dtype=np.float64).reshape(-1)
         root = np.sqrt(np.clip(value, 0.0, None))

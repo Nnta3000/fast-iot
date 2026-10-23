@@ -36,7 +36,7 @@ def probe_one(
     from scipy import sparse
 
     from iot import EdgeSet, InverseOTProblem, mandatory_edges
-    from iot.master import build_master_system
+    from iot.exact.master import build_master_system
 
     rng = np.random.default_rng(int(seed))
     started = time.perf_counter()

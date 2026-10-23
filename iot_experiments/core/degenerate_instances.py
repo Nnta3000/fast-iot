@@ -147,8 +147,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     from iot import solve_inverse_ot
-    from iot.cupdlpx_master import CuPdlpxMasterSolver
-    from iot.master import LinearMasterSolver
+    from iot.backends.cupdlpx_master import CuPdlpxMasterSolver
+    from iot.exact.master import LinearMasterSolver
 
     for n in args.n:
         for penalty in args.penalty:

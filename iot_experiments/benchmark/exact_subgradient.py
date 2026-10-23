@@ -30,7 +30,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot.subgradient import (  # noqa: E402
+from iot.alternatives.subgradient import (  # noqa: E402
     ExactPlanSolver,
     SubgradientConfig,
     fit_theta_subgradient,
@@ -48,7 +48,7 @@ from iot_experiments.benchmark.instances import (  # noqa: E402
     build_instance,
 )
 from iot_experiments.benchmark.runner import params_from_instance  # noqa: E402
-from iot.sinkhorn_theta import project_theta  # noqa: E402
+from iot.alternatives.sinkhorn_theta import project_theta  # noqa: E402
 
 PINNED_THREADS: tuple[int, int, int] = (8, 8, 8)
 LOCK_PATH = _REPO_ROOT / "iot_experiments" / "benchmark" / ".cpu_lock"
@@ -71,7 +71,7 @@ def _threads() -> dict[str, int]:
 
 def make_pot_solver(instance: BenchmarkInstance) -> ExactPlanSolver:
     """CN: POT 精确 OT 内层求解器（稠密代价）。EN: POT exact-OT inner solver (dense cost)."""
-    from iot.subgradient import make_pot_solver as _make
+    from iot.alternatives.subgradient import make_pot_solver as _make
 
     return _make(instance.observed_problem(), num_itermax=DEFAULT_NUM_ITERMAX)
 

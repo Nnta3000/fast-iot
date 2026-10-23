@@ -23,7 +23,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot import make_hello_solver  # noqa: E402
-from iot.subgradient import SubgradientConfig, fit_theta_subgradient, make_pot_solver  # noqa: E402
+from iot.alternatives.subgradient import SubgradientConfig, fit_theta_subgradient, make_pot_solver  # noqa: E402
 from iot_experiments.benchmark.instances import build_instance  # noqa: E402
 
 

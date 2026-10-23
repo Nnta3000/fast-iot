@@ -5,11 +5,11 @@ import ot
 import pytest
 
 from iot import BilinearPSDTheta, dense_cost_matrix, make_bilinear_psd_grounded_instance
-from iot.evaluation import evaluate_inverse_ot, l0_gap
-from iot.grounded import GroundedInstance
-from iot.loop import solve_inverse_ot
-from iot.sdp import SdpMasterSolver
-from iot.sinkhorn_theta import fit_theta_sinkhorn
+from iot.eval.evaluation import evaluate_inverse_ot, l0_gap
+from iot.generators.grounded import GroundedInstance
+from iot.exact.loop import solve_inverse_ot
+from iot.exact.sdp import SdpMasterSolver
+from iot.alternatives.sinkhorn_theta import fit_theta_sinkhorn
 
 
 def test_shared_l0_gap_matches_direct_pot_computation() -> None:

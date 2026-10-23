@@ -26,7 +26,7 @@ from iot import (
     solve_cut_master,
     solve_cutting_plane,
 )
-from iot.subgradient import make_pot_solver, observed_feature_moment, support_moment
+from iot.alternatives.subgradient import make_pot_solver, observed_feature_moment, support_moment
 
 
 def _problem(

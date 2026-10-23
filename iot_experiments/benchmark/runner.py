@@ -38,8 +38,8 @@ from iot import (  # noqa: E402
     dense_cost_matrix,
     solve_inverse_ot,
 )
-from iot.entropic import SinkhornResult, sinkhorn_plan_with_potentials  # noqa: E402
-from iot.sinkhorn_theta import project_theta  # noqa: E402
+from iot.alternatives.entropic import SinkhornResult, sinkhorn_plan_with_potentials  # noqa: E402
+from iot.alternatives.sinkhorn_theta import project_theta  # noqa: E402
 
 from iot_experiments.benchmark.checkpoint import (  # noqa: E402
     InstanceParams,

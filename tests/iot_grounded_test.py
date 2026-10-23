@@ -7,7 +7,7 @@ from iot import (
     is_optimal_plan,
     make_diagonal_grounded_instance,
 )
-from iot.grounded import GroundedInstance
+from iot.generators.grounded import GroundedInstance
 
 
 def test_grounded_diagonal_instance_is_consistent(simplex_instance: GroundedInstance) -> None:

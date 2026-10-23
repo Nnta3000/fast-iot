@@ -52,7 +52,7 @@ from iot import (  # noqa: E402
     is_optimal_plan,
     solve_inverse_ot,
 )
-from iot.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
+from iot.backends.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
 
 _DATA_ROOT = Path("/home/agent/Documents/dpm-inverse-ot/data/Task_002_MRI_T1_T2/Train")
 _IMG = 192

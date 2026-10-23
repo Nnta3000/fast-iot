@@ -14,7 +14,7 @@ from iot import (
     mandatory_edges,
     solve_inverse_ot,
 )
-from iot.grounded import GroundedInstance
+from iot.generators.grounded import GroundedInstance
 
 
 def _grid(m: int, n: int) -> tuple[np.ndarray, np.ndarray]:

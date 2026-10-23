@@ -1,98 +1,51 @@
 """
-CN: hello-iot 公开 API：逆最优传输（约束生成）。
-EN: Public API of hello-iot: inverse optimal transport by constraint generation.
+CN: hello-iot 公开 API。**按用途分组**，每组一个子包：
+
+      iot.core         问题、边集、参数集、特征族、结果类型（词汇层，无算法）
+      iot.exact        精确（max-margin）逆 OT —— 主求解器 `solve_inverse_ot`
+      iot.relaxed      松弛（最小 regret）逆 OT —— `solve_inverse_ot_regret`，不假设 A1
+      iot.backends     可替换后端：CuPDLPx LP、torch/HELLO 分离扫描、双线性嵌入
+      iot.alternatives 其他算法：切割平面、精确次梯度、熵正则
+      iot.eval         验证与指标
+      iot.generators   真值与精确 OT 内层求解器
+
+EN: Public API of hello-iot, **grouped by purpose**, one subpackage per group:
+
+      iot.core         problem, edge set, parameter set, feature families, result types (no algorithms)
+      iot.exact        exact (max-margin) inverse OT -- the main solver `solve_inverse_ot`
+      iot.relaxed      relaxed (minimum-regret) inverse OT -- `solve_inverse_ot_regret`, drops A1
+      iot.backends     swappable backends: CuPDLPx LP, torch/HELLO separation scans, bilinear embedding
+      iot.alternatives other algorithms: cutting plane, exact subgradient, entropic
+      iot.eval         validation and metrics
+      iot.generators   ground truth and the exact-OT inner solver
+
+CN: 顶层只再导出**最常用**的几个名字，便于 `from iot import solve_inverse_ot`。
+EN: The top level re-exports only the most common names, so `from iot import solve_inverse_ot` works.
 """
 
 from __future__ import annotations
 
-from .components import (
-    ComponentPartition,
-    connector_edges,
-    mandatory_edges,
-    support_components,
-)
-from .cutting_plane import (
-    CutMasterResult,
-    CuttingPlaneConfig,
-    CuttingPlaneCut,
-    CuttingPlaneIteration,
-    CuttingPlaneResult,
-    MasterMode,
-    solve_cut_master,
-    solve_cutting_plane,
-)
-from .cupdlpx_master import (
-    CuPdlpxLp,
-    CuPdlpxMasterSolver,
-    build_cupdlpx_lp,
-)
-from .edges import EdgeSet, edge_keys
-from .entropic import (
-    EntropicFitResult,
-    EntropicIteration,
-    fit_psd_moment_entropic,
-    moment_from_plan,
-    project_psd,
-    scale_invariant_error,
-    sinkhorn_plan,
-)
-from .features import (
+from . import alternatives, backends, core, eval, exact, generators, relaxed
+from .core import (
     BilinearPSDFeatures,
+    BilinearPSDTheta,
     DenseFeatureTensor,
     DiagonalWeightFeatures,
+    EdgeSet,
     FeatureMap,
-    QuadraticFeatures,
-    dense_cost_matrix,
-)
-from .bilinear import (
-    BilinearEmbeddable,
-    BilinearEmbedding,
-    bilinear_embedding,
-    features_support_bilinear,
-)
-from .generic_scan import scan_violations_torch
-from .grounded import (
-    GroundedInstance,
-    make_bilinear_psd_grounded_instance,
-    make_diagonal_grounded_instance,
-)
-from .hello_scan import fast_scan_supported, scan_violations_fast
-from .hello_solver import hello_solver_supported, make_hello_solver
-from .loop import solve_inverse_ot
-from .torch_runtime import (
-    cuda_available,
-    describe_backend,
-    resolve_torch_device,
-    torch_available,
-)
-from .master import (
-    CanonicalGaugeMasterSolver,
-    LinearMasterSolver,
-    MasterSolution,
-    MasterSolver,
-    RegularizedMasterSolver,
-    TieBreak,
-    WarmStartMasterSolver,
-    canonical_potentials,
-    draw_generic_direction,
-)
-from .oracle import ViolationScan, scan_violations
-from .problem import InverseOTError, InverseOTProblem
-from .reduced_master import (
-    ForestRepresentation,
-    SpanningForestMasterSolver,
-    build_forest_representation,
-)
-from .result import InverseOTResult, IterationRecord
-from .sdp import SdpMasterSolver
-from .theta import (
-    BilinearPSDTheta,
+    InverseOTError,
+    InverseOTProblem,
+    InverseOTResult,
+    IterationRecord,
     LinearThetaConstraints,
     LinearThetaSet,
+    QuadraticFeatures,
     SimplexTheta,
     ThetaSet,
+    dense_cost_matrix,
+    edge_keys,
 )
-from .validation import (
+from .eval import (
     DualCertificate,
     OptimalityCheck,
     ThetaRange,
@@ -102,88 +55,145 @@ from .validation import (
     optimal_theta_ranges,
     plan_cost,
 )
+from .exact import (
+    ComponentPartition,
+    MasterSolution,
+    MasterSolver,
+    TieBreak,
+    connector_edges,
+    mandatory_edges,
+    scan_violations,
+    solve_inverse_ot,
+    support_components,
+)
+from .backends import (
+    CuPdlpxLp,
+    CuPdlpxMasterSolver,
+    bilinear_embedding,
+    build_cupdlpx_lp,
+    cuda_available,
+    describe_backend,
+    fast_scan_supported,
+    features_support_bilinear,
+    resolve_torch_device,
+    scan_violations_fast,
+    scan_violations_torch,
+    torch_available,
+)
+from .alternatives import (
+    CutMasterResult,
+    CuttingPlaneConfig,
+    CuttingPlaneCut,
+    CuttingPlaneIteration,
+    CuttingPlaneResult,
+    EntropicFitResult,
+    EntropicIteration,
+    MasterMode,
+    SubgradientConfig,
+    SubgradientIteration,
+    SubgradientResult,
+    fit_psd_moment_entropic,
+    fit_theta_subgradient,
+    moment_from_plan,
+    project_psd,
+    scale_invariant_error,
+    sinkhorn_plan,
+    solve_cut_master,
+    solve_cutting_plane,
+)
+from .exact.sdp import SdpMasterSolver
+from .exact.master import (
+    CanonicalGaugeMasterSolver,
+    LinearMasterSolver,
+    RegularizedMasterSolver,
+    WarmStartMasterSolver,
+    canonical_potentials,
+    draw_generic_direction,
+)
+from .exact.reduced_master import (
+    ForestRepresentation,
+    SpanningForestMasterSolver,
+    build_forest_representation,
+)
+from .relaxed import (
+    RegretIteration,
+    RegretMasterSolver,
+    RegretResult,
+    RegretSolution,
+    build_regret_lp,
+    full_regret,
+    regret_objective,
+    solve_inverse_ot_regret,
+    support_duals,
+)
+from .generators import (
+    GroundedInstance,
+    hello_solver_supported,
+    make_bilinear_psd_grounded_instance,
+    make_diagonal_grounded_instance,
+    make_hello_solver,
+)
+from .backends import BilinearEmbeddable, BilinearEmbedding
+from .alternatives.entropic import SinkhornResult, sinkhorn_plan_with_potentials
+from .alternatives.sinkhorn_theta import (
+    SinkhornThetaIteration,
+    SinkhornThetaResult,
+    fit_theta_sinkhorn,
+    project_simplex,
+    project_theta,
+)
+from .alternatives.subgradient import (
+    observed_feature_moment,
+    subgradient_from_plan,
+    support_moment,
+)
+from .eval.evaluation import (
+    InverseOTMetrics,
+    evaluate_inverse_ot,
+    feature_moment,
+    l0_gap,
+    moment_error,
+)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
-    "ComponentPartition",
-    "CanonicalGaugeMasterSolver",
-    "CutMasterResult",
-    "CuttingPlaneConfig",
-    "CuttingPlaneCut",
-    "CuttingPlaneIteration",
-    "CuttingPlaneResult",
-    "CuPdlpxLp",
-    "CuPdlpxMasterSolver",
-    "DenseFeatureTensor",
-    "DiagonalWeightFeatures",
-    "DualCertificate",
-    "EdgeSet",
-    "EntropicFitResult",
-    "EntropicIteration",
-    "FeatureMap",
-    "ForestRepresentation",
-    "GroundedInstance",
-    "BilinearPSDFeatures",
-    "BilinearPSDTheta",
-    "InverseOTError",
-    "InverseOTProblem",
-    "InverseOTResult",
-    "IterationRecord",
-    "LinearMasterSolver",
-    "LinearThetaConstraints",
-    "LinearThetaSet",
-    "MasterMode",
-    "MasterSolution",
-    "MasterSolver",
-    "OptimalityCheck",
-    "QuadraticFeatures",
-    "RegularizedMasterSolver",
-    "SdpMasterSolver",
-    "SimplexTheta",
-    "SpanningForestMasterSolver",
-    "ThetaRange",
-    "ThetaSet",
-    "TieBreak",
-    "ViolationScan",
-    "WarmStartMasterSolver",
-    "__version__",
-    "build_forest_representation",
-    "build_cupdlpx_lp",
-    "canonical_potentials",
-    "connector_edges",
-    "dense_cost_matrix",
-    "draw_generic_direction",
-    "dual_optimality_certificate",
-    "edge_keys",
-    "fit_psd_moment_entropic",
-    "fixed_dual_theta_ranges",
-    "fast_scan_supported",
-    "features_support_bilinear",
-    "bilinear_embedding",
-    "BilinearEmbedding",
-    "BilinearEmbeddable",
-    "scan_violations_torch",
-    "torch_available",
-    "cuda_available",
-    "resolve_torch_device",
-    "describe_backend",
-    "hello_solver_supported",
-    "is_optimal_plan",
-    "make_bilinear_psd_grounded_instance",
-    "make_diagonal_grounded_instance",
-    "make_hello_solver",
-    "mandatory_edges",
-    "moment_from_plan",
-    "optimal_theta_ranges",
-    "plan_cost",
-    "project_psd",
-    "scale_invariant_error",
-    "scan_violations",
-    "scan_violations_fast",
-    "sinkhorn_plan",
-    "solve_cut_master",
-    "solve_cutting_plane",
-    "solve_inverse_ot",
+    # subpackages
+    "alternatives", "backends", "core", "eval", "exact", "generators", "relaxed",
+    # core vocabulary
+    "BilinearPSDFeatures", "BilinearPSDTheta", "DenseFeatureTensor", "DiagonalWeightFeatures",
+    "EdgeSet", "FeatureMap", "InverseOTError", "InverseOTProblem", "InverseOTResult",
+    "IterationRecord", "LinearThetaConstraints", "LinearThetaSet", "QuadraticFeatures",
+    "SimplexTheta", "ThetaSet", "dense_cost_matrix", "edge_keys",
+    # exact
+    "CanonicalGaugeMasterSolver", "ComponentPartition", "ForestRepresentation", "LinearMasterSolver",
+    "MasterSolution", "MasterSolver", "RegularizedMasterSolver", "SdpMasterSolver",
+    "SpanningForestMasterSolver", "TieBreak", "WarmStartMasterSolver",
+    "build_forest_representation", "canonical_potentials", "connector_edges",
+    "draw_generic_direction", "mandatory_edges", "scan_violations", "solve_inverse_ot",
     "support_components",
+    # relaxed
+    "RegretIteration", "RegretMasterSolver", "RegretResult", "RegretSolution",
+    "build_regret_lp", "full_regret", "regret_objective", "solve_inverse_ot_regret", "support_duals",
+    # backends
+    "BilinearEmbeddable", "BilinearEmbedding", "CuPdlpxLp", "CuPdlpxMasterSolver",
+    "bilinear_embedding", "build_cupdlpx_lp", "cuda_available", "describe_backend",
+    "fast_scan_supported", "features_support_bilinear", "resolve_torch_device",
+    "scan_violations_fast", "scan_violations_torch", "torch_available",
+    # alternatives
+    "CutMasterResult", "CuttingPlaneConfig", "CuttingPlaneCut", "CuttingPlaneIteration",
+    "CuttingPlaneResult", "EntropicFitResult", "EntropicIteration", "MasterMode", "SinkhornResult",
+    "SinkhornThetaIteration", "SinkhornThetaResult", "SubgradientConfig", "SubgradientIteration",
+    "SubgradientResult", "fit_psd_moment_entropic", "fit_theta_sinkhorn", "fit_theta_subgradient",
+    "moment_from_plan", "observed_feature_moment", "project_psd", "project_simplex", "project_theta",
+    "scale_invariant_error", "sinkhorn_plan", "sinkhorn_plan_with_potentials", "solve_cut_master",
+    "solve_cutting_plane", "subgradient_from_plan", "support_moment",
+    # eval
+    "DualCertificate", "InverseOTMetrics", "OptimalityCheck", "ThetaRange",
+    "dual_optimality_certificate", "evaluate_inverse_ot", "feature_moment",
+    "fixed_dual_theta_ranges", "is_optimal_plan", "l0_gap", "moment_error",
+    "optimal_theta_ranges", "plan_cost",
+    # generators
+    "GroundedInstance", "hello_solver_supported", "make_bilinear_psd_grounded_instance",
+    "make_diagonal_grounded_instance", "make_hello_solver",
 ]

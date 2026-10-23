@@ -36,7 +36,7 @@ from iot import (  # noqa: E402
     LinearMasterSolver,
     MasterSolution,
 )
-from iot.loop import solve_inverse_ot  # noqa: E402
+from iot.exact.loop import solve_inverse_ot  # noqa: E402
 from iot_experiments.core.costs import blockwise_cost_matrix  # noqa: E402
 from iot_experiments.core.families import FamilySpec, build_family  # noqa: E402
 from iot_experiments.core.marginals import marginal_spec  # noqa: E402
@@ -88,7 +88,7 @@ class PenalizedMasterSolver:
 
     def solve(self, problem, edges, *, tie_break: str = "none"):
         import highspy
-        from iot.master import build_master_system
+        from iot.exact.master import build_master_system
 
         system = build_master_system(problem, edges)
         layout = system.layout

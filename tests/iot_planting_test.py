@@ -64,8 +64,8 @@ def test_planted_pruning_cycles_with_the_first_order_master_contract() -> None:
     #     hysteresis cycle. We cannot reproduce the GPU here, so we assert the *contract*:
     #     CuPdlpxMasterSolver rejects any tie_break != "none", and prune=none is cupdlpx's usable setting.
     from iot import CuPdlpxMasterSolver
-    from iot.problem import InverseOTError
-    from iot.components import mandatory_edges
+    from iot.core.problem import InverseOTError
+    from iot.exact.components import mandatory_edges
 
     planted = plant_instance(family="diagonal", n=60, point_dimension=4, seed=0)
     edges, _ = mandatory_edges(planted.problem)

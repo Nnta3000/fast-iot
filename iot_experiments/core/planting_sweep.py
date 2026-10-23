@@ -24,7 +24,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot import LinearMasterSolver, solve_inverse_ot  # noqa: E402
-from iot.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
+from iot.backends.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
 from iot_experiments.core.planting import plant_instance  # noqa: E402
 
 

@@ -11,7 +11,7 @@ from iot import (
     scale_invariant_error,
     sinkhorn_plan,
 )
-from iot.evaluation import l0_gap
+from iot.eval.evaluation import l0_gap
 
 
 def test_project_psd_clips_negative_eigenvalues() -> None:

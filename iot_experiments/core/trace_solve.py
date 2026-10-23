@@ -25,9 +25,9 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot import EdgeSet, InverseOTProblem, solve_inverse_ot  # noqa: E402
-from iot.components import mandatory_edges  # noqa: E402
-from iot.master import MasterSolver  # noqa: E402
-from iot.oracle import scan_violations  # noqa: E402
+from iot.exact.components import mandatory_edges  # noqa: E402
+from iot.exact.master import MasterSolver  # noqa: E402
+from iot.exact.oracle import scan_violations  # noqa: E402
 
 
 class TracingSolver:
@@ -78,8 +78,8 @@ class TracingSolver:
 def trace_solve(*, family: str, n: int, point_dimension: int, seed: int, marginal: str,
                 scan: str, solver: str, prune: str, tau_prune: float, tau_sep: float, gamma: int,
                 master_time_limit: float, max_iterations: int, use_planting: bool) -> None:
-    from iot.cupdlpx_master import CuPdlpxMasterSolver
-    from iot.master import LinearMasterSolver
+    from iot.backends.cupdlpx_master import CuPdlpxMasterSolver
+    from iot.exact.master import LinearMasterSolver
 
     if use_planting:
         from iot_experiments.core.planting import plant_instance

@@ -28,7 +28,7 @@ import numpy as np
 import ot
 
 from iot import is_optimal_plan
-from iot.features import dense_cost_matrix
+from iot.core.features import dense_cost_matrix
 
 from .checkpoint import RunCheckpoint, read_run
 from .instances import DEFAULT_NUM_ITERMAX, BenchmarkInstance, build_instance

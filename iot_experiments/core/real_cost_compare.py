@@ -45,7 +45,7 @@ from iot import (  # noqa: E402
     is_optimal_plan,
     solve_inverse_ot,
 )
-from iot.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
+from iot.backends.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
 
 from .real_phase1 import _DATA_ROOT, block_features, load_gray  # noqa: E402
 

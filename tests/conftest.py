@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from iot.grounded import (
+from iot.generators.grounded import (
     GroundedInstance,
     make_bilinear_psd_grounded_instance,
     make_diagonal_grounded_instance,

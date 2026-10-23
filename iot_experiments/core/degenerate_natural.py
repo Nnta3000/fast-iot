@@ -83,7 +83,7 @@ def reps1d(n: int, m: int) -> np.ndarray:
 def _one(*, kind: str, family: str, n: int, d: int, seed: int, prune: str, tau_prune: float,
          tau_sep: float, gamma: int, scan: str, max_iterations: int) -> dict[str, object]:
     from iot import solve_inverse_ot
-    from iot.cupdlpx_master import CuPdlpxMasterSolver
+    from iot.backends.cupdlpx_master import CuPdlpxMasterSolver
 
     rng = np.random.default_rng(int(seed))
     source, target = _clouds(kind, int(n), int(d), rng)

@@ -18,7 +18,7 @@ from iot import (
     make_diagonal_grounded_instance,
     mandatory_edges,
 )
-from iot.subgradient import (
+from iot.alternatives.subgradient import (
     SubgradientConfig,
     fit_theta_subgradient,
     make_pot_solver,

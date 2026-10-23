@@ -20,8 +20,8 @@ from iot import (
     dense_cost_matrix,
     is_optimal_plan,
 )
-from iot.evaluation import feature_moment
-from iot.subgradient import (
+from iot.eval.evaluation import feature_moment
+from iot.alternatives.subgradient import (
     SubgradientConfig,
     fit_theta_subgradient,
     make_pot_solver,
@@ -75,7 +75,7 @@ def test_subgradient_satisfies_convexity_inequality() -> None:
         perturbation = rng.normal(scale=0.05, size=problem.n_features)
         theta_prime = theta0 + perturbation
         # Project onto the simplex via the same routine the learner uses.
-        from iot.sinkhorn_theta import project_theta
+        from iot.alternatives.sinkhorn_theta import project_theta
 
         theta_prime = project_theta(theta_prime, theta_set)
         _, gap_prime = subgradient_from_plan(problem, theta_prime, solver(theta_prime))

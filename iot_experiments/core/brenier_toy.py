@@ -43,8 +43,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot import DiagonalWeightFeatures, InverseOTProblem, SimplexTheta, solve_inverse_ot  # noqa: E402
-from iot.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
-from iot.master import LinearMasterSolver  # noqa: E402
+from iot.backends.cupdlpx_master import CuPdlpxMasterSolver  # noqa: E402
+from iot.exact.master import LinearMasterSolver  # noqa: E402
 from export_experiments.synthetic import (  # noqa: E402
     make_brenier_problem,
     make_correlated_brenier_problem,
