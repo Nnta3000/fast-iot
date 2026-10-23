@@ -21,6 +21,7 @@ from scipy.sparse import csr_matrix, lil_matrix, vstack
 from ..core.edges import EdgeSet
 from ..core.problem import InverseOTError, InverseOTProblem
 from ..core.theta import LinearThetaSet
+from ..backends.lp_common import assemble_lp
 
 # CN: "lex_generic" 是 spec/证明第 6 节的两步 tie-break：先最大化 delta，再在
 #     delta = delta* 的面上最大化一个整轮固定、运行开始时抽取一次的通用方向 r。
@@ -106,89 +107,18 @@ def _finite_bound(value: float) -> float | None:
 
 def build_master_system(problem: InverseOTProblem, edges: EdgeSet) -> _MasterSystem:
     """
-    CN: 由 F 上的线性特征构造 master 的稀疏 LP 系统。
-    EN: Build the sparse LP system of the master from the linear features on F.
+    CN: 由共享装配器 `backends.lp_common.assemble_lp` 构造 max-margin master：
+        S 边为等式，其余边带 delta，目标 `max delta`（即 `c[delta] = -1`）。
+    EN: Build the max-margin master through the shared assembler `backends.lp_common.assemble_lp`:
+        S edges are equalities, other edges carry delta, objective `max delta` (`c[delta] = -1`).
     """
-    if edges.size < 1:
-        raise InverseOTError("master requires a non-empty edge set")
-    if not isinstance(problem.theta_set, LinearThetaSet):
-        raise InverseOTError(
-            "the LP master requires a LinearThetaSet; "
-            f"got {type(problem.theta_set).__name__}. Pair a non-linear Theta with a "
-            "dedicated master solver."
-        )
     layout = _variable_layout(int(problem.n_source), int(problem.n_target), int(problem.n_features))
-    support_keys = problem.support_keys()
-    in_support = np.isin(edges.keys, support_keys)
-    feature_matrix = problem.features.features(edges.rows, edges.cols)
-    if feature_matrix.shape != (edges.size, int(problem.n_features)):
-        raise InverseOTError("features() returned an unexpected number of feature columns")
-
-    n_source = int(problem.n_source)
-    equality_rows = int(np.count_nonzero(in_support))
-    inequality_rows = int(edges.size - equality_rows)
-    theta_constraints = problem.theta_set.linear_constraints()
-    n_eq = equality_rows + theta_constraints.a_eq.shape[0] + 1  # +1 for g[0] = 0
-    n_ub = inequality_rows
-
-    a_eq = lil_matrix((n_eq, layout.size), dtype=np.float64)
-    b_eq = np.zeros(n_eq, dtype=np.float64)
-    a_ub = lil_matrix((n_ub, layout.size), dtype=np.float64)
-    b_ub = np.zeros(n_ub, dtype=np.float64)
-
-    eq_cursor = 0
-    ub_cursor = 0
-    for edge_index in range(edges.size):
-        row = int(edges.rows[edge_index])
-        col = int(edges.cols[edge_index])
-        feature_row = feature_matrix[edge_index]
-        if bool(in_support[edge_index]):
-            a_eq[eq_cursor, layout.source_start + row] = 1.0
-            a_eq[eq_cursor, layout.target_start + col] = 1.0
-            a_eq[eq_cursor, layout.theta_start : layout.theta_start + int(problem.n_features)] = -feature_row
-            b_eq[eq_cursor] = 0.0
-            eq_cursor += 1
-        else:
-            a_ub[ub_cursor, layout.delta] = 1.0
-            a_ub[ub_cursor, layout.source_start + row] = 1.0
-            a_ub[ub_cursor, layout.target_start + col] = 1.0
-            a_ub[ub_cursor, layout.theta_start : layout.theta_start + int(problem.n_features)] = -feature_row
-            b_ub[ub_cursor] = 0.0
-            ub_cursor += 1
-
-    # CN: 嵌入 Theta 的线性等式约束。
-    # EN: Embed the linear equality constraints of Theta.
-    theta_block = theta_constraints.a_eq
-    for local_row in range(theta_block.shape[0]):
-        a_eq[eq_cursor, layout.theta_start : layout.theta_start + int(problem.n_features)] = theta_block[local_row]
-        b_eq[eq_cursor] = float(theta_constraints.b_eq[local_row])
-        eq_cursor += 1
-    # CN: 规范固定 g[0] = 0。
-    # EN: Gauge fixing g[0] = 0.
-    a_eq[eq_cursor, layout.target_start] = 1.0
-    b_eq[eq_cursor] = 0.0
-    eq_cursor += 1
-
-    bounds: list[tuple[float | None, float | None]] = [(0.0, None)]
-    for index in range(int(problem.n_features)):
-        bounds.append(
-            (
-                _finite_bound(float(theta_constraints.lower[index])),
-                _finite_bound(float(theta_constraints.upper[index])),
-            )
-        )
-    bounds.extend([(None, None)] * (n_source + int(problem.n_target)))
-    if len(bounds) != layout.size:
-        raise InverseOTError("internal error: variable layout and bounds disagree")
-
-    return _MasterSystem(
-        a_ub=csr_matrix(a_ub),
-        b_ub=b_ub,
-        a_eq=csr_matrix(a_eq),
-        b_eq=b_eq,
-        bounds=bounds,
-        layout=layout,
-    )
+    objective = np.zeros(int(layout.size), dtype=np.float64)
+    objective[int(layout.delta)] = -1.0
+    shared = assemble_lp(problem, edges, has_delta=True, objective=objective,
+                         support_as_equalities=True)
+    return _MasterSystem(a_ub=shared.a_ub, b_ub=shared.b_ub, a_eq=shared.a_eq, b_eq=shared.b_eq,
+                         bounds=list(zip(shared.lb.tolist(), shared.ub.tolist())), layout=layout)
 
 
 def _solve_system(

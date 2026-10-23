@@ -55,6 +55,9 @@ __all__ = [
 # CN: 分离/停止用解算器精度量级的容差；证书恒等式用浮点量级容差。
 # EN: separation/stopping use solver-accuracy tolerances; the identity uses floating-point tolerances.
 DEFAULT_TOL = 1e-7
+# CN: 分离容差至少是代价尺度的这个倍数，否则求解器噪声会把 F 填满。
+# EN: the separation tolerance is at least this fraction of the cost scale, otherwise solver noise fills F.
+TOL_SCALE_FRACTION = 1e-5
 DEFAULT_TAU = 1e-7
 IDENTITY_RTOL = 1e-10
 SelectionMode = Literal["central", "uniform", "none"]
@@ -75,6 +78,11 @@ class RegretIteration:
     added: int
     max_sigma_all: float
     wall_time: float = 0.0
+    regret_pre_repair: float = 0.0
+    sigma_max_in_F: float = 0.0
+    sigma_max_out_F: float = 0.0
+    solver_iterations: int = 0
+    solver_status: str = ""
 
 
 @dataclass(frozen=True)
@@ -139,10 +147,23 @@ def _sigma(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.nd
 
 
 def _assert_identity(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.ndarray,
-                     rows: np.ndarray, cols: np.ndarray, values: np.ndarray, regret: float) -> None:
+                     rows: np.ndarray, cols: np.ndarray, values: np.ndarray, regret: float,
+                     *, rtol: float = IDENTITY_RTOL) -> None:
     """
-    CN: 断言 `R = -sum_S pi sigma`（浮点量级、按各项尺度缩放）。
-    EN: Assert `R = -sum_S pi sigma` (floating-point tolerance, scaled by the terms).
+    CN: 断言 `R = -sum_S pi sigma`（按各项尺度相对比较）。
+
+        CN: **容差必须给出**：精确 LP 上与 `rtol` 同量级（1e-10 量级），但一阶求解器（CuPDLPx）只把
+            `sigma <= 0` 满足到一个求解精度（默认 ~1e-7），因此该点的恒等式只能到同一量级。用同一个
+            `rtol` 会在 CuPDLPx 上**误报**——恒等式本身在两种后端上都成立（实测残差 ~1e-12 相对），
+            差别只是求解器把点放在可行域内的哪里。
+
+    EN: Assert `R = -sum_S pi sigma` (relative to the terms' scale).
+
+        **The tolerance must be supplied.** On an exact LP it is ~1e-10, but a first-order solver
+        (CuPDLPx) satisfies `sigma <= 0` only to its own accuracy (default ~1e-7), so the identity at
+        that point is only good to the same order. Using the exact-LP tolerance made this assert fire
+        spuriously on CuPDLPx -- the identity itself holds on both backends (measured residual ~1e-12
+        relative); only *where* the solver puts the point inside the feasible set differs.
     """
     sig = _sigma(problem, theta, f, g, rows, cols)
     lhs = float(regret)
@@ -150,8 +171,10 @@ def _assert_identity(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray
     cost = np.asarray(problem.features.costs(theta, rows, cols), dtype=np.float64)
     scale = max(1.0, abs(float(np.dot(values, cost))), abs(float(np.dot(values, f[rows]))),
                 abs(float(np.dot(values, g[cols]))))
-    if abs(lhs - rhs) > IDENTITY_RTOL * scale:
-        raise InverseOTError(f"regret identity violated: R={lhs!r} vs {rhs!r} (scale={scale:.3e})")
+    if abs(lhs - rhs) > float(rtol) * scale:
+        raise InverseOTError(
+            f"regret identity violated: R={lhs!r} vs {rhs!r} (rel={abs(lhs - rhs) / scale:.3e}, "
+            f"rtol={rtol:.1e}, scale={scale:.3e})")
 
 
 def _uniform_theta(problem: InverseOTProblem) -> np.ndarray:
@@ -170,7 +193,7 @@ def _fingerprint(edges: EdgeSet) -> str:
 def solve_inverse_ot_regret(
     problem: InverseOTProblem,
     *,
-    tol: float = DEFAULT_TOL,
+    tol: float | None = None,
     tau_prune: float = DEFAULT_TAU,
     gamma: int = 1,
     max_iterations: int = 200,
@@ -181,6 +204,7 @@ def solve_inverse_ot_regret(
     eta: float = 1e-7,
     check_pot: bool = True,
     initial_extra: EdgeSet | None = None,
+    identity_rtol: float | None = None,
 ) -> RegretResult:
     """
     CN: 求解 §2 的松弛逆 OT。
@@ -194,9 +218,17 @@ def solve_inverse_ot_regret(
     """
     if int(gamma) < 1:
         raise ValueError("gamma must be >= 1")
-    if float(tol) < 0.0 or float(tau_prune) < 0.0:
-        raise ValueError("tol and tau_prune must be nonnegative")
+    if tol is not None and float(tol) < 0.0:
+        raise ValueError("tol must be nonnegative")
+    if float(tau_prune) < 0.0:
+        raise ValueError("tau_prune must be nonnegative")
     solver = master if master is not None else RegretMasterSolver(eta_scale=float(eta), tie_break=False)
+    if identity_rtol is None:
+        # CN: 一阶后端把点放在可行性内部，恒等式只能到求解精度；精确后端用浮点精度。
+        # EN: a first-order backend sits inside the feasible set, so the identity is only good to solver
+        #     accuracy; an exact backend gets floating point.
+        backend = str(getattr(solver, "backend", "highs"))
+        identity_rtol = 1e-8 if backend == "cupdlpx" else IDENTITY_RTOL
     support_rows, support_cols, support_values = problem.support()
     support = EdgeSet.from_arrays(support_rows, support_cols, n_target=int(problem.n_target))
     mandatory, _partition = mandatory_edges(problem)
@@ -221,8 +253,28 @@ def solve_inverse_ot_regret(
     r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
     all_rows, all_cols = r_idx.reshape(-1), c_idx.reshape(-1)
     total_mass = float(np.sum(support_values))
+    # CN: 容差 = max(用户给定或默认, 1e-5 * 代价尺度)。代价尺度用 uniform theta 下的 |c| 中位数。
+    # EN: tolerance = max(user/default, 1e-5 * cost scale), the scale being the median |c| at uniform theta.
+    probe = _uniform_theta(problem)
+    cost_probe = np.abs(np.asarray(problem.features.costs(probe, all_rows, all_cols),
+                                   dtype=np.float64))
+    cost_scale = float(np.median(cost_probe)) if cost_probe.size else 1.0
+    tol_eff = max(float(tol) if tol is not None else DEFAULT_TOL,
+                  float(TOL_SCALE_FRACTION) * max(cost_scale, 1e-30))
 
     records: list[RegretIteration] = []
+    # CN: uniform theta 作为初始 best-so-far（可行点，`s=0`，`U = R_uniform`）。
+    # EN: uniform theta seeds best-so-far (feasible, `s=0`, `U = R_uniform`).
+    uni0 = _uniform_theta(problem)
+    f_u, g_u = _best_dual_for(problem, uni0)
+    sig_u = _sigma(problem, uni0, f_u, g_u, all_rows, all_cols)
+    su = max(0.0, float(sig_u.max())) if sig_u.size else 0.0
+    u_uniform = float(np.dot(regret_objective(problem)[: int(problem.n_features)], uni0)
+                      - float(np.dot(problem.resolved_source_mass, f_u))
+                      - float(np.dot(problem.resolved_target_mass, g_u))) + su * total_mass
+    best_theta = np.array(uni0, dtype=np.float64)
+    best_upper = float(u_uniform)
+    best_regret = float("nan")
     start = time.perf_counter()
     theta = np.zeros(int(problem.n_features), dtype=np.float64)
     f = np.zeros(m, dtype=np.float64)
@@ -246,23 +298,45 @@ def solve_inverse_ot_regret(
         regret = float(solution.regret)
         if not np.all(np.isin(support.keys, finite.keys)):
             raise InverseOTError("S left the finite edge set (B1 violated)")
-        _assert_identity(problem, theta, f, g, support_rows, support_cols, support_values, regret)
+        _assert_identity(problem, theta, f, g, support_rows, support_cols, support_values, regret,
+                         rtol=float(identity_rtol))
 
-        as_master = MasterSolution(delta=0.0, theta=theta, source_dual=f, target_dual=g,
+        # CN: **扫描平移前的点**（投影 + 规范修复后、尚未 `f <- f - s`）。用平移后的点扫描会让
+        #     `s ~ 0`、永远看不到违例、每轮都在第 1 轮"收敛"。
+        # EN: **scan the pre-shift point** (projected + gauge-fixed, before `f <- f - s`). Scanning the
+        #     shifted point makes `s ~ 0`, finds no violators, and "converges" every time in round 1.
+        theta_pre = np.asarray(solution.theta_pre, dtype=np.float64)
+        f_pre = np.asarray(solution.source_dual_pre, dtype=np.float64)
+        g_pre = np.asarray(solution.target_dual_pre, dtype=np.float64)
+        as_master = MasterSolution(delta=0.0, theta=theta_pre, source_dual=f_pre, target_dual=g_pre,
                                    status=solution.status)
-        scan = scan_violations(problem, as_master, excluded=finite, tol=float(tol), gamma=int(gamma))
-        sigma_all = _sigma(problem, theta, f, g, all_rows, all_cols)
-        max_sigma_all = float(sigma_all.max())
-        s = max(0.0, max_sigma_all)
-        lower = regret
-        upper = regret + s * total_mass
-        gap = s * total_mass
+        scan = scan_violations(problem, as_master, excluded=finite, tol=float(tol_eff),
+                               gamma=int(gamma))
+        sigma_all = _sigma(problem, theta_pre, f_pre, g_pre, all_rows, all_cols)
+        s_pre = max(0.0, float(sigma_all.max()))
+        # CN: U = R_pre + s_pre*|pi_hat|（= 修复后的 R'），这是证书的上界。
+        # EN: U = R_pre + s_pre*|pi_hat| (= the repaired R'), the certified upper bound.
+        r_pre = float(solution.regret_pre)
+        upper = r_pre + s_pre * total_mass
+        lower = r_pre
+        gap = upper - lower
+        # CN: best-so-far 用上界 U 比较（uniform theta 也是候选）。
+        # EN: best-so-far compares on the upper bound U (uniform theta is also a candidate).
+        if best_theta is None or upper < best_upper:
+            best_theta = np.array(theta, dtype=np.float64)     # repaired point (globally feasible)
+            best_upper = float(upper)
+            best_regret = float(regret)
         records.append(RegretIteration(
             index=index, regret=regret, lower=lower, upper=upper, gap=gap,
             support_size=int(finite.size), finite_edges=int(finite.size),
             violation_count=int(scan.violation_count), added=int(scan.rows.size),
-            max_sigma_all=max_sigma_all, wall_time=float(time.perf_counter() - t0)))
-        if gap <= eps_r:
+            max_sigma_all=s_pre, wall_time=float(time.perf_counter() - t0),
+            regret_pre_repair=r_pre,
+            sigma_max_in_F=float(solution.sigma_max_in_F),
+            sigma_max_out_F=float(solution.sigma_max_out_F),
+            solver_iterations=int(solution.solver_iterations),
+            solver_status=str(solution.solver_status)))
+        if s_pre * total_mass <= eps_r:
             converged = True
             break
 
@@ -310,6 +384,7 @@ def solve_inverse_ot_regret(
     if check_pot:
         pot_regret = full_regret(problem, theta)
         pot_matches = bool(abs(pot_regret - regret_at_solution) <= max(1e-7, 1e-7 * abs(pot_regret)))
+    theta = best_theta if best_theta is not None else theta
     return RegretResult(
         theta=theta, source_dual=f, target_dual=g, regret=regret,
         regret_at_solution=regret_at_solution, lower=lower, upper=upper, gap=gap,
@@ -327,6 +402,85 @@ def _best_dual_for(problem: InverseOTProblem, theta: np.ndarray) -> tuple[np.nda
     cost = np.asarray(problem.features.costs(theta, r_idx.reshape(-1), c_idx.reshape(-1)),
                       dtype=np.float64).reshape(m, n)
     return cost.min(axis=1), np.zeros(n, dtype=np.float64)
+
+
+def select_nearest_uniform(problem: InverseOTProblem, finite: EdgeSet, *, eta: float,
+                           tol: float, max_iterations: int = 30) -> np.ndarray:
+    """
+    CN: **中心化选择**（约束生成）：先解一次得 `R*`，再限制 `R <= R* + eta` 并最小化
+        `||theta - 1/K||_1`；在**全图**上扫描、插入违例边，重复直到 `max sigma <= tol`。
+        L1 用 `p, n >= 0` 线性化：`theta + n - p = 1/K`，目标 `sum(p) + sum(n)`。
+    EN: **Central selection** (constraint generation): one solve gives `R*`; cap `R <= R* + eta` and
+        minimise `||theta - 1/K||_1`; **full-graph** scan, insert violators, repeat until
+        `max sigma <= tol`. The L1 is linearised with `p, n >= 0`, `theta + n - p = 1/K`, objective
+        `sum(p) + sum(n)`.
+    """
+    from scipy import sparse as _sparse
+    from scipy.optimize import linprog
+
+    from ..backends.lp_common import LpLayout, repair_point
+    from .master_regret import build_regret_lp
+
+    m, n = int(problem.n_source), int(problem.n_target)
+    k = int(problem.n_features)
+    target = 1.0 / float(k)
+    layout = LpLayout(has_delta=False, n_features=k, n_source=m, n_target=n)
+    r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
+    all_rows, all_cols = r_idx.reshape(-1), c_idx.reshape(-1)
+    sup_rows, sup_cols, sup_vals = problem.support()
+    current = finite
+    objective = regret_objective(problem)
+    theta = np.full(k, target)
+    for _round in range(int(max_iterations)):
+        system = build_regret_lp(problem, current)
+        base = linprog(objective, A_ub=system.a_ub, b_ub=system.b_ub, A_eq=system.a_eq,
+                       b_eq=system.b_eq, bounds=system.bounds, method="highs")
+        if not base.success or base.x is None:
+            raise InverseOTError(f"selection: base solve failed: {base.message!r}")
+        bound = float(base.fun) + float(eta)
+        size = system.size
+
+        # CN: 右侧零块的行数必须与**对应矩阵的行数**一致（a_ub 是边数，不是变量数）。
+        # EN: the right-hand zero blocks need as many rows as the matrix they extend (edges, not variables).
+        zeros_ub = _sparse.csr_matrix((system.a_ub.shape[0], 2 * k))
+        a_ub = _sparse.vstack([
+            _sparse.hstack([system.a_ub, zeros_ub], format="csr"),
+            _sparse.csr_matrix(np.append(objective, np.zeros(2 * k))[None, :]),
+        ], format="csr")
+        b_ub = np.concatenate([system.b_ub, [bound]])
+
+        # CN: regret LP 无 delta 列，theta 从 0 开始（见 LpLayout(has_delta=False)）。
+        # EN: the regret LP has no delta column, so theta starts at 0 (see LpLayout(has_delta=False)).
+        rows_pn = np.zeros((k, size + 2 * k))
+        for i in range(k):
+            rows_pn[i, i] = 1.0                  # theta_i
+            rows_pn[i, size + i] = -1.0          # -p_i
+            rows_pn[i, size + k + i] = 1.0       # +n_i
+        a_eq = _sparse.vstack([
+            _sparse.hstack([system.a_eq, _sparse.csr_matrix((system.a_eq.shape[0], 2 * k))],
+                           format="csr"),
+            _sparse.csr_matrix(rows_pn),
+        ], format="csr")
+        b_eq = np.concatenate([system.b_eq, np.full(k, target)])
+        # CN: theta + n - p = target  =>  p 的系数应为 -1（见上），n 为 +1。
+        # EN: theta + n - p = target, hence coefficient -1 on p and +1 on n (set above).
+        c_obj = np.concatenate([np.zeros(size), np.ones(2 * k)])
+        res = linprog(c_obj, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq,
+                      bounds=list(system.bounds) + [(0.0, None)] * (2 * k), method="highs")
+        if not res.success or res.x is None:
+            raise InverseOTError(f"selection: central solve failed: {res.message!r}")
+        repaired = repair_point(problem, np.asarray(res.x[:size], dtype=np.float64), layout,
+                                all_rows=all_rows, all_cols=all_cols,
+                                support_rows=sup_rows, support_cols=sup_cols,
+                                support_values=sup_vals, objective=objective)
+        theta = repaired.theta
+        sigma_all = _sigma(problem, theta, repaired.source_dual, repaired.target_dual,
+                           all_rows, all_cols)
+        if float(sigma_all.max()) <= float(tol):
+            return theta
+        viol = sigma_all > float(tol)
+        current = current.union(EdgeSet.from_arrays(all_rows[viol], all_cols[viol], n_target=n))
+    return theta
 
 
 def _select_central_cg(problem: InverseOTProblem, finite: EdgeSet, *, eta: float, tol: float,

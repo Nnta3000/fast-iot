@@ -40,6 +40,14 @@ from scipy.optimize import linprog
 from ..core.edges import EdgeSet
 from ..core.problem import InverseOTError, InverseOTProblem
 from ..core.theta import LinearThetaSet
+from ..backends.lp_common import (
+    LpLayout,
+    assemble_lp,
+    repair_point,
+    cupdlpx_available,
+    solve_lp_cupdlpx,
+    solve_lp_highs,
+)
 
 __all__ = [
     "RegretSolution",
@@ -65,6 +73,19 @@ class RegretSolution:
     n_edges: int
     box_bound_active: bool = False
     regret_at_solution: float = 0.0
+    sigma_max_raw: float = 0.0
+    scale: float = 1.0
+    dual_bound: float | None = None
+    regret_pre_repair: float = 0.0
+    solver_iterations: int = 0
+    solver_status: str = ""
+    sigma_max_in_F: float = 0.0
+    sigma_max_out_F: float = 0.0
+    theta_pre: np.ndarray | None = None
+    source_dual_pre: np.ndarray | None = None
+    target_dual_pre: np.ndarray | None = None
+    regret_pre: float = float("nan")
+    s_pre: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -88,70 +109,28 @@ class _RegretSystem:
 def build_regret_lp(problem: InverseOTProblem, edges: EdgeSet, *,
                     box: float | None = None) -> _RegretSystem:
     """
-    CN: 构造 §2 的稀疏 LP。`sigma_e = f_i + g_j - theta·phi_ij <= 0`，即
-        `A_ub` 行为 `[+1 at f_i, +1 at g_j, -phi_ij at theta]`，右端 0。
-        `box` 仅用于测试（默认 None）：`|f|,|g| <= box`。
-    EN: Build §2's sparse LP. `sigma_e = f_i + g_j - theta·phi_ij <= 0`, i.e. each `A_ub` row is
-        `[+1 at f_i, +1 at g_j, -phi_ij at theta]` with rhs 0. `box` is tests-only (default None).
+    CN: 由共享装配器构造 regret master：S 边为**不等式**、无 delta 列、目标 `min R`。
+        `box` 仅测试用（默认 None）。
+    EN: Build the regret master through the shared assembler: S edges are **inequalities**, no delta
+        column, objective `min R`. `box` is tests-only (default None).
     """
     if edges.size < 1:
         raise InverseOTError("regret master requires a non-empty edge set")
-    if not isinstance(problem.theta_set, LinearThetaSet):
-        raise InverseOTError(
-            "the regret LP master requires a LinearThetaSet; "
-            f"got {type(problem.theta_set).__name__}")
-    key = (int(problem.n_features), int(problem.n_source), int(problem.n_target))
-    n_theta, n_source, n_target = key
-    size = n_theta + n_source + n_target
-
-    constraint_rows = np.arange(edges.size, dtype=np.int64)
-    features = problem.features.features(edges.rows, edges.cols)
-    if features.shape != (edges.size, n_theta):
-        raise InverseOTError("features() returned an unexpected number of feature columns")
-
-    from scipy.sparse import coo_matrix
-
-    # CN: 三种块分别给出 (行, 列) 坐标；统一用**绝对列号**，避免行主序与展平索引混用。
-    # EN: three blocks, each with absolute (row, col) coordinates; avoids mixing row-major with flat indices.
-    edge_idx = np.arange(edges.size, dtype=np.int64)
-    theta_cols = np.tile(np.arange(n_theta, dtype=np.int64), edges.size)
-    theta_rows = np.repeat(edge_idx, n_theta)
-    f_rows = edge_idx
-    f_cols = n_theta + edges.rows
-    g_rows = edge_idx
-    g_cols = n_theta + n_source + edges.cols
-    a_ub = coo_matrix(
-        (np.concatenate([-features.reshape(-1), np.ones(edges.size), np.ones(edges.size)]),
-         (np.concatenate([theta_rows, f_rows, g_rows]),
-          np.concatenate([theta_cols, f_cols, g_cols]))),
-        shape=(edges.size, size),
-    ).tocsr()
-    b_ub = np.zeros(edges.size, dtype=np.float64)
-
-    theta_constraints = problem.theta_set.linear_constraints()
-    # CN: Theta 的等式只占 theta 列，需要右侧补零到总变量数，才能与规范行纵向拼接。
-    # EN: Theta equalities live only in the theta columns; pad zeros to the full variable count so they
-    #     can be vstacked with the gauge row.
-    theta_rows_eq = np.asarray(theta_constraints.a_eq, dtype=np.float64)
-    eq_wide = np.hstack([theta_rows_eq,
-                         np.zeros((theta_rows_eq.shape[0], size - n_theta), dtype=np.float64)])
-    gauge = np.zeros((1, size), dtype=np.float64)
-    gauge[0, n_theta + n_source] = 1.0
-    a_eq = sparse.csr_matrix(np.vstack([eq_wide, gauge]))
-    b_eq = np.concatenate([np.asarray(theta_constraints.b_eq, dtype=np.float64),
-                           np.zeros(1, dtype=np.float64)])
-
-    bounds: list[tuple[float | None, float | None]] = []
-    for index in range(n_theta):
-        lower = float(theta_constraints.lower[index])
-        upper = float(theta_constraints.upper[index])
-        bounds.append((None if not np.isfinite(lower) else lower,
-                       None if not np.isfinite(upper) else upper))
-    dual_bound: tuple[float | None, float | None] = (
-        (None, None) if box is None else (-float(box), float(box)))
-    bounds.extend([dual_bound] * (n_source + n_target))
-    return _RegretSystem(a_ub=a_ub, b_ub=b_ub, a_eq=a_eq, b_eq=b_eq, bounds=bounds,
-                         n_features=n_theta, n_source=n_source, n_target=n_target)
+    objective = regret_objective(problem)
+    shared = assemble_lp(problem, edges, has_delta=False, objective=objective,
+                         support_as_equalities=False)
+    lb, ub = shared.lb.copy(), shared.ub.copy()
+    if box is not None:
+        dual_bound = float(box)
+        n_source, n_target = int(problem.n_source), int(problem.n_target)
+        start = int(shared.layout.source_start)
+        lb[start:] = -dual_bound
+        ub[start:] = dual_bound
+    system = _RegretSystem(a_ub=shared.a_ub, b_ub=shared.b_ub, a_eq=shared.a_eq, b_eq=shared.b_eq,
+                           bounds=list(zip(lb.tolist(), ub.tolist())),
+                           n_features=int(problem.n_features), n_source=int(problem.n_source),
+                           n_target=int(problem.n_target))
+    return system
 
 
 def regret_objective(problem: InverseOTProblem) -> np.ndarray:
@@ -197,13 +176,22 @@ class RegretMasterSolver:
     """
 
     def __init__(self, *, eta_scale: float = 1e-9, box: float | None = None,
-                 box_check: bool = True, tie_break: bool = True) -> None:
+                 box_check: bool = True, tie_break: bool = True,
+                 backend: str = "cupdlpx", params: dict[str, object] | None = None) -> None:
         if float(eta_scale) < 0.0:
             raise ValueError("eta_scale must be nonnegative")
+        if str(backend) not in {"cupdlpx", "highs"}:
+            raise ValueError("backend must be 'cupdlpx' (GPU, production) or 'highs' (CPU, reference)")
+        if str(backend) == "cupdlpx" and not cupdlpx_available():
+            raise InverseOTError(
+                "backend='cupdlpx' requested but CuPDLPx is unavailable; use backend='highs' for the "
+                "CPU reference path.")
         self.eta_scale = float(eta_scale)
         self.box = box
         self.box_check = bool(box_check)
         self.tie_break = bool(tie_break)
+        self.backend = str(backend)
+        self.params = dict(params or {})
 
     def solve(self, problem: InverseOTProblem, edges: EdgeSet) -> RegretSolution:
         """CN: 求解一次（含两段式）。EN: One solve (including the two-stage rule)."""
@@ -216,7 +204,7 @@ class RegretMasterSolver:
         if objective.size != system.size:
             raise InverseOTError("objective and variable layout disagree")
 
-        primal, value, status = _run_lp(system, objective, method="highs")
+        primal, value, status, result_info = self._solve_system(system, objective)
         if primal is None or value is None:
             raise InverseOTError(
                 "regret master (stage 1) is not optimal: "
@@ -240,7 +228,7 @@ class RegretMasterSolver:
             r = _generic_direction(system.size)
             extra_ub = [objective]
             extra_rhs = [float(value) + self.eta_scale * max(1.0, abs(float(value)))]
-            chosen, _chosen_value, chosen_status = _run_lp(
+            chosen, _chosen_value, chosen_status, _chosen_info = self._solve_system(
                 system, -r, extra_ub=extra_ub, extra_ub_rhs=extra_rhs)
             if chosen is None:
                 raise InverseOTError(
@@ -254,10 +242,101 @@ class RegretMasterSolver:
                            dtype=np.float64)
             g = np.asarray(primal[system.n_features + system.n_source:], dtype=np.float64)
 
-        return RegretSolution(theta=theta, source_dual=f, target_dual=g, regret=float(value),
+        # CN: 修复返回点（投影 theta、修规范、全图 sigma、f <- f - s），并只用修复后的向量报告。
+        # EN: repair the returned point (project theta, fix gauge, full-grid sigma, f <- f - s) and report
+        #     only quantities computed from the repaired vector.
+        r, c = np.meshgrid(np.arange(system.n_source), np.arange(system.n_target), indexing="ij")
+        all_rows, all_cols = r.reshape(-1), c.reshape(-1)
+        sup_rows, sup_cols, sup_vals = problem.support()
+        layout = LpLayout(has_delta=False, n_features=int(system.n_features),
+                          n_source=int(system.n_source), n_target=int(system.n_target))
+        repaired = repair_point(problem, primal, layout, all_rows=all_rows, all_cols=all_cols,
+                                support_rows=sup_rows, support_cols=sup_cols,
+                                support_values=sup_vals, objective=objective)
+        dual_bound = None
+        if isinstance(result_info, dict):
+            for key in ("dual_objective", "lower_bound", "dual_obj", "obj_dual", "lb"):
+                if result_info.get(key) is not None:
+                    try:
+                        dual_bound = float(result_info[key])
+                    except (TypeError, ValueError):
+                        dual_bound = None
+                    break
+        # CN: 修复前后两个 R，以及 F 内/外的最大违约（分开报告：F 内违约说明求解器违反了自己的约束）。
+        # EN: R before and after repair, plus max sigma inside/outside F (a violation inside F means the
+        #     solver breaks its own constraints).
+        pre_repair = float(repaired.regret_pre)
+        # CN: `edges` **就是 F 的全体**，因此"F 内" = 全部这些边；"F 外"必须用全图减去 F 来算。
+        #     （此前把 `support_keys` 当作 F，于是"F 外"实际是 `F \\ S`，报出的是余量而非真实违约。）
+        # EN: `edges` **is** all of F, so "inside F" means every one of these edges; "outside F" must be
+        #     computed as the whole grid minus F. (Previously `support_keys` was used as F, so "outside F"
+        #     was really `F \\ S` and reported a slack rather than a real violation.)
+        sigma_edges = _sigma_pre(repaired, edges, problem)
+        max_in = float(sigma_edges.max()) if sigma_edges.size else float("-inf")
+        r_g, c_g = np.meshgrid(np.arange(int(problem.n_source)), np.arange(int(problem.n_target)),
+                               indexing="ij")
+        all_keys = (r_g * int(problem.n_target) + c_g).reshape(-1)
+        out_keys = np.setdiff1d(all_keys, edges.keys, assume_unique=False)
+        if out_keys.size:
+            rows_o, cols_o = np.divmod(out_keys, int(problem.n_target))
+            sig_o = (np.asarray(repaired.source_dual_pre, dtype=np.float64)[rows_o]
+                     + np.asarray(repaired.target_dual_pre, dtype=np.float64)[cols_o]
+                     - np.asarray(problem.features.costs(repaired.theta_pre, rows_o, cols_o),
+                                  dtype=np.float64))
+            max_out = float(sig_o.max())
+        else:
+            max_out = float("-inf")
+        iters = int(result_info.get("iterations", 0)) if isinstance(result_info, dict) else 0
+        return RegretSolution(theta=repaired.theta, source_dual=repaired.source_dual,
+                              target_dual=repaired.target_dual, regret=repaired.regret,
                               status=str(status), n_edges=int(edges.size),
                               box_bound_active=bool(box_active),
-                              regret_at_solution=float(objective @ primal))
+                              regret_at_solution=repaired.regret,
+                              sigma_max_raw=float(repaired.sigma_max_raw),
+                              scale=float(repaired.scale), dual_bound=dual_bound,
+                              regret_pre_repair=pre_repair, solver_iterations=iters,
+                              solver_status=str(status),
+                              sigma_max_in_F=max_in, sigma_max_out_F=max_out,
+                              theta_pre=repaired.theta_pre,
+                              source_dual_pre=repaired.source_dual_pre,
+                              target_dual_pre=repaired.target_dual_pre,
+                              regret_pre=float(repaired.regret_pre),
+                              s_pre=float(repaired.sigma_max_raw))
+
+    def _solve_system(self, system: "_RegretSystem", objective: np.ndarray, *,
+                      extra_ub: list[np.ndarray] | None = None,
+                      extra_ub_rhs: list[float] | None = None,
+                      ) -> tuple[np.ndarray | None, float | None, str, dict]:
+        """
+        CN: 求解一个 regret LP。两条后端**都走共享装配/适配层**（`backends.lp_common`），
+            本方法只负责把 regret 的 `_RegretSystem` 转成 `LpSystem`。
+        EN: Solve one regret LP. Both backends go through the shared assembly/adapter layer
+            (`backends.lp_common`); this method only converts the regret `_RegretSystem` into an
+            `LpSystem`.
+        """
+        from ..backends.lp_common import LpLayout, LpSystem
+
+        layout = LpLayout(has_delta=False, n_features=int(system.n_features),
+                          n_source=int(system.n_source), n_target=int(system.n_target))
+        lb = np.array([np.nan if lo is None else float(lo) for lo, _ in system.bounds])
+        ub = np.array([np.nan if hi is None else float(hi) for _, hi in system.bounds])
+        lb = np.where(np.isnan(lb), -np.inf, lb)
+        ub = np.where(np.isnan(ub), np.inf, ub)
+        a_ub, b_ub = system.a_ub, system.b_ub
+        if extra_ub:
+            a_ub = sparse.vstack([a_ub, sparse.csr_matrix(np.vstack(extra_ub))], format="csr")
+            b_ub = np.concatenate([b_ub, np.asarray(extra_ub_rhs, dtype=np.float64)])
+        lp = LpSystem(a_eq=system.a_eq, b_eq=system.b_eq, a_ub=a_ub, b_ub=b_ub,
+                      c=np.asarray(objective, dtype=np.float64), lb=lb, ub=ub, layout=layout)
+        try:
+            if self.backend == "cupdlpx":
+                res = solve_lp_cupdlpx(lp, params=self.params)
+            else:
+                res = solve_lp_highs(lp)
+        except InverseOTError as error:
+            return None, None, str(error), {}
+        x = np.asarray(res.x, dtype=np.float64)
+        return x, float(np.asarray(objective, dtype=np.float64) @ x), str(res.status), dict(res.info)
 
     def _box_active(self, system: _RegretSystem, primal: np.ndarray) -> bool:
         """CN: 检查 `f,g` 是否顶到 box 边界。EN: Whether `f,g` sit on the box boundary."""
@@ -266,6 +345,18 @@ class RegretMasterSolver:
         limit = float(self.box)
         dual = primal[system.n_features:]
         return bool(np.any(np.abs(dual) >= limit - 1e-6 * max(1.0, limit)))
+
+
+def _sigma_pre(repaired: object, edges: EdgeSet, problem: InverseOTProblem) -> np.ndarray:
+    """
+    CN: 在**平移前**的 `(theta, f, g)` 上计算 F 内每条边的 sigma。
+    EN: per-edge sigma on the **pre-shift** `(theta, f, g)`.
+    """
+    theta = np.asarray(getattr(repaired, "theta_pre"), dtype=np.float64)
+    f = np.asarray(getattr(repaired, "source_dual_pre"), dtype=np.float64)
+    g = np.asarray(getattr(repaired, "target_dual_pre"), dtype=np.float64)
+    cost = np.asarray(problem.features.costs(theta, edges.rows, edges.cols), dtype=np.float64)
+    return f[edges.rows] + g[edges.cols] - cost
 
 
 def _generic_direction(size: int, *, seed: int = 20261021) -> np.ndarray:

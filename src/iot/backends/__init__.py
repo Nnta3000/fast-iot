@@ -5,6 +5,15 @@ EN: **Swappable backends**: the LP engine (CuPDLPx) and the separation scans (ge
     plus the bilinear embedding they rely on. Implementation choices, not algorithm choices.
 """
 
+from .lp_common import (
+    LpLayout,
+    LpResult,
+    LpSystem,
+    assemble_lp,
+    cupdlpx_available,
+    solve_lp_cupdlpx,
+    solve_lp_highs,
+)
 from .bilinear import BilinearEmbeddable, BilinearEmbedding, bilinear_embedding, features_support_bilinear
 from .cupdlpx_master import CuPdlpxLp, CuPdlpxMasterSolver, build_cupdlpx_lp
 from .generic_scan import scan_violations_torch
@@ -12,6 +21,8 @@ from .hello_scan import fast_scan_supported, scan_violations_fast
 from .torch_runtime import cuda_available, describe_backend, resolve_torch_device, torch_available
 
 __all__ = [
+    "LpLayout", "LpResult", "LpSystem", "assemble_lp", "cupdlpx_available",
+    "solve_lp_cupdlpx", "solve_lp_highs",
     "BilinearEmbeddable", "BilinearEmbedding", "CuPdlpxLp", "CuPdlpxMasterSolver",
     "bilinear_embedding", "build_cupdlpx_lp", "cuda_available", "describe_backend",
     "fast_scan_supported", "features_support_bilinear", "resolve_torch_device",
