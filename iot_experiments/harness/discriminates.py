@@ -43,13 +43,21 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import Any, TypeVar
 
 import numpy as np
-from jaxtyping import Float, Int
+from jaxtyping import Int
 
-# CN: 指标签名：`(a, b) -> float`，其中 `a`/`b` 是一对样本的特征（任意形状），**越大越好**。
-# EN: a metric maps a pair of samples `(a, b)` to a float, **higher is better**.
-Metric = Callable[[Float[np.ndarray, "..."], Float[np.ndarray, "..."]], float]
+# CN: 样本类型由调用方决定：可以是数组（特征向量），也可以是**字典**（E1 的切片同时需要
+#     MR/CT/掩膜/z）。这里用 `TypeVar` 而不是 `Any`，使签名保留"两侧样本类型相同"这一信息。
+# EN: the sample type is the caller's choice: an array (a feature vector) or a **dict** (E1 slices need
+#     MR/CT/mask/z at once). A `TypeVar` is used instead of `Any` so the signature still records that both
+#     sides share one sample type.
+SampleT = TypeVar("SampleT")
+
+# CN: 指标签名：`(a, b) -> float`，**越大越好**。
+# EN: a metric maps a pair of samples `(a, b)` to a float; **higher is better**.
+Metric = Callable[[Any, Any], float]
 
 
 class DiscriminatesError(RuntimeError):
@@ -105,8 +113,8 @@ def _effect(mean_true: float, mean_control: float, std_control: float) -> float:
 
 def discrimination_check(
     metrics: dict[str, Metric],
-    samples_a: Sequence[Float[np.ndarray, "..."]],
-    samples_b: Sequence[Float[np.ndarray, "..."]],
+    samples_a: Sequence[SampleT],
+    samples_b: Sequence[SampleT],
     *,
     centres: Int[np.ndarray, "n"] | None = None,
     draws: int = 3,
@@ -160,12 +168,14 @@ def discrimination_check(
                     j_same: int = int(rng.choice(same_pool))
                     same_vals.append(float(metric(samples_a[i], samples_b[j_same])))
 
+        # CN: 用 `nanmean`/`nanstd`，因为个别指标可能返回 inf/nan（例如 PSNR 的上限处理）。
+        # EN: `nanmean`/`nanstd` because an individual metric may return inf/nan (e.g. a capped PSNR).
         arrays = {"true": np.asarray(true_vals, dtype=np.float64),
                   "random": np.asarray(random_vals, dtype=np.float64)}
         if same_vals:
             arrays["same"] = np.asarray(same_vals, dtype=np.float64)
-        means = {k: float(v.mean()) for k, v in arrays.items()}
-        stds = {k: float(v.std()) for k, v in arrays.items()}
+        means = {k: float(np.nanmean(v)) for k, v in arrays.items()}
+        stds = {k: float(np.nanstd(v)) for k, v in arrays.items()}
         effects = {k: _effect(means["true"], means[k], stds[k]) for k in arrays if k != "true"}
         usable: bool = bool(effects) and all(e >= float(threshold) for e in effects.values())
         reports.append(MetricReport(metric=str(name), means=means, stds=stds, effects=effects,
@@ -207,6 +217,7 @@ __all__ = [
     "DiscriminatesError",
     "Metric",
     "MetricReport",
+    "SampleT",
     "discrimination_check",
     "format_check",
 ]

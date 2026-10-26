@@ -254,6 +254,7 @@ class NmiConfig(RunConfig):
     bins: int = 32
     pixel_size: int = 32
     fitted_geometry: str = "G2"
+    holdout: bool = True
 
     @classmethod
     def add_study_arguments(cls, parser: argparse.ArgumentParser) -> None:
@@ -267,6 +268,8 @@ class NmiConfig(RunConfig):
         parser.add_argument("--bins", type=int, default=32, help="equal-frequency bins for the NMI histogram")
         parser.add_argument("--pixel-size", type=int, default=32,
                             help="images are resized to this square before the MI histogram")
+        parser.add_argument("--holdout", action=argparse.BooleanOptionalAction, default=True,
+                            help="also score learned on the subjects NOT used in fitting (default: on)")
         parser.add_argument("--fitted-geometry", default="G2", choices=["G0", "G1", "G2", "G3"],
                             help="geometry theta is fitted AND applied in (must be the same space)")
 
@@ -391,10 +394,49 @@ def main(argv: list[str] | None = None) -> int:
                                              extra={"R_prime": fit.R_prime, "R_uniform": fit.R_uniform,
                                                     "theta_space": str(config.fitted_geometry),
                                                     "space_asserted": True}))
+                    # CN: **样本外**读数：池 = **未参与拟合**的受试者（两侧都不含那 m 个），
+                    #     否则 learned 的优势主要是"记住了拟合用的配对"。报告以样本外为准。
+                    # EN: **out-of-sample** read-out: the pool is the subjects **not used in fitting**
+                    #     (neither side contains the m fitted pairs); otherwise the learned advantage is
+                    #     mostly memorisation of those pairs. The report quotes the held-out numbers.
+                    if config.holdout:
+                        keep = split.unlabelled
+                        h = int(keep.size)
+                        order_h1 = np.random.default_rng(int(draw)).permutation(h)
+                        order_h2 = np.random.default_rng(int(draw) + 100).permutation(h)
+                        inv_h = np.empty(h, dtype=np.int64)
+                        inv_h[order_h2] = np.arange(h, dtype=np.int64)
+                        os_stats = fit_geometry(x[keep], y[keep], str(config.fitted_geometry))
+                        os_x, os_y = apply_geometry(x[keep[order_h1]], y[keep[order_h2]], os_stats)
+                        os_perm = hungarian(diagonal_cost(os_x, os_y, fit.theta))
+                        os_cos = hungarian(diagonal_cost(os_x, os_y,
+                                                         np.ones(os_x.shape[1]) / float(os_x.shape[1])))
+                        os_metrics = {"pair_acc_hungarian": pair_accuracy(os_perm, inv_h[order_h1]),
+                                      "pair_acc_cosine": pair_accuracy(os_cos, inv_h[order_h1])}
+                        records.append(RunRecord(study=str(config.study),
+                                                 geometry=str(config.fitted_geometry),
+                                                 arm="learned_holdout", k=int(k), m=int(m),
+                                                 draw=int(draw), metrics=os_metrics,
+                                                 config=config.to_dict(),
+                                                 extra={"n_holdout": h,
+                                                        "theta_space": str(config.fitted_geometry),
+                                                        "space_asserted": True}))
+                        print(f"  K={k} m={m} d={draw} HELD-OUT n={h} learned "
+                              f"{os_metrics['pair_acc_hungarian']:.4f} vs cosine "
+                              f"{os_metrics['pair_acc_cosine']:.4f}", flush=True)
                     print(f"  K={k} m={m} d={draw} learned ({config.fitted_geometry}) "
                           f"hungarian acc={metrics['pair_acc_hungarian']:.4f} "
                           f"emd acc={metrics['pair_acc_emd']:.4f}", flush=True)
 
+    # CN: 把样本外池上的 cosine 单独列一行（它是 learned_holdout 的同池对照，必须一起看）。
+    # EN: surface cosine on the held-out pool as its own row -- it is the same-pool control for
+    #     `learned_holdout` and must be read next to it.
+    for rec in records:
+        if rec.arm == "learned_holdout" and "pair_acc_cosine" in rec.metrics:
+            records.append(RunRecord(study=rec.study, geometry=rec.geometry, arm="cosine_holdout",
+                                     k=rec.k, m=rec.m, draw=rec.draw,
+                                     metrics={"pair_acc_hungarian": rec.metrics["pair_acc_cosine"]},
+                                     config=rec.config, extra={"n_holdout": rec.extra["n_holdout"]}))
     rows = summarise(records, group=("geometry", "arm"),
                      metrics=("pair_acc_hungarian", "pair_acc_emd"))
     print("\n" + format_table(rows, ("geometry", "arm", "n_draws",

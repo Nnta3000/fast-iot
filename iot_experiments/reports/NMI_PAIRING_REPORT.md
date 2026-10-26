@@ -19,12 +19,29 @@ information; whitening and binning statistics use the images only.
 | `nmi` | same | EMD | 1.0000 | 0 |
 | `cosine_ot` | whitened DINOv2 cosine distance (K=256) | Hungarian | 0.8250 | 0 |
 | `cosine_ot` | same | EMD | 0.8250 | 0 |
-| `learned` | learned diagonal weight in **G2** (K=256, m=300) | Hungarian | **0.8480** | 0.0127 |
-| `learned` | same | EMD | **0.8480** | 0.0127 |
+| `learned` | learned diagonal weight in **G2** (K=256, m=300), **in-sample** | Hungarian | 0.8480 | 0.0127 |
+| `learned` | same | EMD | 0.8480 | 0.0127 |
 
 Config: feature `dinov2-pool4`, K=256, m=300, draws 0–2, solver CuPDLPx, `studies/nmi`
 (`iot_experiments/gpu_bench/out/nmi/records.json`). Hungarian and EMD agree on every arm, so the result is
 about the **cost**, not the decoder. Per-draw learned values: 0.857, 0.830, 0.857.
+
+### The learned row does NOT beat cosine once the fitted pairs are removed
+
+The `learned` row above is **in-sample**: the 300 fitted pairs are also in the 1000-subject pool, so the
+0.848 vs 0.825 gap is largely recovery of those 300 pairs. Re-scored on **held-out subjects only** (the 700
+not used in fitting, excluded from both sides of the pool, each side shuffled independently):
+
+| draw | learned | cosine | diff |
+|---|---|---|---|
+| 0 | 0.8529 | 0.8600 | −0.0071 |
+| 1 | 0.8500 | 0.8529 | −0.0029 |
+| 2 | 0.8714 | 0.8529 | +0.0186 |
+| **mean** | **0.8581 ± 0.0095** | **0.8552 ± 0.0034** | **+0.0029** |
+
+**No rank claim is made.** The out-of-sample difference is +0.003, learned loses on 2 of 3 draws, and the
+in-sample advantage (+0.023) does not survive. Any future "learned beats cosine" statement must be computed
+on a subject-disjoint pool; the in-sample number is retained only for comparison.
 
 ## This benchmark is saturated and is NOT used to rank methods
 
