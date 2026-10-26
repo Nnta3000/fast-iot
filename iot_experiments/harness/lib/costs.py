@@ -41,7 +41,9 @@ def blockwise_cost_matrix(
         stop = min(m, start + rows_per_block)
         rows = np.repeat(np.arange(start, stop, dtype=np.int64), n)
         cols = np.tile(np.arange(n, dtype=np.int64), stop - start)
-        cost[start:stop] = np.asarray(features.costs(theta, rows, cols)).reshape(stop - start, n)
+        cost[start:stop] = np.asarray(features.costs(theta, rows, cols)).reshape(
+            stop - start, n
+        )
     return cost
 
 
@@ -86,10 +88,14 @@ def dual_feasibility(
         worst = max(worst, float(np.max(u[rows] + v[cols] - cost)))
     if support_rows.size:
         cost_support = np.asarray(features.costs(theta, support_rows, support_cols))
-        support_residual = float(np.max(np.abs(u[support_rows] + v[support_cols] - cost_support)))
+        support_residual = float(
+            np.max(np.abs(u[support_rows] + v[support_cols] - cost_support))
+        )
     else:
         support_residual = 0.0
-    certified = bool(worst <= float(feasibility_tol) and support_residual <= float(tightness_tol))
+    certified = bool(
+        worst <= float(feasibility_tol) and support_residual <= float(tightness_tol)
+    )
     return DualFeasibility(
         certified=certified,
         max_dual_violation=float(worst),

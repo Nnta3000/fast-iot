@@ -80,7 +80,6 @@ def scan_violations(
     source_dual = np.asarray(master.source_dual, dtype=np.float64)
     target_dual = np.asarray(master.target_dual, dtype=np.float64)
     delta = float(master.delta)
-    threshold = float(tol) - delta
 
     row_values = np.full((n_source, int(gamma)), -np.inf, dtype=np.float64)
     row_indices = np.full((n_source, int(gamma)), -1, dtype=np.int64)

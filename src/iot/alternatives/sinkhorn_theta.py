@@ -20,7 +20,7 @@ from typing import Callable, Literal
 
 import numpy as np
 
-from .entropic import project_psd, sinkhorn_plan, sinkhorn_plan_with_potentials
+from .entropic import project_psd, sinkhorn_plan_with_potentials
 from ..core.problem import InverseOTProblem
 from ..core.theta import BilinearPSDTheta, SimplexTheta
 

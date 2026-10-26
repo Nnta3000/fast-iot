@@ -274,7 +274,6 @@ def solve_inverse_ot_regret(
                       - float(np.dot(problem.resolved_target_mass, g_u))) + su * total_mass
     best_theta = np.array(uni0, dtype=np.float64)
     best_upper = float(u_uniform)
-    best_regret = float("nan")
     start = time.perf_counter()
     theta = np.zeros(int(problem.n_features), dtype=np.float64)
     f = np.zeros(m, dtype=np.float64)
@@ -325,7 +324,6 @@ def solve_inverse_ot_regret(
         if best_theta is None or upper < best_upper:
             best_theta = np.array(theta, dtype=np.float64)     # repaired point (globally feasible)
             best_upper = float(upper)
-            best_regret = float(regret)
         records.append(RegretIteration(
             index=index, regret=regret, lower=lower, upper=upper, gap=gap,
             support_size=int(finite.size), finite_edges=int(finite.size),

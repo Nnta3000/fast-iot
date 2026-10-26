@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from iot import dense_cost_matrix
-from iot_experiments.core.fractional_planting import PROBLEM_TYPE, plant_fractional
+from iot_experiments.harness.lib.fractional_planting import PROBLEM_TYPE, plant_fractional
 
 
 def _pot_gap(planted) -> float:

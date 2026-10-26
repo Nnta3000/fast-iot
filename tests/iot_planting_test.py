@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 
 from iot import LinearMasterSolver, solve_inverse_ot
-from iot_experiments.core.planting import PROBLEM_TYPE, plant_instance
+from iot_experiments.harness.lib.planting import PROBLEM_TYPE, plant_instance
 
 
 def test_planted_plan_is_certified_and_monge() -> None:

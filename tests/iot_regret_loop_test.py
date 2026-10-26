@@ -157,7 +157,7 @@ def test_planted_n30_through_the_loop_is_optimal() -> None:
         End-to-end check that the loop returns a certifiable answer on a certifiable instance.
     """
     from iot.eval.validation import is_optimal_plan
-    from iot_experiments.core.planting import plant_instance
+    from iot_experiments.harness.lib.planting import plant_instance
 
     planted = plant_instance(family="quadratic", n=30, point_dimension=4, seed=0)
     problem = planted.problem
@@ -188,7 +188,7 @@ def test_planted_n30_gpu_relaxed_bound() -> None:
     """
     pytest.importorskip("pycupdlpx")
     from iot.backends.lp_common import cupdlpx_available
-    from iot_experiments.core.planting import plant_instance
+    from iot_experiments.harness.lib.planting import plant_instance
 
     if not cupdlpx_available():
         pytest.skip("CuPDLPx unavailable")

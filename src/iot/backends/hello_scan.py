@@ -40,7 +40,7 @@ import numpy as np
 from ..core.edges import EdgeSet
 from ..core.features import DiagonalWeightFeatures, FeatureMap
 from ..exact.master import MasterSolution
-from ..exact.oracle import ViolationScan, scan_violations
+from ..exact.oracle import ViolationScan
 from ..core.problem import InverseOTError, InverseOTProblem
 
 

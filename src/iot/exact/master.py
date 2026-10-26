@@ -16,11 +16,10 @@ from typing import Any, Literal, Protocol, cast, runtime_checkable
 
 import numpy as np
 from scipy.optimize import linprog
-from scipy.sparse import csr_matrix, lil_matrix, vstack
+from scipy.sparse import csr_matrix, vstack
 
 from ..core.edges import EdgeSet
 from ..core.problem import InverseOTError, InverseOTProblem
-from ..core.theta import LinearThetaSet
 from ..backends.lp_common import assemble_lp
 
 # CN: "lex_generic" 是 spec/证明第 6 节的两步 tie-break：先最大化 delta，再在

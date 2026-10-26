@@ -43,7 +43,7 @@ EN: **Constructive ("planting") inverse-OT instances -- Monge problems.** No POT
     (slide source points to a cell boundary, with the direction as a sweep parameter), never the default.
 
 用法 / EN: usage
-    from iot_experiments.core.planting import plant_instance
+    from iot_experiments.harness.lib.planting import plant_instance
     problem, meta = plant_instance(family="quadratic", n=2000, point_dimension=8, seed=0)
 """
 

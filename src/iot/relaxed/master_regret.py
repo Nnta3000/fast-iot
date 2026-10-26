@@ -39,7 +39,6 @@ from scipy.optimize import linprog
 
 from ..core.edges import EdgeSet
 from ..core.problem import InverseOTError, InverseOTProblem
-from ..core.theta import LinearThetaSet
 from ..backends.lp_common import (
     LpLayout,
     assemble_lp,
@@ -122,7 +121,6 @@ def build_regret_lp(problem: InverseOTProblem, edges: EdgeSet, *,
     lb, ub = shared.lb.copy(), shared.ub.copy()
     if box is not None:
         dual_bound = float(box)
-        n_source, n_target = int(problem.n_source), int(problem.n_target)
         start = int(shared.layout.source_start)
         lb[start:] = -dual_bound
         ub[start:] = dual_bound
@@ -219,11 +217,8 @@ class RegretMasterSolver:
                 "safety box is active; the reported regret would be box-dependent "
                 f"(|E|={edges.size}, m={problem.n_source}, n={problem.n_target})")
 
-        theta = np.asarray(primal[: system.n_features], dtype=np.float64)
-        f = np.asarray(primal[system.n_features: system.n_features + system.n_source],
-                       dtype=np.float64)
-        g = np.asarray(primal[system.n_features + system.n_source:], dtype=np.float64)
-
+        # CN: 下游统一由 `repair_point` 从 `primal` 切片，这里不再重复切分（曾留下死赋值）。
+        # EN: `repair_point` slices from `primal` downstream; no duplicate slicing here.
         if self.tie_break:
             r = _generic_direction(system.size)
             extra_ub = [objective]
@@ -236,11 +231,9 @@ class RegretMasterSolver:
                     f"R*={value!r}, |E|={edges.size}")
             if self.box is not None and self.box_check and self._box_active(system, chosen):
                 raise InverseOTError("safety box is active in stage 2")
+            # CN: 只用 `primal`；下游由 `repair_point` 负责切片，不必在这里再切一次。
+            # EN: only `primal` is used; `repair_point` does the slicing downstream.
             primal = chosen
-            theta = np.asarray(primal[: system.n_features], dtype=np.float64)
-            f = np.asarray(primal[system.n_features: system.n_features + system.n_source],
-                           dtype=np.float64)
-            g = np.asarray(primal[system.n_features + system.n_source:], dtype=np.float64)
 
         # CN: 修复返回点（投影 theta、修规范、全图 sigma、f <- f - s），并只用修复后的向量报告。
         # EN: repair the returned point (project theta, fix gauge, full-grid sigma, f <- f - s) and report

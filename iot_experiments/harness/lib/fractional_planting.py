@@ -40,7 +40,7 @@ EN: **Fractional (Kantorovich) plan construction** -- slide a source to a **cell
     path.
 
 用法 / EN: usage
-    from iot_experiments.core.fractional_planting import plant_fractional
+    from iot_experiments.harness.lib.fractional_planting import plant_fractional
     problem, meta = plant_fractional(family="quadratic", n=2000, point_dimension=8, seed=0,
                                      split_fraction=0.5, direction="target_diff")
 """
