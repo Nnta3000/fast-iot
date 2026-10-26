@@ -1,6 +1,6 @@
 # Inverse OT on real pairs: pool-matching study
 
-**Status: CURRENT (2026-10-22).** One question, one protocol. Everything here is measured on the
+**Status: CURRENT (2026-10-22; confidence section revised 2026-10-26).** One question, one protocol. Everything here is measured on the
 real 1000 T1/T2 pairs shipped with the sibling project; no synthetic instances are mixed in.
 
 **Question.** Given `m` labelled T1↔T2 pairs, does a cost learned by inverse OT recover the true
@@ -103,11 +103,24 @@ signal lives in the squared features. Any linear-on-differences baseline is test
 So per-row ranking is capped by hubness, and the *coupling* recovers substantially more than
 independent ranking. `R@1` and `recovered` are not interchangeable measures.
 
-**Confidence does not work yet.** Two measures were tried — margin `min(row gap, column gap)` and
-mutual-NN agreement. Neither ranks rows usefully: at every coverage (25/50/75/100%) precision stays
-within ±0.08 of the overall rate, and for the learned arm the margin ordering is sometimes *worse*
-than the overall rate. The coupling recovers many pairs; nothing here identifies **which** are
-trustworthy.
+**Confidence works — the earlier negative was a scorer bug.** The earlier measurement reported
+precision staying within ±0.08 of the overall rate at every coverage, i.e. no ordering information.
+That run scored against **shuffled column ids** instead of `argsort(perm)` (the index bug documented in
+`SERVER_TESTS_REPORT.md` §6.6); with the index fixed and the geometry set to G2 (standardise-then-L2),
+confidence carries real signal.
+
+K=256, G2, m ∈ {100, 300}, 3 draws each (`studies/pool`; `P@100 = hit` asserted per record).
+Standardisation statistics and the PCA basis are fitted on the **pool images** (transductive, label-free).
+
+| arm | hit | P@25 | P@50 | P@75 | P@100 | MNN P@25 | MNN P@50 |
+|---|---|---|---|---|---|---|---|
+| cosine | 0.8428 | **1.0000** | 0.9996 | 0.9456 | 0.8428 | 0.9497 | 0.9522 |
+| learned | 0.8518 | **1.0000** | 0.9988 | 0.9503 | 0.8518 | 0.9472 | 0.9578 |
+
+Using the **margin** confidence, the top 25% of rows is **exactly correct** and the top 50% is ≥99.9%
+correct, so the usable operating point is "keep the most-confident half, discard the rest" at
+essentially no precision cost. Margin is far better than mutual-NN at low coverage (binary scores
+cannot grade a top quarter). Neither measure depends on the learned θ (cosine matches it).
 
 **Feature resolution is the binding constraint.** Nearest-neighbour similarity between *different*
 subjects' T1 slices:
@@ -147,8 +160,9 @@ resolution ladder shows that 16×16 is not where this problem is hardest.
 1. **Re-run the pairwise comparison with per-arm diagnostics and a distinct EMD cost for
    `pair+emd`.** It separates "assignment matters" from "margin objective matters"; it is the one
    missing comparison that decides what inverse OT is contributing here.
-2. **Confidence**: margin and mutual-NN both fail. A measure that predicts which assigned pairs are
-   correct does not exist yet.
+2. **Confidence**: **resolved** — with the scoring index fixed and geometry G2, the margin confidence
+   gives precision 1.000 at 25% coverage and 0.9996 at 50%; the earlier negative was a scorer bug.
+   The open part is whether the same holds at other resolutions and on a genuinely unpaired pool.
 3. **Resolution**: the task becomes measurably harder at 32×32+ and at full resolution; the learned-θ
    advantage has not been measured there.
 

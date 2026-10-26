@@ -27,7 +27,8 @@ CN: **特征与几何注册表** —— 预处理链**唯一**的所在地。
 用法 / EN: usage
     from iot_experiments.harness.registry import features, geometry, assert_uniform_equals_cosine
     x, y = features("dinov2-pool4", dim=256)
-    xl, yl, xu, yu = geometry(x, y, "G2", labelled=lab, unlabelled=unl)
+    geo = geometry(x, y, "G2", labelled=lab, unlabelled=unl)   # returns a GeometryResult
+    geo.x_label, geo.y_label, geo.x_unlabelled, geo.y_unlabelled
 """
 
 from __future__ import annotations
