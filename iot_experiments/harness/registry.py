@@ -6,7 +6,8 @@ CN: **特征与几何注册表** —— 预处理链**唯一**的所在地。
         于是「cosine」在不同文件里成了两件事（L2-only → R@1 0.270；先标准化再 L2 → 0.768）。
         现在特征与几何各按**名字**取用，且 `uniform θ ≡ cosine` 在每次取用时被断言。
 
-    CN: 几何定义（PCA 之后，只做后处理；PCA 基在全部未标注 T1+T2 上拟合一次，池化均值）：
+    CN: 几何定义（PCA 之后，只做后处理；PCA 基在**全部（标注+未标注）T1+T2 图像**上拟合一次，
+        只用图像本身、不使用配对信息）：
 
       | 名字 | 变换 | 说明 |
       |---|---|---|
@@ -16,6 +17,9 @@ CN: **特征与几何注册表** —— 预处理链**唯一**的所在地。
       | `G3` | **按模态**标准化（各自均值/标准差）→ L2 | |
 
     EN: **Feature and geometry registry** -- the **only** place the preprocessing chain lives.
+
+    The PCA basis is fitted once on **all** T1+T2 images (labelled and unlabelled), using the images only and
+    never the pairing; the geometry statistics use the pool images.
 
     Why it exists: `dinov2_pool4` / `l2_normalise` / `standardise_labelled` had been copied into five drivers,
     so "cosine" came to mean two different things (L2-only, R@1 0.270, versus standardise-then-L2, 0.768).
@@ -37,7 +41,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
-from jaxtyping import Float, Int, Shaped
+from jaxtyping import Bool, Float, Int, Shaped
 
 FeatureName = Literal["dinov2-pool4", "dinov2-cls", "block"]
 GeometryName = Literal["G0", "G1", "G2", "G3"]
@@ -77,19 +81,40 @@ def assert_uniform_equals_cosine(x: Float[np.ndarray, "m d"], y: Float[np.ndarra
         rows, `cos = 0.5 * k * uni`; differing orderings are tolerated only at ties.
     """
     d = int(x.shape[1])
+    # CN: 两条成本只在**单位范数**下等价：cos = 1 - <x,y>，uni = (|x|^2 - 2<x,y> + |y|^2)/d。
+    #     若 |x| = |y| = 1，则 uni = 2*cos/d **精确**成立，排序在数学上恒等；能出现的唯一差异是舍入。
+    #     因此这里检查的不是"排序相同"（那是恒真的、死代码），而是
+    #       (a) 两式之差在相对意义下 <= 2e-9（`rms` 归一，避免 `cos` 接近 0 时绝对容差过严）；
+    #       (b) 若排序仍有差异，则差异处的余弦值之差 <= 2e-9（只可能在并列中被舍入打破）。
+    # EN: the two costs agree only for **unit-norm** rows: cos = 1 - <x,y> and uni = (|x|^2 - 2<x,y> + |y|^2)/d.
+    #     With |x| = |y| = 1, uni = 2*cos/d **exactly**, so the orderings are identical by construction and a
+    #     plain "same ordering" loop is dead code. What is worth checking is (a) the two forms agree in a
+    #     scale-free sense to <= 2e-9 (normalised by the row cost energy, not an absolute tolerance that is
+    #     unfair when cos is near 0), and (b) if any ordering still differs, the reordered cosine values are
+    #     within 2e-9 (only possible when roundoff breaks a tie).
     cosine: Float[np.ndarray, "m n"] = 1.0 - x @ y.T
     uniform: Float[np.ndarray, "m n"] = (
         (x ** 2).sum(axis=1)[:, None] - 2.0 * (x @ y.T) + (y ** 2).sum(axis=1)[None, :]
     ) / float(d)
-    gap: Float[np.ndarray, "m n"] = np.abs(cosine - 0.5 * float(d) * uniform)
-    if float(gap.max()) > 1e-9:
+    twice: Float[np.ndarray, "m n"] = 2.0 * cosine / float(d)
+    scale: Float[np.ndarray, "m n"] = np.maximum(np.abs(cosine), np.abs(twice)) + 1e-12
+    relative: Float[np.ndarray, "m n"] = np.abs(uniform - twice) / scale
+    worst = float(relative.max())
+    if worst > 2e-9:
         raise RegistryError(
-            f"cosine and uniform-theta cost disagree by {float(gap.max()):.3e}; geometry is not L2-normalised")
+            f"cosine and uniform-theta cost disagree by {worst:.3e} (relative); geometry is not L2-normalised")
+
+    tolerance = 2e-9
     for row in range(int(x.shape[0])):
-        if not np.array_equal(np.argsort(cosine[row], kind="stable"),
-                              np.argsort(uniform[row], kind="stable")):
-            if float(gap[row].max()) > 1e-9:      # pragma: no cover - defensive
-                raise RegistryError(f"ranking mismatch beyond ties at row {row}")
+        a = np.argsort(cosine[row], kind="stable")
+        b = np.argsort(twice[row], kind="stable")
+        if np.array_equal(a, b):
+            continue
+        for pos in np.flatnonzero(a != b):
+            if abs(float(cosine[row, a[pos]] - cosine[row, b[pos]])) > tolerance:
+                raise RegistryError(
+                    f"ranking mismatch beyond ties at row {row}, position {int(pos)}: "
+                    f"{float(cosine[row, a[pos]]):.17g} vs {float(cosine[row, b[pos]]):.17g}")
 
 
 @dataclass(frozen=True)
@@ -113,19 +138,43 @@ def geometry(
     *,
     labelled: Int[np.ndarray, "m"],
     unlabelled: Int[np.ndarray, "n"],
+    drop_near_constant: bool = False,
 ) -> GeometryResult:
     """
     CN: 按名字施加**PCA 之后**的变换，并用**未标注**图像拟合所有统计量（无标签）。
         返回四个已 L2 归一化的视图；随后会断言 uniform θ 与余弦一致。
+
+        `drop_near_constant=True` 时，**在 G2/G3 标准化之前**按未标注图像计算的近常量掩码删列
+        （块特征里大量列恒为零，标准化会给这些噪声列放大的权重）。掩码统计量无标签。
     EN: Apply the **post-PCA** transform named by `name`, fitting every statistic on **unlabelled** images
         only (label-free). Returns four L2-normalised views and then asserts uniform theta == cosine.
+
+        With `drop_near_constant=True` the near-constant mask (computed on unlabelled images) is applied
+        **before** G2/G3 standardisation: block features carry many all-zero columns, and standardising
+        them would amplify noise. The mask statistics are label-free.
     """
     if str(name) not in _KNOWN_GEOMETRIES:
         raise RegistryError(f"unknown geometry {name!r}; known: {sorted(_KNOWN_GEOMETRIES)}")
+    # CN: 标注集与未标注集必须不相交，否则 pool 统计量会看到标签图像。
+    # EN: labelled and unlabelled must be disjoint, else the pool statistics see labelled images.
+    overlap = np.intersect1d(np.asarray(labelled), np.asarray(unlabelled))
+    if overlap.size:
+        raise RegistryError(
+            f"labelled and unlabelled overlap on {int(overlap.size)} subject(s): {overlap[:5].tolist()}")
     x_u: Float[np.ndarray, "n d"] = np.asarray(x, dtype=np.float64)[unlabelled]
     y_u: Float[np.ndarray, "n d"] = np.asarray(y, dtype=np.float64)[unlabelled]
     x_l: Float[np.ndarray, "m d"] = np.asarray(x, dtype=np.float64)[labelled]
     y_l: Float[np.ndarray, "m d"] = np.asarray(y, dtype=np.float64)[labelled]
+
+    # CN: 掩码只看未标注图像，且只对需要标准化的 G2/G3 生效（G0/G1 不放大噪声列）。
+    # EN: the mask sees unlabelled images only and applies to G2/G3 (the standardising geometries);
+    #     G0/G1 do not amplify noise columns, so they are left untouched.
+    if drop_near_constant and name in ("G2", "G3"):
+        keep = near_constant_mask(x_u, y_u)
+        dropped = int((~keep).sum())
+        if dropped:
+            print(f"[registry] {name}: dropped {dropped}/{keep.size} near-constant columns", flush=True)
+        x_u, y_u, x_l, y_l = x_u[:, keep], y_u[:, keep], x_l[:, keep], y_l[:, keep]
 
     if name == "G0":
         xl, yl, xu, yu = l2_normalise(x_l), l2_normalise(y_l), l2_normalise(x_u), l2_normalise(y_u)
@@ -148,6 +197,31 @@ def geometry(
 
     assert_uniform_equals_cosine(xu, yu)
     return GeometryResult(x_label=xl, y_label=yl, x_unlabelled=xu, y_unlabelled=yu, name=str(name))
+
+
+def near_constant_mask(
+    x_unlabelled: Float[np.ndarray, "n d"],
+    y_unlabelled: Float[np.ndarray, "n d"],
+    *,
+    zero_fraction_max: float = 0.9,
+    sigma_relative_min: float = 0.1,
+) -> Bool[np.ndarray, "d"]:
+    """
+    CN: 近常量特征的掩码：丢掉 (a) 在**未标注**图像上零值比例 > `zero_fraction_max` 的列，
+        (b) 标准差 < `sigma_relative_min` x 中位标准差的列。`True` 表示**保留**。
+        统计量只用未标注图像（无标签），因此掩码本身不泄漏。
+    EN: near-constant feature mask: drop columns whose zero fraction over the **unlabelled** images exceeds
+        `zero_fraction_max`, and whose std is below `sigma_relative_min` x the median std. `True` = keep.
+        Statistics come from unlabelled images only, so the mask itself cannot leak.
+    """
+    pooled: Float[np.ndarray, "pooled d"] = np.concatenate([x_unlabelled, y_unlabelled], axis=0)
+    zero_fraction: Float[np.ndarray, "d"] = np.mean(pooled == 0.0, axis=0)
+    sigma: Float[np.ndarray, "d"] = pooled.std(axis=0)
+    positive: Float[np.ndarray, "d"] = sigma[sigma > 0.0]
+    median: float = float(np.median(positive)) if positive.size else 1.0
+    keep: Bool[np.ndarray, "d"] = (zero_fraction <= float(zero_fraction_max)) & \
+        (sigma >= float(sigma_relative_min) * median)
+    return keep
 
 
 def features(name: str, *, dim: int | None = None, grid: int = 16,
@@ -176,8 +250,12 @@ def features(name: str, *, dim: int | None = None, grid: int = 16,
     from DPM.embeddings.encoders import load_encoder_latents  # noqa: PLC0415
 
     if name == "dinov2-cls":
-        x, _ids = load_encoder_latents("dinov2", "T1", split="train")
-        y, _ids_y = load_encoder_latents("dinov2", "T2", split="train")
+        x, ids = load_encoder_latents("dinov2", "T1", split="train")
+        y, ids_y = load_encoder_latents("dinov2", "T2", split="train")
+        # CN: T1/T2 必须按**同一**受试者顺序对齐；否则 (x[i], y[i]) 不是一对。
+        # EN: T1 and T2 must be aligned on the **same** subject order, else (x[i], y[i]) is not a pair.
+        if len(ids) != len(ids_y) or any(str(a) != str(b) for a, b in zip(ids, ids_y)):
+            raise RegistryError("dinov2-cls: T1 and T2 id lists differ; pairing would be wrong")
         return np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
     # CN: pool4 + PCA，基在全部未标注 T1+T2 上拟合一次。
     # EN: pool4 + PCA, basis fitted once on all unlabelled T1+T2.

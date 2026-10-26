@@ -18,7 +18,7 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-from jaxtyping import Float, Int
+from jaxtyping import Float, Shaped
 
 IMG_SIZE: int = 192
 _DEFAULT_DATA_ROOT: Path = Path("/home/agent/Documents/dpm-inverse-ot/data/Task_002_MRI_T1_T2/Train")
@@ -43,7 +43,10 @@ def load_gray(path: Path, *, size: int = IMG_SIZE) -> Float[np.ndarray, "img img
          "-depth", "8", "gray:-"],
         check=True, capture_output=True,
     ).stdout
-    arr: Int[np.ndarray, "img img"] = np.frombuffer(raw, dtype=np.uint8).reshape(size, size)
+    # CN: ImageMagick 输出 uint8 灰度；`Int[np.ndarray, ...]` 不接受无符号类型，故中间量用 `Shaped`。
+    # EN: ImageMagick emits uint8 grey; `Int[np.ndarray, ...]` rejects unsigned dtypes, so the intermediate
+    #     is annotated `Shaped`.
+    arr: Shaped[np.ndarray, "img img"] = np.frombuffer(raw, dtype=np.uint8).reshape(size, size)
     return arr.astype(np.float64) / 255.0
 
 
@@ -73,9 +76,11 @@ def dinov2_pool4_pca(dim: int, *, root: str | Path | None = None,
                      ) -> tuple[Float[np.ndarray, "subjects K"], Float[np.ndarray, "subjects K"]]:
     """
     CN: DINOv2 patch token 池化到 4×4（16×384=6144 维），PCA 到 `dim` 维。
-        **PCA 基在全部未标注 T1+T2 上拟合一次**（池化均值，`np.linalg.svd`），因此没有标签泄漏。
+        **PCA 基在全部（标注+未标注）T1+T2 图像上拟合一次**（池化均值，`np.linalg.svd`）：
+        只用图像本身、**不使用任何配对信息**，因此不是标签泄漏（与 DPM 项目的做法一致）。
     EN: Pool DINOv2 patch tokens to a 4x4 grid (16*384 = 6144 dims) and PCA-reduce to `dim`. The **PCA basis
-        is fitted once on all unlabelled T1+T2** (pooled mean, `np.linalg.svd`), so no label leakage.
+        is fitted once on all T1+T2 images, labelled and unlabelled** (pooled mean, `np.linalg.svd`), using
+        only the images and **no pairing information**, so it is not label leakage.
     """
     # CN: 只有**显式传入**非默认值时才拒绝（DPM 侧的编码器加载器接受固定路径）。
     # EN: refuse only when a **non-default** root is passed explicitly (the DPM encoder loader takes fixed

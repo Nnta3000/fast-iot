@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from itertools import product
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 from jaxtyping import Float, Int

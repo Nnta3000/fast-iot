@@ -33,7 +33,8 @@ import argparse
 import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar, Literal, Sequence
+from collections.abc import Sequence
+from typing import ClassVar, Literal
 
 SolverName = Literal["cupdlpx", "highs"]
 ScanName = Literal["hello", "torch", "numpy"]
