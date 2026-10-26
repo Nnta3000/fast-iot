@@ -131,6 +131,78 @@ class GeometryResult:
     name: str
 
 
+@dataclass(frozen=True)
+class GeometryStats:
+    """
+    CN: 一个几何在**未标注**图像上拟合出的统计量（均值/标准差）。有了它，同一几何既能变换标注集，
+        也能变换**之后**要评分的任意集合——这正是"在标注对上拟合 θ、再在整个池上评分"所必需的。
+        `mean_x/mean_y/std_x/std_y` 只在 `G1`/`G3` 使用；`G2` 用池化统计量；`G0` 全为空。
+    EN: the statistics one geometry fits on the **unlabelled** images. With them, the same geometry can
+        transform the labelled set *and* any set scored afterwards, which is exactly what "fit theta on the
+        labelled pairs, then score the whole pool" requires. `mean_x/mean_y/std_x/std_y` are used by
+        `G1`/`G3`; `G2` uses the pooled statistics; `G0` leaves everything empty.
+    """
+
+    name: str
+    mean: Float[np.ndarray, "d"] | None = None
+    std: Float[np.ndarray, "d"] | None = None
+    mean_x: Float[np.ndarray, "d"] | None = None
+    mean_y: Float[np.ndarray, "d"] | None = None
+    std_x: Float[np.ndarray, "d"] | None = None
+    std_y: Float[np.ndarray, "d"] | None = None
+
+
+def fit_geometry(x_unlabelled: Float[np.ndarray, "n d"], y_unlabelled: Float[np.ndarray, "n d"],
+                 name: str) -> GeometryStats:
+    """
+    CN: 在**未标注**图像上拟合一个几何的统计量（无标签）。随后用 `apply_geometry` 变换任意集合。
+    EN: fit one geometry's statistics on the **unlabelled** images (label-free); `apply_geometry` then
+        transforms any set with the same statistics.
+    """
+    if str(name) not in _KNOWN_GEOMETRIES:
+        raise RegistryError(f"unknown geometry {name!r}; known: {sorted(_KNOWN_GEOMETRIES)}")
+    x_u: Float[np.ndarray, "n d"] = np.asarray(x_unlabelled, dtype=np.float64)
+    y_u: Float[np.ndarray, "n d"] = np.asarray(y_unlabelled, dtype=np.float64)
+    if name == "G0":
+        return GeometryStats(name=str(name))
+    if name == "G1":
+        return GeometryStats(name=str(name), mean_x=x_u.mean(axis=0), mean_y=y_u.mean(axis=0))
+    if name == "G2":
+        pooled: Float[np.ndarray, "pooled d"] = np.concatenate([x_u, y_u], axis=0)
+        return GeometryStats(name=str(name), mean=pooled.mean(axis=0), std=pooled.std(axis=0))
+    return GeometryStats(name=str(name), mean_x=x_u.mean(axis=0), std_x=x_u.std(axis=0),
+                         mean_y=y_u.mean(axis=0), std_y=y_u.std(axis=0))
+
+
+def apply_geometry(x: Float[np.ndarray, "subjects d"], y: Float[np.ndarray, "subjects d"],
+                   stats: GeometryStats) -> tuple[Float[np.ndarray, "subjects d"],
+                                                  Float[np.ndarray, "subjects d"]]:
+    """
+    CN: 用已拟合的统计量变换任意 `(x, y)` 集合，并逐行 L2 归一化。**只做变换，不重新拟合**，
+        因此标注集与评分池处在同一空间（这是 θ 可用的前提）。
+    EN: transform any `(x, y)` set with already-fitted statistics and L2-normalise each row. It **only**
+        transforms and never refits, so the labelled set and the scored pool live in the same space, which
+        is the precondition for using theta.
+    """
+    xa: Float[np.ndarray, "subjects d"] = np.asarray(x, dtype=np.float64)
+    ya: Float[np.ndarray, "subjects d"] = np.asarray(y, dtype=np.float64)
+    if stats.name == "G0":
+        return l2_normalise(xa), l2_normalise(ya)
+    if stats.name == "G1":
+        if stats.mean_x is None or stats.mean_y is None:
+            raise RegistryError("G1 statistics are missing their means")
+        return (l2_normalise(xa - stats.mean_x), l2_normalise(ya - stats.mean_y))
+    if stats.name == "G2":
+        if stats.mean is None or stats.std is None:
+            raise RegistryError("G2 statistics are missing their mean/std")
+        return (l2_normalise(_standardise(xa, stats.mean, stats.std)),
+                l2_normalise(_standardise(ya, stats.mean, stats.std)))
+    if stats.mean_x is None or stats.std_x is None or stats.mean_y is None or stats.std_y is None:
+        raise RegistryError("G3 statistics are missing their per-modality mean/std")
+    return (l2_normalise(_standardise(xa, stats.mean_x, stats.std_x)),
+            l2_normalise(_standardise(ya, stats.mean_y, stats.std_y)))
+
+
 def geometry(
     x: Float[np.ndarray, "subjects d"],
     y: Float[np.ndarray, "subjects d"],
@@ -269,6 +341,9 @@ __all__ = [
     "FeatureName",
     "GeometryName",
     "GeometryResult",
+    "GeometryStats",
+    "apply_geometry",
+    "fit_geometry",
     "RegistryError",
     "assert_uniform_equals_cosine",
     "features",

@@ -1,83 +1,127 @@
-**Status: CURRENT (2026-10-26).** One question, one protocol. Every number below states its config.
+**Status: CURRENT (2026-10-26, revised).** One question, one protocol. Every number below states its config.
 
 # NMI + Hungarian pairing on the full pool
 
 **Question.** Can mutual information (NMI) serve as a pairing cost, and does it beat whitened-DINOv2
 cosine + OT and the learned cost, on a protocol where the true partners are hidden?
 
-**Protocol (identical for all three arms).** The candidate pool is **all 1000 subjects**. The T1 side and
-the T2 side are each shuffled **independently**, so an arm sees two unordered sets and nothing else. Each
-arm emits a 1000×1000 cost and is decoded two ways — Hungarian assignment and exact EMD — and scored by
-`pair_acc`, the fraction of decoded pairs that join the same subject. **Chance = 1/1000 = 0.001.**
-No arm receives any pairing or label information; whitening and binning statistics use the images only.
+**Protocol (identical for all arms).** The candidate pool is **all 1000 subjects**. The T1 side and the T2
+side are each shuffled **independently**, so an arm sees two unordered sets and nothing else. Each arm emits
+a 1000×1000 cost decoded two ways — Hungarian and exact EMD — and scored by `pair_acc`, the fraction of
+decoded pairs that join the same subject. **Chance = 1/1000 = 0.001.** No arm receives pairing or label
+information; whitening and binning statistics use the images only.
 
 ## Result
 
 | arm | cost | decoder | `pair_acc` (3 draws) | std |
 |---|---|---|---|---|
-| **`nmi`** | `H(A_i) + H(B_j) − I(A_i; B_j)` over pixel histograms | Hungarian | **1.0000** | 0 |
-| **`nmi`** | same | EMD | **1.0000** | 0 |
-| `cosine_ot` | whitened DINOv2 cosine distance | Hungarian | 0.8250 | 0 |
+| `nmi` | `H(A_i) + H(B_j) − I(A_i; B_j)` over full-resolution pixels | Hungarian | 1.0000 | 0 |
+| `nmi` | same | EMD | 1.0000 | 0 |
+| `cosine_ot` | whitened DINOv2 cosine distance (K=256) | Hungarian | 0.8250 | 0 |
 | `cosine_ot` | same | EMD | 0.8250 | 0 |
-| `learned` | learned diagonal-weight L2², K=256, m=300 | Hungarian | 0.5423 | 0.0164 |
-| `learned` | same | EMD | 0.5423 | 0.0164 |
+| `learned` | learned diagonal weight in **G2** (K=256, m=300) | Hungarian | **0.8480** | 0.0127 |
+| `learned` | same | EMD | **0.8480** | 0.0127 |
 
-Config: feature `dinov2-pool4`, K=256 (learned arm; the NMI arm uses 32×32 pixels), m=300, draws 0–2,
-solver CuPDLPx, `studies/nmi` (`iot_experiments/gpu_bench/out/nmi/records.json`).
-Hungarian and EMD agree on every arm, so the result is about the **cost**, not the decoder.
+Config: feature `dinov2-pool4`, K=256, m=300, draws 0–2, solver CuPDLPx, `studies/nmi`
+(`iot_experiments/gpu_bench/out/nmi/records.json`). Hungarian and EMD agree on every arm, so the result is
+about the **cost**, not the decoder. Per-draw learned values: 0.857, 0.830, 0.857.
 
-## What the NMI number actually is — read this before citing 1.000
+## This benchmark is saturated and is NOT used to rank methods
 
-The perfect score is real on this data but it is **not** the semantic pairing result that the cosine and
-learned arms report, and it is fragile:
+**The `nmi` row is not a win.** Same-subject T1/T2 slices are **registered**, so their pixels are nearly
+identical; pixel MI measures *image-to-image similarity* and recovers such pairs trivially. The benchmark
+therefore cannot compare methods, and this report makes no ranking claim on it. It is retained only as a
+sanity check. SynthRAD (registered pairs too) will use it the same way.
 
-| variant | `pair_acc` |
+The saturation is measurable, not asserted:
+
+* On **cross-subject** pairs the MI cost separates by only **+0.02 SD** (same-subject 3.464 vs cross
+  3.461), i.e. the signal that produces 1.000 is *pair identity*, not *content compatibility*.
+* Every brain MRI correlates with every other (same-subject Pearson +0.698 vs cross-pair +0.690, a gap of
+  0.11 SD), so cross-subject discrimination in pixel space is near zero for any pixel metric.
+
+### The earlier `learned = 0.5423` row was a bug, now fixed
+
+An earlier revision fitted θ in **G2** (standardised + L2) but applied the cost in the **raw unwhitened**
+space. The two spaces have different scales, so θ was meaningless there: the same fit scored **0.549** in
+the raw space and **0.863** in the space it was fitted in. The row labelled "G2" was therefore neither G0 nor
+G2 — it was a θ/space mismatch.
+
+Fixed by `registry.fit_geometry` + `apply_geometry` (fit statistics on the unlabelled set, then transform
+any set **without refitting**) and by an **assertion** in the driver: the fit space and the scoring space must
+agree, and both must have unit row norms. The assertion passed on every draw and the records carry
+`space_asserted: true`.
+
+## NMI robustness: the earlier "collapse" was sample starvation
+
+The first revision reported that NMI collapsed under noise (0.003 at 32×32 / 32 bins). That conclusion was
+**wrong**: 1,024 pixels were being histogrammed into 1,024 cells, i.e. one sample per cell.
+`studies/nmi/robustness.py`, n=1000, σ added to T2 pixels:
+
+| resolution | bins | σ=0 | σ=0.1 | σ=0.3 | samples/cell |
+|---|---|---|---|---|---|
+| 192×192 | 32 | 1.0000 | 1.0000 | **0.9640** | 36 |
+| 192×192 | 64 | 1.0000 | 1.0000 | **1.0000** | 9 |
+| 32×32 | 32 | 1.0000 | — | **0.0030** | **1.0** |
+
+So NMI is robust at full resolution; the 32×32 cell was starved. **Sample count per histogram cell** is the
+governing quantity, and it is now the first thing to report for any pixel-MI construction.
+
+## The three earliest NMI constructions were non-paper variants
+
+They were my own constructions, not variants from the literature, and all three failed for reasons now
+understood:
+
+| construction | why it failed |
 |---|---|
-| 32×32 pixels, 32 bins (reported) | 1.0000 |
-| 16×16 pixels, 16 bins | 0.9100 |
-| 32×32 pixels + additive noise (σ=0.3), 32 bins | **0.0030** |
+| n rows as samples of one component pair | `cost[i,j]` built from a histogram over **all** rows, so `i` and `j` only appear as bin codes; at 32 bins only **32 rows** are distinguishable, so 1000 subjects cannot be identified |
+| components of one candidate pair as its samples | MI of a **true** pair and a **false** pair are **identical** (2.0794 both at 8 components): too few samples to estimate a joint histogram |
+| the same, made shuffle-invariant | invariance fixed, but planted recovery stayed at 0.01 — the estimator was still too weak |
+| **pixels of one candidate pair** (the classical MI registration objective) | works: planted recovery 1.000, chance on independent data, shuffle-invariant |
 
-The data are **same-subject slice pairs**: the T1 and T2 images of one subject are nearly identical
-pictures. MI over raw pixels measures **image-to-image similarity**, so it recovers near-identical pairs
-almost perfectly and fails completely as soon as the two images stop being near-identical (the σ=0.3 row).
-The cosine and learned arms operate on learned features, which degrade gradually instead of collapsing.
-So: **NMI wins at the "are these two pictures of the same thing" task and loses the semantic task.** On a
-genuinely unpaired pool (different acquisitions, a modality gap) the pixel-NMI arm should be expected to
-behave like the noise row, not like the reported row.
+Rule extracted: **NMI needs many samples per candidate pair**; below a few hundred it cannot pair, whatever
+the normalisation.
 
-## Three NMI constructions that failed, and why
+## Metric discrimination check (now a harness gate)
 
-This is the substance of the study. Only the fourth construction is defensible.
+`harness/discriminates.py` makes "check a metric before using it" a code invariant. A pairing metric is
+usable only if its effect size beats the **same-centre** control, not merely the random floor — the
+same-centre control is what exposes "this pairing is better because it is the same scanner/centre".
 
-| construction | samples per pair | failure |
-|---|---|---|
-| n rows as samples of one component pair | n = 1000 | `cost[i,j]` built from a joint histogram over **all** rows, so `i` and `j` appear only as bin codes; at 32 bins only **32 rows are distinguishable**, so it cannot identify 1000 subjects. Scored exactly 0.0000 (below chance). |
-| components of one candidate pair as samples | K = 16 or 256 | MI of a **true** pair and of a **false** pair are **identical** (measured 2.0794 for both at 8 components): a handful of samples cannot estimate a joint histogram, and MI reduces to a function of marginal bin occupancy. Scored at chance. |
-| same, but "fixed" to be shuffle-invariant | K = 16 | Became shuffle-invariant and chance-level on independent data (both correct), but planted recovery fell to **0.01** — the invariance was right, the estimator was still too weak. |
-| **pixels of one candidate pair** | **~1k–16k** | **works**: planted recovery 1.000, chance on independent data, shuffle-invariant. This is the classical MI image-registration objective. |
+Applied to the T1/T2 pair-scoring metrics (64×64, n=60, 1 draw), both are **rejected**:
 
-The rule that came out of it: **NMI needs many samples per candidate pair.** If a construction has fewer
-than a few hundred samples per pair it cannot pair, no matter how it is normalised.
+| metric | mean_true | mean_same | mean_random | eff_same | eff_random | usable |
+|---|---|---|---|---|---|---|
+| `ssim` | 0.5208 | 0.5193 | 0.4912 | **+0.01** | +0.24 | NO |
+| `psnr` | 11.7930 | 11.7989 | 11.5234 | **−0.00** | +0.15 | NO |
 
-## Bugs found and fixed in the harness while doing this
+Both look mildly useful against the random floor and vanish against the same-centre control — exactly the
+centre shortcut. At full 192×192 resolution the SSIM gap is 0.00 SD (0.4973 true vs 0.4975 cross) and
+SSIM-argmax recovers the true partner at chance.
 
-1. **`pair_accuracy` compared `perm[i] == i`.** With both sides shuffled the identity map is meaningless;
-   it must be compared against the true-partner **column**. The first version printed exactly chance for a
-   cost that provably recovered pairs (argmax hit 76.5% of rows) — the tell was *exactly* 0.0000, not a
-   small number.
-2. **`load_gray` violated its own beartype annotation** (`Int[np.ndarray, ...]` on a `uint8` array). It was
-   latent because nothing called it through the harness; the NMI study was the first caller.
-3. **`typing.Sequence` / `typing.Callable`** in the harness emit PEP 585 deprecation warnings on every
-   import; switched to `collections.abc`.
+**Consequence for the planned two-halves study:** with T1 from half A and T2 from half B the true partner is
+never a candidate, so `pair_acc` is ~0 for every arm by construction, and SSIM/PSNR cannot distinguish arms.
+The study was **not run** on T1/T2; that is recorded here as the finding, and SSIM/PSNR are excluded as
+evaluation metrics until a dataset where they pass the discrimination check is in place.
+
+## Bugs found in the harness while doing this
+
+1. **`pair_accuracy` compared `perm[i] == i`.** With both sides shuffled the identity map is meaningless; it
+   must be compared against the true-partner **column**. The tell was *exactly* 0.0000 (not a small number)
+   for a cost that recovered 76.5% of rows by argmax.
+2. **`load_gray` violated its own beartype annotation** (`Int[...]` on a `uint8` array), latent until the NMI
+   study became the first harness caller.
+3. **`typing.Sequence` / `typing.Callable`** emitted PEP 585 warnings on every import.
 
 ## Reproduce
 
 ```bash
-PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
-  .venv/bin/python -u -m iot_experiments.studies.nmi.run \
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.nmi.run \
     --ks 256 --ms 300 --draws 0 1 2 --solver cupdlpx
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.nmi.robustness
 ```
 
-Runtime: about 2 minutes (the n=1000 pixel-NMI cost is ~22 s on CPU). Tests:
-`tests/iot_nmi_study_test.py` (5 claims: planted recovery after shuffling, true-partner scoring,
-Hungarian ≡ EMD, MI direction, unit-variance whitening).
+Tests: `tests/iot_nmi_study_test.py` (planted recovery after shuffling, true-partner scoring,
+Hungarian ≡ EMD, MI direction, unit-variance whitening, sample-per-cell diagnostic) and
+`tests/iot_discriminates_test.py` (accept with signal, reject noise, same-centre control is stricter than
+random, input validation).

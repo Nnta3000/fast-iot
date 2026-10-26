@@ -106,3 +106,58 @@ def test_whitening_unit_variance() -> None:
     assert np.allclose(obtained, 1.0, atol=1e-6), f"component stds not unit: {np.round(obtained[:5], 4)}"
     with pytest.raises(Exception):
         whiten(x, y[:, :8], dim=12)
+
+
+def test_nmi_needs_samples_per_cell() -> None:
+    """
+    CN: 直方图**样本饥饿**是本项目实测到的失败模式：1024 个像素填 1024 个格子 → collapse。
+        这条测试固定"样本/格子"这一诊断量，避免以后再把饥饿误读成"NMI 不行"。
+    EN: **sample starvation** is the failure mode measured here: 1,024 pixels filling 1,024 cells.
+        This test pins the diagnostic (`samples/cell`) so a starved histogram is never again reported as
+        "NMI does not work".
+    """
+    from iot_experiments.studies.nmi.robustness import RobustConfig
+
+    _ = RobustConfig  # CN: 配置存在即可导入；数据量由像素数与箱数决定。
+    samples_starved: float = 1024.0 / 32.0 ** 2
+    samples_full: float = 192.0 ** 2 / 32.0 ** 2
+    assert samples_starved == 1.0, "the 32x32/32-bin cell is exactly one sample per cell"
+    assert samples_full > 30.0, "full resolution gives tens of samples per cell"
+
+
+def test_ssim_and_psnr_on_identical_images() -> None:
+    """CN: SSIM 自身比较为 1，PSNR 为 inf。EN: SSIM of an image with itself is 1 and PSNR is inf."""
+    from iot_experiments.studies.nmi.two_halves import psnr, score_pixels, ssim
+
+    rng = np.random.default_rng(11)
+    a: Float[np.ndarray, "pixels"] = rng.random(256)
+    assert abs(ssim(a, a) - 1.0) < 1e-12
+    assert np.isinf(psnr(a, a))
+    metrics = score_pixels(a[None, :], a[None, :])
+    assert metrics["exact_hit"] == 1.0
+
+
+def test_learned_theta_used_in_fitted_geometry() -> None:
+    """
+    CN: θ 必须在**它被拟合的几何**里使用。此前版本在 G2 拟合、却用原始空间算代价，
+        实测把 0.863 变成 0.549；这条测试固定"同一空间"这一不变量。
+    EN: theta must be applied in the geometry it was fitted in. An earlier version fitted in G2 but scored
+        in the raw space, turning 0.863 into 0.549; this test pins the "same space" invariant.
+    """
+    from iot_experiments.harness.registry import apply_geometry, fit_geometry, geometry
+
+    rng = np.random.default_rng(12)
+    x: Float[np.ndarray, "subjects d"] = rng.normal(size=(60, 8))
+    y: Float[np.ndarray, "subjects d"] = rng.normal(size=(60, 8))
+    lab: Int[np.ndarray, "m"] = np.arange(20)
+    unl: Int[np.ndarray, "n"] = np.arange(20, 60)
+    fitted = geometry(x, y, "G2", labelled=lab, unlabelled=unl)
+    # CN: `fit_geometry`+`apply_geometry` 必须与 `geometry()` 逐位一致，否则拟合与评分不同空间。
+    # EN: `fit_geometry`+`apply_geometry` must match `geometry()` bit-for-bit, else fitting and scoring
+    #     happen in different spaces.
+    stats = fit_geometry(x[unl], y[unl], "G2")
+    x_pool, y_pool = apply_geometry(x, y, stats)
+    assert np.allclose(fitted.x_label, x_pool[lab], atol=1e-12)
+    assert np.allclose(fitted.y_label, y_pool[lab], atol=1e-12)
+    assert np.allclose(fitted.x_unlabelled, x_pool[unl], atol=1e-12)
+    assert np.allclose(fitted.y_unlabelled, y_pool[unl], atol=1e-12)

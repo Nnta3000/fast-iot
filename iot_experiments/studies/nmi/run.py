@@ -60,7 +60,7 @@ if str(_REPO_ROOT) not in sys.path:
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.driver import make_split  # noqa: E402
 from iot_experiments.harness.records import RunRecord, format_table, summarise, write_records  # noqa: E402
-from iot_experiments.harness.registry import geometry  # noqa: E402
+from iot_experiments.harness.registry import apply_geometry, fit_geometry, geometry  # noqa: E402
 from iot_experiments.harness.solver import diagonal_cost, fit_full_lp  # noqa: E402
 
 PROVENANCE: dict[str, object] = {
@@ -253,6 +253,7 @@ class NmiConfig(RunConfig):
     arms: tuple[str, ...] = ("nmi", "cosine_ot", "learned")
     bins: int = 32
     pixel_size: int = 32
+    fitted_geometry: str = "G2"
 
     @classmethod
     def add_study_arguments(cls, parser: argparse.ArgumentParser) -> None:
@@ -266,6 +267,8 @@ class NmiConfig(RunConfig):
         parser.add_argument("--bins", type=int, default=32, help="equal-frequency bins for the NMI histogram")
         parser.add_argument("--pixel-size", type=int, default=32,
                             help="images are resized to this square before the MI histogram")
+        parser.add_argument("--fitted-geometry", default="G2", choices=["G0", "G1", "G2", "G3"],
+                            help="geometry theta is fitted AND applied in (must be the same space)")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -337,30 +340,59 @@ def main(argv: list[str] | None = None) -> int:
                           f"emd acc={metrics['pair_acc_emd']:.4f}", flush=True)
 
                 if "learned" in config.arms:
-                    geo = geometry(x, y, "G2", labelled=split.labelled, unlabelled=split.unlabelled)
+                    geo = geometry(x, y, str(config.fitted_geometry),
+                                   labelled=split.labelled, unlabelled=split.unlabelled)
                     fit = fit_full_lp(geo.x_label, geo.y_label, solver=str(config.solver),
                                       solve_limit_s=float(config.solve_limit_s))
                     if fit.status != "ok":
-                        records.append(RunRecord(study=str(config.study), geometry="G2", arm="learned",
+                        records.append(RunRecord(study=str(config.study),
+                                                 geometry=str(config.fitted_geometry), arm="learned",
                                                  k=int(k), m=int(m), draw=int(draw), metrics={},
                                                  config=config.to_dict(), excluded=True, status=fit.status))
                         print(f"  K={k} m={m} d={draw} learned EXCLUDED: {fit.status}", flush=True)
                         continue
-                    # CN: 学到的 θ 是对角权重，在**原始（未白化）**空间上取 L2²，与此前研究一致。
-                    # EN: the learned theta is a diagonal weight, applied as L2^2 in the **unwhitened**
-                    #     space, consistent with every earlier study.
-                    xr: Float[np.ndarray, "n d"] = np.asarray(x, dtype=np.float64)[order_t1]
-                    yr: Float[np.ndarray, "n d"] = np.asarray(y, dtype=np.float64)[order_t2]
-                    cost = diagonal_cost(xr, yr, fit.theta)
+                    # CN: **θ 必须在它被拟合的那个空间里使用**。早先的版本在 G2（标准化+L2）上拟合，
+                    #     却把代价算在原始未白化空间上，两者尺度不同，θ 无意义（实测 0.549 vs 0.863）。
+                    #     这里把同一个几何施加到**整个池**上，再套用 θ。
+                    # EN: **theta must be used in the space it was fitted in.** An earlier version fitted on
+                    #     G2 (standardised + L2) but evaluated the cost in the raw unwhitened space; the
+                    #     scales differ, so theta is meaningless there (measured 0.549 vs 0.863). Here the
+                    #     same geometry is applied to the **whole pool**, then theta is applied.
+                    stats = fit_geometry(x[split.unlabelled], y[split.unlabelled],
+                                         str(config.fitted_geometry))
+                    xg, yg = apply_geometry(x[order_t1], y[order_t2], stats)
+                    # CN: **断言**评分用的几何与拟合用的几何是同一个，且数据确实落在该几何的单位球上。
+                    #     仅靠注释无法阻止这个 bug 复发：此前正是"G2 拟合、原始空间计分"。
+                    # EN: **assert** that the geometry used for scoring is the one theta was fitted in, and
+                    #     that the data really lies on that geometry's unit sphere. A comment cannot stop
+                    #     this bug from returning; the original defect was "fit in G2, score in raw space".
+                    apply_geometry_stats = stats.name
+                    if apply_geometry_stats != str(config.fitted_geometry):
+                        raise SystemExit(
+                            f"theta was fitted in {config.fitted_geometry} but applied in "
+                            f"{apply_geometry_stats}; refusing to score")
+                    fitted_norms = np.linalg.norm(np.asarray(geo.x_label, dtype=np.float64), axis=1)
+                    scored_norms = np.linalg.norm(np.asarray(xg, dtype=np.float64), axis=1)
+                    if not (np.allclose(fitted_norms, 1.0, atol=1e-8)
+                            and np.allclose(scored_norms, 1.0, atol=1e-8)):
+                        raise SystemExit(
+                            "fit and score spaces differ: fitted norms "
+                            f"[{fitted_norms.min():.6f},{fitted_norms.max():.6f}] vs scored norms "
+                            f"[{scored_norms.min():.6f},{scored_norms.max():.6f}]")
+                    cost = diagonal_cost(xg, yg, fit.theta)
                     perm_h = hungarian(cost)
                     perm_e = emd_perm(cost)
                     metrics = {"pair_acc_hungarian": pair_accuracy(perm_h, pos_of_true),
                                "pair_acc_emd": pair_accuracy(perm_e, pos_of_true)}
-                    records.append(RunRecord(study=str(config.study), geometry="G2", arm="learned",
+                    records.append(RunRecord(study=str(config.study),
+                                             geometry=str(config.fitted_geometry), arm="learned",
                                              k=int(k), m=int(m), draw=int(draw), metrics=metrics,
                                              config=config.to_dict(),
-                                             extra={"R_prime": fit.R_prime, "R_uniform": fit.R_uniform}))
-                    print(f"  K={k} m={m} d={draw} learned hungarian acc={metrics['pair_acc_hungarian']:.4f} "
+                                             extra={"R_prime": fit.R_prime, "R_uniform": fit.R_uniform,
+                                                    "theta_space": str(config.fitted_geometry),
+                                                    "space_asserted": True}))
+                    print(f"  K={k} m={m} d={draw} learned ({config.fitted_geometry}) "
+                          f"hungarian acc={metrics['pair_acc_hungarian']:.4f} "
                           f"emd acc={metrics['pair_acc_emd']:.4f}", flush=True)
 
     rows = summarise(records, group=("geometry", "arm"),
