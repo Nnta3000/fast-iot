@@ -1,0 +1,87 @@
+{
+  "experiment": "cutting_plane_benchmark",
+  "config": {
+    "master_mode": "max_margin",
+    "normalize_cuts": true,
+    "max_iterations": 1500,
+    "tol": 1e-09,
+    "subgradient_step_rule": "polyak",
+    "subgradient_learning_rate": 1.0,
+    "subgradient_max_iterations": 2000,
+    "methods": [
+      "cutting-plane"
+    ]
+  },
+  "rows": [
+    {
+      "n": 200,
+      "k": 4,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=True",
+      "converged": true,
+      "oracle_calls": 22,
+      "iterations": 22,
+      "final_gap": 0.0,
+      "wall_time": 0.10850107399892295,
+      "per_oracle_time": 0.004931866999951043,
+      "is_optimal": true
+    },
+    {
+      "n": 200,
+      "k": 8,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=True",
+      "converged": true,
+      "oracle_calls": 59,
+      "iterations": 59,
+      "final_gap": 0.0,
+      "wall_time": 0.30836382699999376,
+      "per_oracle_time": 0.005226505542372775,
+      "is_optimal": true
+    },
+    {
+      "n": 200,
+      "k": 16,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=True",
+      "converged": true,
+      "oracle_calls": 90,
+      "iterations": 90,
+      "final_gap": 0.0,
+      "wall_time": 0.8581912169993302,
+      "per_oracle_time": 0.009535457966659224,
+      "is_optimal": true
+    },
+    {
+      "n": 200,
+      "k": 32,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=True",
+      "converged": true,
+      "oracle_calls": 282,
+      "iterations": 282,
+      "final_gap": 0.0,
+      "wall_time": 3.7816893070012156,
+      "per_oracle_time": 0.013410245769507856,
+      "is_optimal": true
+    },
+    {
+      "n": 200,
+      "k": 64,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=True",
+      "converged": true,
+      "oracle_calls": 710,
+      "iterations": 710,
+      "final_gap": 0.0,
+      "wall_time": 29.592192007999984,
+      "per_oracle_time": 0.04167914367323941,
+      "is_optimal": true
+    }
+  ]
+}

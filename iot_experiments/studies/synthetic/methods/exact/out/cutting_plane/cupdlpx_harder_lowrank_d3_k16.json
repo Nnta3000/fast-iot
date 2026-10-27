@@ -1,0 +1,119 @@
+{
+  "experiment": "harder_benchmark",
+  "arm": "families",
+  "config": {
+    "sizes": [
+      60,
+      120
+    ],
+    "seeds": [
+      0
+    ],
+    "point_dimension": 3,
+    "families": [
+      "lowrank"
+    ],
+    "methods": [
+      "exact",
+      "cupdlpx"
+    ],
+    "mix": [
+      0.0,
+      0.1
+    ],
+    "max_iterations": 300,
+    "subgradient_rule": "inv_sqrt",
+    "subgradient_learning_rate": 0.5,
+    "entropic_outer": 40
+  },
+  "rows": [
+    {
+      "arm": "families",
+      "family": "lowrank",
+      "n": 60,
+      "d": 3,
+      "k": 16,
+      "seed": 0,
+      "method": "exact",
+      "config": "regularized-eps1e-4",
+      "unit": "master rounds",
+      "converged": true,
+      "iterations": 9,
+      "wall_time": 0.1298198570002569,
+      "per_iteration": 0.014424428555584099,
+      "l0": 0.0,
+      "l0_initial": 0.10452304332498102,
+      "G": 0.0,
+      "R": 0.0,
+      "is_optimal": true,
+      "error": null,
+      "extra": {}
+    },
+    {
+      "arm": "families",
+      "family": "lowrank",
+      "n": 60,
+      "d": 3,
+      "k": 16,
+      "seed": 0,
+      "method": "cupdlpx",
+      "config": "cupdlpx,prune=off",
+      "unit": "master rounds",
+      "converged": true,
+      "iterations": 8,
+      "wall_time": 2.482059459998709,
+      "per_iteration": 0.3102574324998386,
+      "l0": 0.0,
+      "l0_initial": 0.10452304332498102,
+      "G": 0.0,
+      "R": 0.0,
+      "is_optimal": true,
+      "error": null,
+      "extra": {}
+    },
+    {
+      "arm": "families",
+      "family": "lowrank",
+      "n": 120,
+      "d": 3,
+      "k": 16,
+      "seed": 0,
+      "method": "exact",
+      "config": "regularized-eps1e-4",
+      "unit": "master rounds",
+      "converged": true,
+      "iterations": 12,
+      "wall_time": 0.34407097000075737,
+      "per_iteration": 0.02867258083339645,
+      "l0": 0.0,
+      "l0_initial": 0.14318773503934334,
+      "G": 0.0,
+      "R": 0.0,
+      "is_optimal": true,
+      "error": null,
+      "extra": {}
+    },
+    {
+      "arm": "families",
+      "family": "lowrank",
+      "n": 120,
+      "d": 3,
+      "k": 16,
+      "seed": 0,
+      "method": "cupdlpx",
+      "config": "cupdlpx,prune=off",
+      "unit": "master rounds",
+      "converged": true,
+      "iterations": 9,
+      "wall_time": 2.466867998999078,
+      "per_iteration": 0.2740964443332309,
+      "l0": 0.0,
+      "l0_initial": 0.14318773503934334,
+      "G": 0.0,
+      "R": 0.0,
+      "is_optimal": true,
+      "error": null,
+      "extra": {}
+    }
+  ]
+}

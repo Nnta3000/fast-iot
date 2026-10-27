@@ -76,12 +76,12 @@ improves 1.1–1.25× — bounded now entirely by the CPU master.
 ## 6. Reproduce
 
 ```bash
-python iot_experiments/benchmark/hello_scan_benchmark.py \
+python iot_experiments/benchmarks/hello_scan_benchmark.py \
   --sizes 200 800 1600 3200 --k 8 --device cuda --repeats 3 --loop \
-  --out iot_experiments/benchmark/out/hello_scan/scan_speedup.json
+  --out iot_experiments/benchmarks/out/hello_scan/scan_speedup.json
 ```
 
-Backing data: `iot_experiments/benchmark/out/hello_scan/scan_speedup.json` (git-ignored).
+Backing data: `iot_experiments/benchmarks/out/hello_scan/scan_speedup.json` (git-ignored).
 Tests: `tests/iot_hello_scan_test.py`, `tests/iot_dependency_boundary_test.py`.
 
 ## 7. Caveats

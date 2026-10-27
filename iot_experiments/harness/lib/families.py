@@ -24,7 +24,7 @@ from iot import (
     SimplexTheta,
     ThetaSet,
 )
-from iot_experiments.benchmark.lowrank import LowRankFeatures
+from iot_experiments.benchmarks.lowrank import LowRankFeatures
 
 from .marginals import MarginalSpec
 

@@ -1,0 +1,51 @@
+{
+  "experiment": "cupdlpx_master_benchmark",
+  "config": {
+    "tau_prune": 0.001,
+    "max_iterations": 60
+  },
+  "rows": [
+    {
+      "master": "highs-shipped",
+      "n": 200,
+      "k": 256,
+      "seed": 0,
+      "converged": true,
+      "delta": 0.04824272492037666,
+      "iterations": 15,
+      "max_support": 1426,
+      "wall_time": 19.871980948999408,
+      "per_solve": 1.324798729933294,
+      "final_max_violation": -1.5790723080964797e-05,
+      "is_optimal": true
+    },
+    {
+      "master": "highs-matched",
+      "n": 200,
+      "k": 256,
+      "seed": 0,
+      "converged": true,
+      "delta": 0.04824272492037666,
+      "iterations": 13,
+      "max_support": 1427,
+      "wall_time": 18.059622044002026,
+      "per_solve": 1.3892016956924635,
+      "final_max_violation": -0.00011487149113705714,
+      "is_optimal": true
+    },
+    {
+      "master": "cupdlpx-prune-off",
+      "n": 200,
+      "k": 256,
+      "seed": 0,
+      "converged": true,
+      "delta": 0.048245240819031976,
+      "iterations": 11,
+      "max_support": 2885,
+      "wall_time": 26.529090616000758,
+      "per_solve": 2.4117355105455234,
+      "final_max_violation": -0.008690628853004367,
+      "is_optimal": true
+    }
+  ]
+}

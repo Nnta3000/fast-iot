@@ -10,14 +10,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from iot_experiments.benchmark.hard_instances import (
+from iot_experiments.benchmarks.hard_instances import (
     FAMILIES,
     LP_FAMILIES,
     build_hard_instance,
     score_hard,
     uniform_theta,
 )
-from iot_experiments.benchmark.harder_benchmark import (
+from iot_experiments.benchmarks.harder_benchmark import (
     run_families_arm,
     run_noisy_arm,
     run_psd_arm,

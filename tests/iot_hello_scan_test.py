@@ -21,7 +21,7 @@ from iot import (
     scan_violations_fast,
     solve_inverse_ot,
 )
-from iot_experiments.benchmark.lowrank import LowRankFeatures
+from iot_experiments.benchmarks.lowrank import LowRankFeatures
 
 
 def _master(n: int = 40, k: int = 3, seed: int = 0):

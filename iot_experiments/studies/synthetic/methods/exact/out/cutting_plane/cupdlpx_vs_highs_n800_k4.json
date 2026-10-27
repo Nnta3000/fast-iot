@@ -1,0 +1,41 @@
+{
+  "experiment": "cupdlpx_master_benchmark",
+  "rows": [
+    {
+      "master": "highs-prune-off",
+      "n": 800,
+      "k": 4,
+      "seed": 0,
+      "converged": true,
+      "delta": 1.2187367553630925e-05,
+      "iterations": 14,
+      "wall_time": 11.45159352399969,
+      "final_max_violation": -2.2219634531048912e-05,
+      "is_optimal": true
+    },
+    {
+      "master": "highs-shipped",
+      "n": 800,
+      "k": 4,
+      "seed": 0,
+      "converged": true,
+      "delta": 1.2187367553631242e-05,
+      "iterations": 21,
+      "wall_time": 5.909151417999965,
+      "final_max_violation": -1.1410917712523928e-06,
+      "is_optimal": true
+    },
+    {
+      "master": "cupdlpx-prune-off",
+      "n": 800,
+      "k": 4,
+      "seed": 0,
+      "converged": true,
+      "delta": 9.069555119302206e-06,
+      "iterations": 12,
+      "wall_time": 98.49635097400096,
+      "final_max_violation": -0.00020233272410482715,
+      "is_optimal": true
+    }
+  ]
+}

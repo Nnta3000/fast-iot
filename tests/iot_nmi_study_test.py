@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 from jaxtyping import Float, Int
 
-from iot_experiments.studies.nmi.run import (
+from iot_experiments.studies.real.t1t2.nmi.run import (
     emd_perm,
     hungarian,
     nmi_pixel_cost,
@@ -116,7 +116,7 @@ def test_nmi_needs_samples_per_cell() -> None:
         This test pins the diagnostic (`samples/cell`) so a starved histogram is never again reported as
         "NMI does not work".
     """
-    from iot_experiments.studies.nmi.robustness import RobustConfig
+    from iot_experiments.studies.real.t1t2.nmi.robustness import RobustConfig
 
     _ = RobustConfig  # CN: 配置存在即可导入；数据量由像素数与箱数决定。
     samples_starved: float = 1024.0 / 32.0 ** 2
@@ -127,7 +127,7 @@ def test_nmi_needs_samples_per_cell() -> None:
 
 def test_ssim_and_psnr_on_identical_images() -> None:
     """CN: SSIM 自身比较为 1，PSNR 为 inf。EN: SSIM of an image with itself is 1 and PSNR is inf."""
-    from iot_experiments.studies.nmi.two_halves import psnr, score_pixels, ssim
+    from iot_experiments.studies.real.t1t2.nmi.two_halves import psnr, score_pixels, ssim
 
     rng = np.random.default_rng(11)
     a: Float[np.ndarray, "pixels"] = rng.random(256)

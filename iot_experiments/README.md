@@ -1,83 +1,94 @@
 # iot_experiments
 
-Experiments for the inverse-OT work. Run everything from the repository root after
-`pip install -e .`. This file is the **index**: what each directory answers and which
-driver/report to cite.
+Experiments for the inverse-OT work. Run from the repository root after `pip install -e .`.
 
-## The design: three axes on one record
+**This file is the index.** If you are looking for "the current code", it is
+`harness/` (shared machinery) plus `studies/` (the science).
 
-Every current experiment is a point in a three-axis design, described by one `RunSpec` and
-recorded as one `RunRecord` (`core/records.py`):
+## The split that matters: real data vs synthetic
 
-1. **scale** — growth in `K` (point dimension / feature count), `m`, `n`;
-2. **marginal** — `uniform` vs non-uniform (`gaussian`, `gmm`, `gaussian:<c>:<w>`);
-3. **cost family** — `diagonal`, `quadratic`, `lowrank` (+ `bilinear-psd` at tiny `n`).
+Experiments answer two different kinds of question, and the directories say which:
 
-A study is just a grid over these axes plus an analysis. `RunSpec`/`RunRecord` live in
-`core/`; studies import them, so results from different studies merge and cite directly
-(`AGENTS.md` §7.1: a number is usable only with its config).
+| directory | data | question |
+|---|---|---|
+| **`studies/real/`** | **real images** (T1/T2 MRI, SynthRAD MR/CT) | does the pairing recover the right partner? |
+| **`studies/synthetic/`** | **generated in-process** | does the solver solve it, how fast, does it certify? |
+| `benchmarks/` | frozen instances | cross-method comparison under a fixed protocol |
+| `harness/` | — | shared machinery: config, preprocessing, splits, records, metrics, gates |
 
-| path | what it is |
-| --- | --- |
-| `core/` | shared axes + `RunSpec`/`RunRecord` + the single `run_spec`/`run_grid` entry point |
-| `benchmark/` | **frozen** cross-method contract (`PROTOCOL.md`), generators, evaluation, gradient runner |
-| `scaling/` | **study 1** — growth in `K`, `m`, `n` |
-| `marginals/` | **study 2** — uniform vs Gaussian / GMM marginals (and a peakedness sweep) |
-| `families/` | **study 3** — diagonal / quadratic / low-rank (+ tiny-`n` bilinear-PSD) |
-| `external/` | **study 4** — adapters to external benchmarks (placeholder) |
-| `reports/` | current written results (see `reports/README.md`) |
-| `legacy/` | retired experiments and superseded reports (see `legacy/README.md`) |
-| `theory/` | the convergence proof source (`CONVERGENCE_PROOF.typ`) |
+Everything else is support or history: `reports/` (what to cite), `theory/` (proofs), `out/`
+(run results, git-ignored), `legacy/` (retired code, git-ignored).
 
-## Question → study → driver → report
+## Directory map
 
-| question | study | driver | report |
-| --- | --- | --- | --- |
-| where does the solve exceed 2 s in `(m,n,K)`? | `scaling/` | `scaling/run.py` + `scaling/analyse.py` | `reports/SCALING_REPORT.md` |
-| how do marginals change structure / cost? | `marginals/` | `marginals/run.py` + `marginals/analyse.py` | `reports/MARGINAL_REPORT.md` |
-| how do cost families differ? | `families/` | `families/run.py` + `families/analyse.py` | `reports/FAMILY_REPORT.md` |
-| external datasets | `external/` | (adapter, later) | (later) |
-| cross-method comparison (exact vs gradient) | `benchmark/` | `benchmark/runner.py` | `reports/BENCHMARK_EXACT_REPORT.md` |
+```
+iot_experiments/
+├── harness/                     shared machinery — the only place preprocessing/splits/records live
+├── studies/
+│   ├── real/
+│   │   ├── t1t2/                geometry, pool, nmi, metric_learning
+│   │   └── synthrad/            E1–E5 (pending data)
+│   └── synthetic/               scaling, marginals, families
+├── benchmarks/                  frozen cross-method contract (PROTOCOL.md)
+├── theory/                      CONVERGENCE_PROOF.typ
+├── reports/                     citable results; reports/README.md is the index
+├── out/                         ALL run output (git-ignored) — studies write iot_experiments/out/<study>/
+└── legacy/                      retired: the frozen core/ tree, gpu_bench/, external/  (git-ignored)
+```
+
+**`out/` is the only place results are written.** Drivers do not carry their own `out/`, so you
+always know where to look. Each run also writes its own `run.log` (timestamped, per-step elapsed)
+next to its `records.json` — a long job that is launched with plain `python -u` still leaves a record.
+
+## What each study answers
+
+### `studies/real/`
+
+| study | question | report |
+|---|---|---|
+| `t1t2/geometry` | which post-PCA transform makes retrieval work (G0–G3)? | `REAL_PAIRS_REPORT.md` |
+| `t1t2/pool` | which of the selected pairs can be trusted (precision at coverage)? | `REAL_PAIRS_REPORT.md` |
+| `t1t2/nmi` | NMI + Hungarian vs cosine + OT vs the learned cost | `NMI_PAIRING_REPORT.md` |
+| `t1t2/metric_learning` | InfoNCE / Sinkhorn-InfoNCE / CCA / residual vs relaxed iOT | `studies/real/t1t2/metric_learning/README.md` |
+
+### `studies/synthetic/`
+
+| study | question | report |
+|---|---|---|
+| `synthetic/scaling` | where does the solve exceed 2 s in `(m, n, K)`? | `SCALING_REPORT.md` |
+| `synthetic/marginals` | uniform vs Gaussian / GMM marginals: structure and cost | `MARGINAL_REPORT.md` |
+| `synthetic/families` | diagonal / quadratic / low-rank (+ tiny-`n` PSD) | `FAMILY_REPORT.md` |
+
+These three are driven by `harness/lib/` generators (`planting`, `marginals`, `families`) and
+`harness/lib/runner.py`; every record carries a full `RunSpec`, so results from different studies
+merge and cite directly.
 
 ## Running
 
 ```bash
-# study 1: scale
-python iot_experiments/scaling/run.py --family quadratic --marginal gmm \
-  --sizes 200 400 800 1600 3200 --dims 2 4 8 16
-python iot_experiments/scaling/analyse.py iot_experiments/scaling/out/quadratic_gmm.json
+# real-data study (needs data/, see data/README.md)
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
+  .venv/bin/python -u -m iot_experiments.studies.real.t1t2.nmi \
+    --ks 256 --ms 100 300 --draws 0 1 2 --solver cupdlpx
 
-# study 2: marginals
-python iot_experiments/marginals/run.py --families diagonal quadratic lowrank \
-  --marginals uniform gaussian gmm --n 800
-python iot_experiments/marginals/analyse.py iot_experiments/marginals/out/marginals_n800.json
-
-# study 3: cost families (LP) + tiny-n PSD
-python iot_experiments/families/run.py --families diagonal quadratic lowrank \
-  --marginal gmm --sizes 200 800 1600
-python iot_experiments/families/run.py --families bilinear-psd --marginal gmm --psd-ns 8 16 32
-python iot_experiments/families/analyse.py iot_experiments/families/out/families_gmm.json
+# synthetic study
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
+  .venv/bin/python -u -m iot_experiments.studies.synthetic.scaling \
+    --family quadratic --marginal gmm --ms 200 800 3200
 ```
 
-Generated outputs land in each study's `out/` (git-ignored) as `<name>.json` + `<name>.csv`.
-
-## Reading the results
-
-- Every record carries its `RunSpec`; `is_optimal` comes from `iot.validation.is_optimal_plan`
-  (exact POT), never from `theta == theta_star`. Discrete data is generically
-  non-identifiable, so min/max ranges and distances are diagnostics, never equalities.
-- Timing is split into `scaffold_seconds` (POT ground truth, **not** the algorithm's budget)
-  and `solve_seconds`, with the per-iteration `mean_master_seconds` / `mean_oracle_seconds`
-  split — the bottleneck flips from oracle to master as `K` grows.
-- `certified`/`cert_support_residual` flag the known certificate edge case on degenerate
-  plans (a spurious `~1e-19` support entry); `is_optimal` is the verdict.
-- On noisy/off-support plans the exact method is out of scope (`AGENTS.md` §4.6); do not
-  threshold silently.
+Output lands in `iot_experiments/out/<study>/` with its `run.log`.
 
 ## Conventions
 
-- One report per question; if superseded, add a `Status: HISTORICAL` banner (or move it to
-  `legacy/reports/`) rather than deleting.
-- Figures: instance in the title, labelled axes, legend, sibling `<name>.caption.md` + CSV
-  (`AGENTS.md` §7.2). Generated outputs go under the study's `out/` (git-ignored).
-- `legacy/` is import-only-for-provenance; new code must not import from it.
+- **A number belongs in a report only with its config** (instance, `K`, seed, budget, code path,
+  backend). If you cannot state the config, the number is not usable (`AGENTS.md` §7.1).
+- **Backend is stated in every table**: `cupdlpx` (the production path) or `highs` (reference only).
+- **A pairing metric must pass `harness/discriminates.py`** before it is used to evaluate anything:
+  it must beat the **same-centre** control, not just the random floor.
+- **A learned θ is applied in the space it was fitted in**, asserted in code, not by comment.
+- **No silent fallbacks**: a failed fit prints `FAILED` and is excluded; it is never replaced by
+  cosine or by uniform θ.
+- Negative results are reported plainly.
+
+See `AGENTS.md` for the full contract and `reports/README.md` for what to cite.

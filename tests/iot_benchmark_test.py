@@ -21,17 +21,17 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot_experiments.benchmark.checkpoint import read_run, write_run  # noqa: E402
-from iot_experiments.benchmark.evaluate import (  # noqa: E402
+from iot_experiments.benchmarks.checkpoint import read_run, write_run  # noqa: E402
+from iot_experiments.benchmarks.evaluate import (  # noqa: E402
     reference_scores,
     score_theta,
 )
-from iot_experiments.benchmark.instances import (  # noqa: E402
+from iot_experiments.benchmarks.instances import (  # noqa: E402
     build_clean_instance,
     build_instance,
     build_noisy_instance,
 )
-from iot_experiments.benchmark.runner import (  # noqa: E402
+from iot_experiments.benchmarks.runner import (  # noqa: E402
     ExactConfig,
     GradientConfig,
     fit_theta_adamw,

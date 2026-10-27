@@ -168,7 +168,7 @@ resolution ladder shows that 16×16 is not where this problem is hardest.
 
 ---
 
-**Data.** `iot_experiments/gpu_bench/out/pool_emd/pool_emd2.json` (main, §2–3),
+**Data.** `iot_experiments/out/pool_emd/pool_emd2.json` (main, §2–3),
 `.../regret_gate/` (feature ladder, near-duplicate check),
 `.../metric_baseline/metric_baseline_g16.json` (§4 objectives),
 `.../pair_score/pair_score_g16.json` (§4 pairwise, diagnostics mis-recorded — see §7.1),

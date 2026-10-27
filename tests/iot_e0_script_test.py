@@ -7,7 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 E0_SCRIPT = (
-    REPO_ROOT / "iot_experiments" / "legacy" / "methods" / "exact" / "e0_fixed_fg.py"
+    REPO_ROOT / "iot_experiments" / "studies" / "synthetic" / "methods" / "exact" / "e0_fixed_fg.py"
 )
 
 

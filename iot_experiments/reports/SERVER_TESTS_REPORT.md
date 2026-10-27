@@ -14,8 +14,8 @@ changed. Corrections carried over: §6.5 (`correlated d=8 n=6400` is uncertified
 
 | path | content |
 | --- | --- |
-| `iot_experiments/gpu_bench/out/queue/<ts>/{summary.tsv,queue.log,NN_*.log}` | queue console records |
-| `iot_experiments/gpu_bench/out/{no_prune,validated,e2e,e2e_gpu}/<run>/e2e.{json,csv}` | per-run records |
+| `iot_experiments/out/queue/<ts>/{summary.tsv,queue.log,NN_*.log}` | queue console records |
+| `iot_experiments/out/{no_prune,validated,e2e,e2e_gpu}/<run>/e2e.{json,csv}` | per-run records |
 | `iot_experiments/core/out/planting/<tag>/planting_sweep.json` | planting sweep records |
 | `iot_experiments/core/out/brenier_toy/brenier_toy.<tag>.json` | §6.5 records (full config + θ per run) |
 | `iot_experiments/core/out/{fractional,degenerate}/...` | §4.5 A3/A4/A5 records |

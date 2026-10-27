@@ -23,7 +23,7 @@ information; whitening and binning statistics use the images only.
 | `learned` | same | EMD | 0.8480 | 0.0127 |
 
 Config: feature `dinov2-pool4`, K=256, m=300, draws 0–2, solver CuPDLPx, `studies/nmi`
-(`iot_experiments/gpu_bench/out/nmi/records.json`). Hungarian and EMD agree on every arm, so the result is
+(`iot_experiments/out/nmi/records.json`). Hungarian and EMD agree on every arm, so the result is
 about the **cost**, not the decoder. Per-draw learned values: 0.857, 0.830, 0.857.
 
 ### The learned row does NOT beat cosine once the fitted pairs are removed
@@ -133,9 +133,9 @@ evaluation metrics until a dataset where they pass the discrimination check is i
 ## Reproduce
 
 ```bash
-PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.nmi.run \
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.real.t1t2.nmi.run \
     --ks 256 --ms 300 --draws 0 1 2 --solver cupdlpx
-PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.nmi.robustness
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.real.t1t2.nmi.robustness
 ```
 
 Tests: `tests/iot_nmi_study_test.py` (planted recovery after shuffling, true-partner scoring,

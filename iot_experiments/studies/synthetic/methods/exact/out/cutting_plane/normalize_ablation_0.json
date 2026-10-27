@@ -1,0 +1,73 @@
+{
+  "experiment": "cutting_plane_benchmark",
+  "config": {
+    "master_mode": "max_margin",
+    "normalize_cuts": false,
+    "max_iterations": 1500,
+    "tol": 1e-09,
+    "subgradient_step_rule": "polyak",
+    "subgradient_learning_rate": 1.0,
+    "subgradient_max_iterations": 2000,
+    "methods": [
+      "cutting-plane"
+    ]
+  },
+  "rows": [
+    {
+      "n": 200,
+      "k": 8,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=False",
+      "converged": true,
+      "oracle_calls": 92,
+      "iterations": 92,
+      "final_gap": -1.474514954580286e-17,
+      "wall_time": 0.5160163159998774,
+      "per_oracle_time": 0.005608872999998667,
+      "is_optimal": true
+    },
+    {
+      "n": 200,
+      "k": 16,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=False",
+      "converged": true,
+      "oracle_calls": 240,
+      "iterations": 240,
+      "final_gap": 0.0,
+      "wall_time": 2.3322090769997885,
+      "per_oracle_time": 0.009717537820832452,
+      "is_optimal": true
+    },
+    {
+      "n": 800,
+      "k": 8,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=False",
+      "converged": true,
+      "oracle_calls": 131,
+      "iterations": 131,
+      "final_gap": 0.0,
+      "wall_time": 13.211017270999946,
+      "per_oracle_time": 0.10084746008396905,
+      "is_optimal": true
+    },
+    {
+      "n": 800,
+      "k": 16,
+      "seed": 0,
+      "method": "cutting-plane",
+      "config_label": "master=max_margin,normalize=False",
+      "converged": true,
+      "oracle_calls": 314,
+      "iterations": 314,
+      "final_gap": 0.0,
+      "wall_time": 38.1999886779995,
+      "per_oracle_time": 0.12165601489808758,
+      "is_optimal": true
+    }
+  ]
+}

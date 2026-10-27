@@ -59,12 +59,13 @@ class RunConfig:
         `__init_subclass__` raises when it does.
     """
 
-    # CN: 实验名决定输出目录 `gpu_bench/out/<study>/`。
-    # EN: the study name decides the output directory `gpu_bench/out/<study>/`.
+    # CN: 实验名决定输出目录 `iot_experiments/out/<study>/`。输出**不再**放在 `gpu_bench/` 下：
+    #     所有运行结果统一到 `out/`（git-ignored），这样驱动目录与结果目录不再互相纠缠。
+    # EN: the study name decides the output directory `iot_experiments/out/<study>/`. Output is **no longer**
+    #     nested under `gpu_bench/`: all run results live in `out/` (git-ignored), so driver directories and
+    #     result directories stop being entangled.
     study: str = "unnamed"
-    out: Path = field(
-        default_factory=lambda: _REPO_ROOT / "iot_experiments" / "gpu_bench" / "out"
-    )
+    out: Path = field(default_factory=lambda: _REPO_ROOT / "iot_experiments" / "out")
     solver: SolverName = "cupdlpx"
     inner_solver: str = "none"
     scan: ScanName = "torch"
