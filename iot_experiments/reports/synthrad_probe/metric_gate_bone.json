@@ -1,0 +1,42 @@
+{
+  "mask_iou": {
+    "mean_same_patient": 1.0,
+    "mean_same_centre_same_z": 0.7884,
+    "mean_same_centre_diff_z": 0.5831,
+    "mean_other_centre": 0.6146,
+    "sd_diff_z": 0.2491,
+    "effect_same_z_vs_diff_z": 0.824
+  },
+  "z": {
+    "mean_same_patient": 1.0,
+    "mean_same_centre_same_z": 0.9741,
+    "mean_same_centre_diff_z": 0.5423,
+    "mean_other_centre": 0.6711,
+    "sd_diff_z": 0.1852,
+    "effect_same_z_vs_diff_z": 2.332
+  },
+  "nmi": {
+    "mean_same_patient": 0.5702,
+    "mean_same_centre_same_z": 0.4172,
+    "mean_same_centre_diff_z": 0.3278,
+    "mean_other_centre": 0.355,
+    "sd_diff_z": 0.161,
+    "effect_same_z_vs_diff_z": 0.556
+  },
+  "ssim": {
+    "mean_same_patient": 1.0,
+    "mean_same_centre_same_z": 0.4527,
+    "mean_same_centre_diff_z": 0.2245,
+    "mean_other_centre": 0.2575,
+    "sd_diff_z": 0.1533,
+    "effect_same_z_vs_diff_z": 1.488
+  },
+  "psnr": {
+    "mean_same_patient": 99.0,
+    "mean_same_centre_same_z": 17.0502,
+    "mean_same_centre_diff_z": 14.6281,
+    "mean_other_centre": 14.9476,
+    "sd_diff_z": 1.8937,
+    "effect_same_z_vs_diff_z": 1.279
+  }
+}

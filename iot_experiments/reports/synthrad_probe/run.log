@@ -1,79 +1,648 @@
-[13:53:56 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/synthrad_probe/run.log
-[13:53:56 +    0.0s] config: anatomy=brain probe_per_centre=10 split_seed=7 cache=True
-[13:53:56 +    0.0s] split: 30 probe / 150 reserved test patients (seed 7); probe per centre {'A': 10, 'B': 10, 'C': 10}
-[13:53:56 +    0.0s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/synthrad_probe/split_manifest.json
-[13:53:57 +    0.8s] 1BA001 centre=A slices 204->200 z=[0.00,1.00] mask 0.429
-[13:53:59 +    2.9s] 1BA076 centre=A slices 197->197 z=[0.00,1.00] mask 0.506
-[13:54:01 +    4.9s] 1BA085 centre=A slices 207->207 z=[0.00,1.00] mask 0.448
-[13:54:03 +    7.3s] 1BA103 centre=A slices 210->207 z=[0.00,1.00] mask 0.430
-[13:54:05 +    9.3s] 1BA116 centre=A slices 198->194 z=[0.00,1.00] mask 0.431
-[13:54:07 +   11.2s] 1BA222 centre=A slices 204->197 z=[0.00,1.00] mask 0.409
-[13:54:09 +   13.2s] 1BA227 centre=A slices 211->203 z=[0.00,1.00] mask 0.403
-[13:54:11 +   15.2s] 1BA328 centre=A slices 200->191 z=[0.00,1.00] mask 0.428
-[13:54:13 +   16.9s] 1BA336 centre=A slices 165->164 z=[0.00,1.00] mask 0.460
-[13:54:15 +   18.9s] 1BA359 centre=A slices 184->178 z=[0.00,1.00] mask 0.438
-[13:54:17 +   20.9s] 1BB002 centre=B slices 172->170 z=[0.00,1.00] mask 0.483
-[13:54:19 +   23.2s] 1BB005 centre=B slices 194->192 z=[0.00,1.00] mask 0.501
-[13:54:21 +   25.1s] 1BB030 centre=B slices 175->174 z=[0.00,1.00] mask 0.496
-[13:54:23 +   27.4s] 1BB049 centre=B slices 196->192 z=[0.00,1.00] mask 0.452
-[13:54:26 +   30.0s] 1BB062 centre=B slices 218->209 z=[0.00,1.00] mask 0.451
-[13:54:28 +   31.9s] 1BB072 centre=B slices 178->174 z=[0.00,1.00] mask 0.494
-[13:54:30 +   33.9s] 1BB099 centre=B slices 176->175 z=[0.00,1.00] mask 0.489
-[13:54:32 +   35.9s] 1BB151 centre=B slices 167->164 z=[0.00,1.00] mask 0.483
-[13:54:34 +   38.1s] 1BB175 centre=B slices 199->196 z=[0.00,1.00] mask 0.470
-[13:54:36 +   40.4s] 1BB177 centre=B slices 194->189 z=[0.00,1.00] mask 0.444
-[13:54:38 +   42.4s] 1BC006 centre=C slices 177->176 z=[0.00,1.00] mask 0.488
-[13:54:40 +   44.3s] 1BC009 centre=C slices 170->169 z=[0.00,1.00] mask 0.482
-[13:54:42 +   46.5s] 1BC014 centre=C slices 193->182 z=[0.00,1.00] mask 0.449
-[13:54:45 +   49.0s] 1BC020 centre=C slices 219->215 z=[0.00,1.00] mask 0.422
-[13:54:47 +   50.9s] 1BC036 centre=C slices 165->164 z=[0.00,1.00] mask 0.477
-[13:54:49 +   52.8s] 1BC048 centre=C slices 178->174 z=[0.00,1.00] mask 0.483
-[13:54:51 +   54.7s] 1BC065 centre=C slices 174->170 z=[0.00,1.00] mask 0.487
-[13:54:53 +   56.7s] 1BC066 centre=C slices 174->173 z=[0.00,1.00] mask 0.458
-[13:54:55 +   58.7s] 1BC074 centre=C slices 173->172 z=[0.00,1.00] mask 0.450
-[13:54:57 +   60.6s] 1BC076 centre=C slices 179->177 z=[0.00,1.00] mask 0.474
-[13:54:57 +   60.6s] 
-patient  centre  n_total  n_kept  n_excluded_low_mask  mask_area_native_min_kept  mask_mean  mask_p05  mr_mean  ct_mean
--------  ------  -------  ------  -------------------  -------------------------  ---------  --------  -------  -------
- 1BA001       A      204     200                    4                     0.0553     0.4288    0.1074   0.1286   0.1456
- 1BA076       A      197     197                    0                     0.0530     0.5061    0.1676   0.1552   0.1593
- 1BA085       A      207     207                    0                     0.0624     0.4481    0.1443   0.1186   0.1489
- 1BA103       A      210     207                    3                     0.0533     0.4301    0.1017   0.1320   0.1466
- 1BA116       A      198     194                    4                     0.0504     0.4311    0.0956   0.1541   0.1460
- 1BA222       A      204     197                    7                     0.0521     0.4093    0.0858   0.1449   0.1685
- 1BA227       A      211     203                    8                     0.0528     0.4031    0.0847   0.1380   0.1752
- 1BA328       A      200     191                    9                     0.0521     0.4282    0.0926   0.1503   0.1786
- 1BA336       A      165     164                    1                     0.0541     0.4601    0.1683   0.1566   0.1967
- 1BA359       A      184     178                    6                     0.0575     0.4384    0.1145   0.1739   0.1868
- 1BB002       B      172     170                    2                     0.0528     0.4828    0.1643   0.1937   0.1930
- 1BB005       B      194     192                    2                     0.0542     0.5007    0.1500   0.1998   0.2079
- 1BB030       B      175     174                    1                     0.0501     0.4964    0.1505   0.1878   0.1925
- 1BB049       B      196     192                    4                     0.0526     0.4518    0.1463   0.1845   0.1916
- 1BB062       B      218     209                    9                     0.0517     0.4513    0.1073   0.1825   0.1990
- 1BB072       B      178     174                    4                     0.0560     0.4938    0.1327   0.1973   0.2030
- 1BB099       B      176     175                    1                     0.0526     0.4891    0.1934   0.1943   0.2045
- 1BB151       B      167     164                    3                     0.0511     0.4832    0.1374   0.1969   0.1974
- 1BB175       B      199     196                    3                     0.0503     0.4704    0.1532   0.1822   0.1823
- 1BB177       B      194     189                    5                     0.0583     0.4440    0.1538   0.1896   0.1804
- 1BC006       C      177     176                    1                     0.0771     0.4883    0.2273   0.1372   0.1611
- 1BC009       C      170     169                    1                     0.0577     0.4823    0.1689   0.1510   0.1554
- 1BC014       C      193     182                   11                     0.0659     0.4486    0.1485   0.1392   0.1587
- 1BC020       C      219     215                    4                     0.0523     0.4217    0.1318   0.1272   0.1320
- 1BC036       C      165     164                    1                     0.0592     0.4765    0.1662   0.1429   0.1615
- 1BC048       C      178     174                    4                     0.0506     0.4832    0.1957   0.1477   0.1597
- 1BC065       C      174     170                    4                     0.0687     0.4868    0.1966   0.1361   0.1622
- 1BC066       C      174     173                    1                     0.0600     0.4575    0.1531   0.1454   0.1620
- 1BC074       C      173     172                    1                     0.0566     0.4501    0.1589   0.1223   0.1449
- 1BC076       C      179     177                    2                     0.0821     0.4739    0.2052   0.1411   0.1524
-[13:54:57 +   60.6s] 
-centre  patients  slices_total  slices_included  excluded_low_mask  slices_per_patient   z_min   z_max  mask_mean  mask_p05  mr_p50_nz  mr_p95_nz  raw_ct_hu_p95
-------  --------  ------------  ---------------  -----------------  ------------------  ------  ------  ---------  --------  ---------  ---------  -------------
-     A        10          1980             1938                 42            193.8000  0.0000  1.0000     0.4383    0.1163   536.8000  1.454e+03       405.7000
-     B        10          1869             1835                 34            183.5000  0.0000  1.0000     0.4763    0.1489    53.7000   421.5000       449.6000
-     C        10          1802             1772                 30            177.2000  0.0000  1.0000     0.4669    0.1752   130.6000   436.3000       239.1000
-[13:54:57 +   60.6s] intensity centre A: {'mr_window': [0.0, 0.8175720446934154], 'mr_p05_mean': 0.0, 'mr_p95_mean': 0.7313, 'mr_mean_mean': 0.1452, 'ct_mean_mean': 0.1652, 'mr_p50_nz': 536.8, 'mr_p95_nz': 1454.4}
-[13:54:57 +   60.6s] intensity centre B: {'mr_window': [0.0, 0.7452177244285532], 'mr_p05_mean': 0.0, 'mr_p95_mean': 0.7264, 'mr_mean_mean': 0.1909, 'ct_mean_mean': 0.1952, 'mr_p50_nz': 53.7, 'mr_p95_nz': 421.5}
-[13:54:57 +   60.6s] intensity centre C: {'mr_window': [0.0, 0.7877032384353431], 'mr_p05_mean': 0.0, 'mr_p95_mean': 0.6707, 'mr_mean_mean': 0.139, 'ct_mean_mean': 0.155, 'mr_p50_nz': 130.6, 'mr_p95_nz': 436.3}
-[13:54:57 +   60.6s] anomalies: none (axes superior-inferior, shapes aligned, no kept slice under the mask floor)
-[13:54:57 +   60.6s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/synthrad_probe/records.json
-[13:54:57 +   60.6s] log closed after 60.6s
+[14:38:08 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/synthrad_gate/run.log
+[14:38:08 +    0.0s] config: encoders=['dinov2', 'pixpca'] ks=[128, 256] geometries=['G2', 'G3'] windows=['soft', 'bone'] draws=[0, 1, 2] probe_per_centre=10 seed=7
+[14:38:08 +    0.0s] reusing the Phase 1 split manifest (30 probe patients); test set untouched
+[14:38:10 +    2.1s] [window=soft (-200.0, 300.0)] pool: 300 slices from 30 patients (2.1s)
+[14:38:16 +    8.1s] metric gate (same-centre control):
+[14:38:16 +    8.1s]   mask_iou     effect(same-z vs diff-z, same centre) = +0.82 SD  KEPT
+[14:38:16 +    8.1s]   z            effect(same-z vs diff-z, same centre) = +2.33 SD  KEPT
+[14:38:16 +    8.1s]   nmi          effect(same-z vs diff-z, same centre) = +0.56 SD  KEPT
+[14:38:16 +    8.1s]   ssim         effect(same-z vs diff-z, same centre) = +0.90 SD  KEPT
+[14:38:16 +    8.1s]   psnr         effect(same-z vs diff-z, same centre) = +1.76 SD  KEPT
+[14:38:16 +    8.1s] kept metrics: ['mask_iou', 'z', 'nmi', 'ssim', 'psnr']
+[14:38:23 +   15.4s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:38:25 +   16.7s] [dinov2 G2 K=128 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:38:25 +   17.5s] [dinov2 G2 K=128 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:38:26 +   18.5s] [dinov2 G2 K=128 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:38:27 +   19.3s] [dinov2 G2 K=128 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.41s)
+[14:38:28 +   20.2s] [dinov2 G2 K=128 soft draw=0] cosine_ot   mask_iou=0.6735 z=0.7554 nmi=0.4107 ssim=0.5222 psnr=12.4840 same_patient=0.000 (0.00s)
+[14:38:29 +   21.0s] [dinov2 G2 K=128 soft draw=0] cosine_nn   mask_iou=0.6964 z=0.7971 nmi=0.4153 ssim=0.5477 psnr=12.8249 same_patient=0.000 (0.00s)
+[14:38:29 +   21.5s]   same-centre A: cosine_ot mask_iou=0.6598 z=0.7325 nmi=0.3807 ssim=0.5143 psnr=12.9616 | random 0.5420
+[14:38:30 +   22.1s]   same-centre B: cosine_ot mask_iou=0.6836 z=0.6269 nmi=0.4091 ssim=0.5346 psnr=11.6094 | random 0.6427
+[14:38:31 +   22.9s]   same-centre C: cosine_ot mask_iou=0.7079 z=0.7602 nmi=0.3896 ssim=0.5624 psnr=13.1702 | random 0.6430
+[14:38:31 +   22.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:38:32 +   24.1s] [dinov2 G2 K=128 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:38:33 +   24.9s] [dinov2 G2 K=128 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:38:34 +   25.8s] [dinov2 G2 K=128 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:38:35 +   26.6s] [dinov2 G2 K=128 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.34s)
+[14:38:35 +   27.4s] [dinov2 G2 K=128 soft draw=1] cosine_ot   mask_iou=0.6676 z=0.7197 nmi=0.3973 ssim=0.5246 psnr=12.4366 same_patient=0.000 (0.00s)
+[14:38:36 +   28.5s] [dinov2 G2 K=128 soft draw=1] cosine_nn   mask_iou=0.6697 z=0.7216 nmi=0.4002 ssim=0.5263 psnr=12.4484 same_patient=0.000 (0.00s)
+[14:38:37 +   29.1s]   same-centre A: cosine_ot mask_iou=0.6295 z=0.8052 nmi=0.3594 ssim=0.4538 psnr=12.1137 | random 0.5366
+[14:38:38 +   29.6s]   same-centre B: cosine_ot mask_iou=0.6578 z=0.6952 nmi=0.4012 ssim=0.5250 psnr=11.6198 | random 0.6409
+[14:38:38 +   30.2s]   same-centre C: cosine_ot mask_iou=0.6842 z=0.7309 nmi=0.3990 ssim=0.5203 psnr=12.5253 | random 0.6421
+[14:38:38 +   30.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:38:39 +   31.4s] [dinov2 G2 K=128 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:38:40 +   32.2s] [dinov2 G2 K=128 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:38:41 +   33.1s] [dinov2 G2 K=128 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:38:42 +   33.9s] [dinov2 G2 K=128 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:38:43 +   34.7s] [dinov2 G2 K=128 soft draw=2] cosine_ot   mask_iou=0.6716 z=0.7609 nmi=0.3849 ssim=0.5069 psnr=12.2247 same_patient=0.000 (0.00s)
+[14:38:44 +   35.9s] [dinov2 G2 K=128 soft draw=2] cosine_nn   mask_iou=0.7002 z=0.7682 nmi=0.4108 ssim=0.5333 psnr=12.5018 same_patient=0.000 (0.00s)
+[14:38:44 +   36.4s]   same-centre A: cosine_ot mask_iou=0.6179 z=0.7302 nmi=0.3591 ssim=0.4754 psnr=12.3552 | random 0.5637
+[14:38:45 +   37.0s]   same-centre B: cosine_ot mask_iou=0.6778 z=0.7184 nmi=0.4402 ssim=0.5477 psnr=11.8250 | random 0.6600
+[14:38:46 +   37.5s]   same-centre C: cosine_ot mask_iou=0.6841 z=0.7148 nmi=0.3795 ssim=0.5342 psnr=12.7321 | random 0.6481
+[14:38:48 +   40.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:38:49 +   41.4s] [dinov2 G3 K=128 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:38:50 +   42.3s] [dinov2 G3 K=128 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:38:51 +   43.1s] [dinov2 G3 K=128 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:38:52 +   43.9s] [dinov2 G3 K=128 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:38:53 +   44.7s] [dinov2 G3 K=128 soft draw=0] cosine_ot   mask_iou=0.6720 z=0.7554 nmi=0.4133 ssim=0.5231 psnr=12.4536 same_patient=0.000 (0.00s)
+[14:38:53 +   45.5s] [dinov2 G3 K=128 soft draw=0] cosine_nn   mask_iou=0.7025 z=0.7969 nmi=0.4235 ssim=0.5518 psnr=12.8222 same_patient=0.000 (0.00s)
+[14:38:54 +   46.0s]   same-centre A: cosine_ot mask_iou=0.6525 z=0.7389 nmi=0.3767 ssim=0.4943 psnr=12.6920 | random 0.5420
+[14:38:55 +   46.6s]   same-centre B: cosine_ot mask_iou=0.7012 z=0.6364 nmi=0.4145 ssim=0.5533 psnr=11.8213 | random 0.6427
+[14:38:56 +   47.6s]   same-centre C: cosine_ot mask_iou=0.7156 z=0.7598 nmi=0.3959 ssim=0.5676 psnr=13.2535 | random 0.6430
+[14:38:56 +   47.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:38:57 +   48.8s] [dinov2 G3 K=128 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:38:58 +   49.6s] [dinov2 G3 K=128 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:38:58 +   50.4s] [dinov2 G3 K=128 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:38:59 +   51.3s] [dinov2 G3 K=128 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.35s)
+[14:39:00 +   52.1s] [dinov2 G3 K=128 soft draw=1] cosine_ot   mask_iou=0.6690 z=0.7079 nmi=0.4001 ssim=0.5294 psnr=12.4917 same_patient=0.000 (0.00s)
+[14:39:01 +   53.0s] [dinov2 G3 K=128 soft draw=1] cosine_nn   mask_iou=0.6790 z=0.7302 nmi=0.4072 ssim=0.5405 psnr=12.5787 same_patient=0.000 (0.00s)
+[14:39:01 +   53.5s]   same-centre A: cosine_ot mask_iou=0.6293 z=0.8017 nmi=0.3519 ssim=0.4437 psnr=12.0446 | random 0.5366
+[14:39:02 +   54.1s]   same-centre B: cosine_ot mask_iou=0.6578 z=0.6952 nmi=0.4012 ssim=0.5250 psnr=11.6198 | random 0.6409
+[14:39:03 +   54.6s]   same-centre C: cosine_ot mask_iou=0.6996 z=0.7743 nmi=0.4027 ssim=0.5400 psnr=12.7848 | random 0.6421
+[14:39:03 +   54.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:04 +   55.9s] [dinov2 G3 K=128 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:39:05 +   56.7s] [dinov2 G3 K=128 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:39:06 +   57.6s] [dinov2 G3 K=128 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.05s)
+[14:39:07 +   58.9s] [dinov2 G3 K=128 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:39:08 +   59.8s] [dinov2 G3 K=128 soft draw=2] cosine_ot   mask_iou=0.6731 z=0.7524 nmi=0.3865 ssim=0.5107 psnr=12.2842 same_patient=0.000 (0.00s)
+[14:39:09 +   60.6s] [dinov2 G3 K=128 soft draw=2] cosine_nn   mask_iou=0.7133 z=0.7813 nmi=0.4139 ssim=0.5443 psnr=12.6946 same_patient=0.000 (0.00s)
+[14:39:09 +   61.2s]   same-centre A: cosine_ot mask_iou=0.6307 z=0.7224 nmi=0.3610 ssim=0.4866 psnr=12.5307 | random 0.5637
+[14:39:10 +   61.8s]   same-centre B: cosine_ot mask_iou=0.6801 z=0.7265 nmi=0.4397 ssim=0.5575 psnr=11.9676 | random 0.6600
+[14:39:10 +   62.3s]   same-centre C: cosine_ot mask_iou=0.7214 z=0.7410 nmi=0.3859 ssim=0.5732 psnr=13.2759 | random 0.6481
+[14:39:13 +   64.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:14 +   66.2s] [dinov2 G2 K=256 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:39:15 +   67.0s] [dinov2 G2 K=256 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:39:16 +   67.8s] [dinov2 G2 K=256 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:39:17 +   68.7s] [dinov2 G2 K=256 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:39:17 +   69.5s] [dinov2 G2 K=256 soft draw=0] cosine_ot   mask_iou=0.6759 z=0.7535 nmi=0.4004 ssim=0.5342 psnr=12.5391 same_patient=0.000 (0.00s)
+[14:39:18 +   70.3s] [dinov2 G2 K=256 soft draw=0] cosine_nn   mask_iou=0.7050 z=0.7730 nmi=0.4168 ssim=0.5420 psnr=12.4043 same_patient=0.000 (0.00s)
+[14:39:19 +   70.8s]   same-centre A: cosine_ot mask_iou=0.6241 z=0.7558 nmi=0.3532 ssim=0.4559 psnr=12.2940 | random 0.5420
+[14:39:19 +   71.4s]   same-centre B: cosine_ot mask_iou=0.6684 z=0.6486 nmi=0.4166 ssim=0.5212 psnr=11.6027 | random 0.6427
+[14:39:20 +   71.9s]   same-centre C: cosine_ot mask_iou=0.6860 z=0.7346 nmi=0.3810 ssim=0.5309 psnr=12.7050 | random 0.6430
+[14:39:20 +   71.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:21 +   73.2s] [dinov2 G2 K=256 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:39:22 +   74.0s] [dinov2 G2 K=256 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:39:23 +   75.5s] [dinov2 G2 K=256 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:39:24 +   76.3s] [dinov2 G2 K=256 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.34s)
+[14:39:25 +   77.1s] [dinov2 G2 K=256 soft draw=1] cosine_ot   mask_iou=0.6570 z=0.7169 nmi=0.3852 ssim=0.5221 psnr=12.4312 same_patient=0.000 (0.00s)
+[14:39:26 +   78.0s] [dinov2 G2 K=256 soft draw=1] cosine_nn   mask_iou=0.6932 z=0.7362 nmi=0.3989 ssim=0.5416 psnr=12.3485 same_patient=0.000 (0.00s)
+[14:39:26 +   78.5s]   same-centre A: cosine_ot mask_iou=0.5989 z=0.6973 nmi=0.3411 ssim=0.4364 psnr=11.7661 | random 0.5366
+[14:39:27 +   79.1s]   same-centre B: cosine_ot mask_iou=0.6745 z=0.6942 nmi=0.4002 ssim=0.5443 psnr=11.8423 | random 0.6409
+[14:39:28 +   79.6s]   same-centre C: cosine_ot mask_iou=0.6893 z=0.6819 nmi=0.3802 ssim=0.5331 psnr=12.5495 | random 0.6421
+[14:39:28 +   79.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:29 +   80.9s] [dinov2 G2 K=256 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:39:30 +   81.7s] [dinov2 G2 K=256 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:39:30 +   82.5s] [dinov2 G2 K=256 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:39:31 +   83.4s] [dinov2 G2 K=256 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:39:32 +   84.2s] [dinov2 G2 K=256 soft draw=2] cosine_ot   mask_iou=0.6488 z=0.7544 nmi=0.3766 ssim=0.4945 psnr=11.9646 same_patient=0.000 (0.00s)
+[14:39:33 +   85.0s] [dinov2 G2 K=256 soft draw=2] cosine_nn   mask_iou=0.7075 z=0.7919 nmi=0.4122 ssim=0.5479 psnr=12.3125 same_patient=0.000 (0.00s)
+[14:39:34 +   85.6s]   same-centre A: cosine_ot mask_iou=0.5785 z=0.6750 nmi=0.3157 ssim=0.4049 psnr=11.4892 | random 0.5637
+[14:39:34 +   86.1s]   same-centre B: cosine_ot mask_iou=0.6661 z=0.6973 nmi=0.4410 ssim=0.5391 psnr=11.7543 | random 0.6600
+[14:39:35 +   86.7s]   same-centre C: cosine_ot mask_iou=0.6746 z=0.7097 nmi=0.3676 ssim=0.5205 psnr=12.5171 | random 0.6481
+[14:39:37 +   89.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:39 +   90.6s] [dinov2 G3 K=256 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:39:39 +   91.4s] [dinov2 G3 K=256 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:39:40 +   92.2s] [dinov2 G3 K=256 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:39:41 +   93.1s] [dinov2 G3 K=256 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:39:42 +   93.9s] [dinov2 G3 K=256 soft draw=0] cosine_ot   mask_iou=0.6826 z=0.7630 nmi=0.4045 ssim=0.5414 psnr=12.6928 same_patient=0.000 (0.01s)
+[14:39:43 +   94.7s] [dinov2 G3 K=256 soft draw=0] cosine_nn   mask_iou=0.7129 z=0.7862 nmi=0.4206 ssim=0.5484 psnr=12.6055 same_patient=0.000 (0.00s)
+[14:39:44 +   96.1s]   same-centre A: cosine_ot mask_iou=0.6324 z=0.7414 nmi=0.3566 ssim=0.4662 psnr=12.4226 | random 0.5420
+[14:39:45 +   96.6s]   same-centre B: cosine_ot mask_iou=0.6684 z=0.6486 nmi=0.4166 ssim=0.5212 psnr=11.6027 | random 0.6427
+[14:39:45 +   97.2s]   same-centre C: cosine_ot mask_iou=0.6859 z=0.7318 nmi=0.3787 ssim=0.5226 psnr=12.5778 | random 0.6430
+[14:39:45 +   97.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:46 +   98.4s] [dinov2 G3 K=256 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:39:47 +   99.2s] [dinov2 G3 K=256 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:39:48 +  100.1s] [dinov2 G3 K=256 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:39:49 +  100.9s] [dinov2 G3 K=256 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.36s)
+[14:39:50 +  101.7s] [dinov2 G3 K=256 soft draw=1] cosine_ot   mask_iou=0.6637 z=0.7364 nmi=0.3885 ssim=0.5316 psnr=12.5357 same_patient=0.000 (0.00s)
+[14:39:51 +  102.6s] [dinov2 G3 K=256 soft draw=1] cosine_nn   mask_iou=0.6972 z=0.7441 nmi=0.3985 ssim=0.5418 psnr=12.5275 same_patient=0.000 (0.00s)
+[14:39:51 +  103.1s]   same-centre A: cosine_ot mask_iou=0.5988 z=0.6898 nmi=0.3312 ssim=0.4410 psnr=11.7821 | random 0.5366
+[14:39:52 +  103.7s]   same-centre B: cosine_ot mask_iou=0.6777 z=0.6767 nmi=0.3965 ssim=0.5471 psnr=11.8366 | random 0.6409
+[14:39:52 +  104.2s]   same-centre C: cosine_ot mask_iou=0.6907 z=0.6807 nmi=0.3838 ssim=0.5371 psnr=12.6162 | random 0.6421
+[14:39:52 +  104.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:39:53 +  105.5s] [dinov2 G3 K=256 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:39:54 +  106.3s] [dinov2 G3 K=256 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:39:55 +  107.2s] [dinov2 G3 K=256 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:39:56 +  108.0s] [dinov2 G3 K=256 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:39:57 +  108.8s] [dinov2 G3 K=256 soft draw=2] cosine_ot   mask_iou=0.6661 z=0.7409 nmi=0.3849 ssim=0.5098 psnr=12.1398 same_patient=0.000 (0.00s)
+[14:39:58 +  109.7s] [dinov2 G3 K=256 soft draw=2] cosine_nn   mask_iou=0.7183 z=0.8055 nmi=0.4149 ssim=0.5575 psnr=12.3753 same_patient=0.000 (0.00s)
+[14:39:58 +  110.2s]   same-centre A: cosine_ot mask_iou=0.6093 z=0.7015 nmi=0.3299 ssim=0.4467 psnr=12.0385 | random 0.5637
+[14:39:59 +  110.8s]   same-centre B: cosine_ot mask_iou=0.6834 z=0.6871 nmi=0.4400 ssim=0.5586 psnr=12.0063 | random 0.6600
+[14:39:59 +  111.3s]   same-centre C: cosine_ot mask_iou=0.6712 z=0.6875 nmi=0.3642 ssim=0.5200 psnr=12.4910 | random 0.6481
+[14:40:01 +  113.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:03 +  114.6s] [pixpca G2 K=128 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:40:03 +  115.4s] [pixpca G2 K=128 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:40:04 +  116.2s] [pixpca G2 K=128 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:40:05 +  117.0s] [pixpca G2 K=128 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:40:06 +  117.9s] [pixpca G2 K=128 soft draw=0] cosine_ot   mask_iou=0.7653 z=0.8650 nmi=0.4696 ssim=0.6271 psnr=13.6760 same_patient=0.000 (0.00s)
+[14:40:07 +  118.7s] [pixpca G2 K=128 soft draw=0] cosine_nn   mask_iou=0.6886 z=0.8429 nmi=0.4318 ssim=0.5754 psnr=13.7874 same_patient=0.000 (0.00s)
+[14:40:08 +  120.3s]   same-centre A: cosine_ot mask_iou=0.6901 z=0.8176 nmi=0.4239 ssim=0.5389 psnr=13.2953 | random 0.5420
+[14:40:09 +  120.8s]   same-centre B: cosine_ot mask_iou=0.7639 z=0.8760 nmi=0.4745 ssim=0.6660 psnr=13.4039 | random 0.6427
+[14:40:09 +  121.4s]   same-centre C: cosine_ot mask_iou=0.7384 z=0.7322 nmi=0.4091 ssim=0.5966 psnr=13.4560 | random 0.6430
+[14:40:09 +  121.4s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:11 +  122.6s] [pixpca G2 K=128 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:40:11 +  123.4s] [pixpca G2 K=128 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:40:12 +  124.3s] [pixpca G2 K=128 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:40:13 +  125.1s] [pixpca G2 K=128 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.33s)
+[14:40:14 +  125.9s] [pixpca G2 K=128 soft draw=1] cosine_ot   mask_iou=0.7438 z=0.8506 nmi=0.4563 ssim=0.6162 psnr=13.6035 same_patient=0.000 (0.00s)
+[14:40:15 +  126.8s] [pixpca G2 K=128 soft draw=1] cosine_nn   mask_iou=0.6628 z=0.8087 nmi=0.4018 ssim=0.5392 psnr=13.5218 same_patient=0.000 (0.00s)
+[14:40:15 +  127.3s]   same-centre A: cosine_ot mask_iou=0.6944 z=0.8147 nmi=0.4175 ssim=0.5577 psnr=13.5638 | random 0.5366
+[14:40:16 +  127.9s]   same-centre B: cosine_ot mask_iou=0.7405 z=0.8057 nmi=0.4460 ssim=0.6278 psnr=12.8922 | random 0.6409
+[14:40:16 +  128.4s]   same-centre C: cosine_ot mask_iou=0.7735 z=0.7664 nmi=0.4140 ssim=0.6324 psnr=13.8675 | random 0.6421
+[14:40:16 +  128.4s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:18 +  129.6s] [pixpca G2 K=128 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:40:18 +  130.5s] [pixpca G2 K=128 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:40:19 +  131.4s] [pixpca G2 K=128 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:40:20 +  132.2s] [pixpca G2 K=128 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:40:21 +  133.0s] [pixpca G2 K=128 soft draw=2] cosine_ot   mask_iou=0.7369 z=0.8015 nmi=0.4332 ssim=0.6009 psnr=13.3735 same_patient=0.000 (0.00s)
+[14:40:22 +  133.9s] [pixpca G2 K=128 soft draw=2] cosine_nn   mask_iou=0.6958 z=0.8084 nmi=0.4153 ssim=0.5734 psnr=13.6086 same_patient=0.000 (0.00s)
+[14:40:22 +  134.4s]   same-centre A: cosine_ot mask_iou=0.6577 z=0.7778 nmi=0.3842 ssim=0.4936 psnr=12.8580 | random 0.5637
+[14:40:23 +  135.0s]   same-centre B: cosine_ot mask_iou=0.7733 z=0.8436 nmi=0.4823 ssim=0.6697 psnr=13.3676 | random 0.6600
+[14:40:24 +  135.5s]   same-centre C: cosine_ot mask_iou=0.7494 z=0.7570 nmi=0.4123 ssim=0.6214 psnr=13.7091 | random 0.6481
+[14:40:26 +  137.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:27 +  138.8s] [pixpca G3 K=128 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:40:28 +  139.6s] [pixpca G3 K=128 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:40:28 +  140.4s] [pixpca G3 K=128 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:40:29 +  141.2s] [pixpca G3 K=128 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:40:30 +  142.0s] [pixpca G3 K=128 soft draw=0] cosine_ot   mask_iou=0.7556 z=0.8580 nmi=0.4650 ssim=0.6144 psnr=13.5532 same_patient=0.000 (0.00s)
+[14:40:31 +  142.8s] [pixpca G3 K=128 soft draw=0] cosine_nn   mask_iou=0.7050 z=0.8376 nmi=0.4438 ssim=0.5908 psnr=13.8725 same_patient=0.000 (0.00s)
+[14:40:31 +  143.3s]   same-centre A: cosine_ot mask_iou=0.6901 z=0.8176 nmi=0.4239 ssim=0.5389 psnr=13.2953 | random 0.5420
+[14:40:32 +  143.9s]   same-centre B: cosine_ot mask_iou=0.7639 z=0.8807 nmi=0.4747 ssim=0.6663 psnr=13.4080 | random 0.6427
+[14:40:32 +  144.4s]   same-centre C: cosine_ot mask_iou=0.7384 z=0.7322 nmi=0.4091 ssim=0.5966 psnr=13.4560 | random 0.6430
+[14:40:32 +  144.4s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:34 +  145.7s] [pixpca G3 K=128 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:40:34 +  146.5s] [pixpca G3 K=128 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:40:35 +  147.3s] [pixpca G3 K=128 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:40:37 +  149.4s] [pixpca G3 K=128 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.34s)
+[14:40:38 +  150.2s] [pixpca G3 K=128 soft draw=1] cosine_ot   mask_iou=0.7438 z=0.8582 nmi=0.4570 ssim=0.6186 psnr=13.6459 same_patient=0.000 (0.00s)
+[14:40:39 +  151.0s] [pixpca G3 K=128 soft draw=1] cosine_nn   mask_iou=0.6812 z=0.8068 nmi=0.4116 ssim=0.5543 psnr=13.5597 same_patient=0.000 (0.00s)
+[14:40:40 +  151.6s]   same-centre A: cosine_ot mask_iou=0.6944 z=0.8147 nmi=0.4175 ssim=0.5577 psnr=13.5638 | random 0.5366
+[14:40:40 +  152.1s]   same-centre B: cosine_ot mask_iou=0.7405 z=0.8057 nmi=0.4460 ssim=0.6278 psnr=12.8922 | random 0.6409
+[14:40:41 +  152.7s]   same-centre C: cosine_ot mask_iou=0.7732 z=0.7776 nmi=0.4132 ssim=0.6298 psnr=13.8422 | random 0.6421
+[14:40:41 +  152.7s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:42 +  153.9s] [pixpca G3 K=128 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:40:43 +  154.8s] [pixpca G3 K=128 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:40:44 +  155.6s] [pixpca G3 K=128 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:40:44 +  156.4s] [pixpca G3 K=128 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:40:45 +  157.3s] [pixpca G3 K=128 soft draw=2] cosine_ot   mask_iou=0.7371 z=0.8085 nmi=0.4342 ssim=0.5966 psnr=13.3261 same_patient=0.000 (0.00s)
+[14:40:46 +  158.1s] [pixpca G3 K=128 soft draw=2] cosine_nn   mask_iou=0.7092 z=0.8179 nmi=0.4227 ssim=0.5886 psnr=13.6955 same_patient=0.000 (0.00s)
+[14:40:47 +  158.7s]   same-centre A: cosine_ot mask_iou=0.6764 z=0.7947 nmi=0.3908 ssim=0.5160 psnr=13.0879 | random 0.5637
+[14:40:47 +  159.2s]   same-centre B: cosine_ot mask_iou=0.7733 z=0.8436 nmi=0.4823 ssim=0.6697 psnr=13.3676 | random 0.6600
+[14:40:48 +  159.8s]   same-centre C: cosine_ot mask_iou=0.7494 z=0.7570 nmi=0.4123 ssim=0.6214 psnr=13.7091 | random 0.6481
+[14:40:50 +  162.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:51 +  163.5s] [pixpca G2 K=256 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:40:52 +  164.3s] [pixpca G2 K=256 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:40:53 +  165.2s] [pixpca G2 K=256 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.12s)
+[14:40:54 +  166.0s] [pixpca G2 K=256 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.33s)
+[14:40:55 +  166.8s] [pixpca G2 K=256 soft draw=0] cosine_ot   mask_iou=0.7520 z=0.8434 nmi=0.4571 ssim=0.6048 psnr=13.4189 same_patient=0.000 (0.00s)
+[14:40:56 +  167.6s] [pixpca G2 K=256 soft draw=0] cosine_nn   mask_iou=0.6565 z=0.8013 nmi=0.3995 ssim=0.5293 psnr=13.6159 same_patient=0.000 (0.00s)
+[14:40:56 +  168.2s]   same-centre A: cosine_ot mask_iou=0.7138 z=0.8432 nmi=0.4185 ssim=0.5537 psnr=13.4037 | random 0.5420
+[14:40:57 +  168.7s]   same-centre B: cosine_ot mask_iou=0.7675 z=0.8328 nmi=0.4688 ssim=0.6711 psnr=13.4976 | random 0.6427
+[14:40:57 +  169.3s]   same-centre C: cosine_ot mask_iou=0.7363 z=0.7233 nmi=0.4007 ssim=0.5980 psnr=13.4352 | random 0.6430
+[14:40:57 +  169.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:40:58 +  170.5s] [pixpca G2 K=256 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:40:59 +  171.3s] [pixpca G2 K=256 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:41:00 +  172.2s] [pixpca G2 K=256 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:41:01 +  173.0s] [pixpca G2 K=256 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.34s)
+[14:41:02 +  173.8s] [pixpca G2 K=256 soft draw=1] cosine_ot   mask_iou=0.7297 z=0.8251 nmi=0.4422 ssim=0.5935 psnr=13.3671 same_patient=0.000 (0.00s)
+[14:41:03 +  174.6s] [pixpca G2 K=256 soft draw=1] cosine_nn   mask_iou=0.6641 z=0.7871 nmi=0.4030 ssim=0.5301 psnr=13.4940 same_patient=0.000 (0.00s)
+[14:41:03 +  175.2s]   same-centre A: cosine_ot mask_iou=0.7103 z=0.8336 nmi=0.4129 ssim=0.5569 psnr=13.4768 | random 0.5366
+[14:41:04 +  175.8s]   same-centre B: cosine_ot mask_iou=0.7404 z=0.7691 nmi=0.4252 ssim=0.6233 psnr=12.7772 | random 0.6409
+[14:41:04 +  176.3s]   same-centre C: cosine_ot mask_iou=0.7738 z=0.7773 nmi=0.4175 ssim=0.6239 psnr=13.8341 | random 0.6421
+[14:41:04 +  176.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:05 +  177.5s] [pixpca G2 K=256 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:41:06 +  178.3s] [pixpca G2 K=256 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:41:07 +  179.2s] [pixpca G2 K=256 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:41:08 +  180.0s] [pixpca G2 K=256 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:41:09 +  180.8s] [pixpca G2 K=256 soft draw=2] cosine_ot   mask_iou=0.7338 z=0.8173 nmi=0.4294 ssim=0.5895 psnr=13.2354 same_patient=0.000 (0.00s)
+[14:41:10 +  181.6s] [pixpca G2 K=256 soft draw=2] cosine_nn   mask_iou=0.6478 z=0.7899 nmi=0.3712 ssim=0.5119 psnr=13.2223 same_patient=0.000 (0.00s)
+[14:41:10 +  182.1s]   same-centre A: cosine_ot mask_iou=0.7044 z=0.8345 nmi=0.3972 ssim=0.5587 psnr=13.5489 | random 0.5637
+[14:41:11 +  182.7s]   same-centre B: cosine_ot mask_iou=0.7244 z=0.7485 nmi=0.4613 ssim=0.5896 psnr=12.4084 | random 0.6600
+[14:41:11 +  183.2s]   same-centre C: cosine_ot mask_iou=0.7439 z=0.7781 nmi=0.4052 ssim=0.5958 psnr=13.4363 | random 0.6481
+[14:41:13 +  185.5s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:15 +  186.7s] [pixpca G3 K=256 soft draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3540 ssim=0.4449 psnr=11.3122 same_patient=0.000 (0.00s)
+[14:41:17 +  189.0s] [pixpca G3 K=256 soft draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4363 ssim=0.6334 psnr=13.8258 same_patient=0.000 (0.00s)
+[14:41:18 +  189.8s] [pixpca G3 K=256 soft draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4865 ssim=0.7105 psnr=14.9420 same_patient=0.000 (0.03s)
+[14:41:19 +  190.6s] [pixpca G3 K=256 soft draw=0] nmi         mask_iou=0.7892 z=0.8981 nmi=0.5211 ssim=0.6629 psnr=14.3711 same_patient=0.000 (0.34s)
+[14:41:19 +  191.5s] [pixpca G3 K=256 soft draw=0] cosine_ot   mask_iou=0.7511 z=0.8422 nmi=0.4562 ssim=0.6007 psnr=13.3588 same_patient=0.000 (0.00s)
+[14:41:20 +  192.3s] [pixpca G3 K=256 soft draw=0] cosine_nn   mask_iou=0.6794 z=0.8111 nmi=0.4139 ssim=0.5495 psnr=13.6454 same_patient=0.000 (0.00s)
+[14:41:21 +  192.8s]   same-centre A: cosine_ot mask_iou=0.7070 z=0.8383 nmi=0.4150 ssim=0.5425 psnr=13.2935 | random 0.5420
+[14:41:21 +  193.4s]   same-centre B: cosine_ot mask_iou=0.7675 z=0.8328 nmi=0.4688 ssim=0.6711 psnr=13.4976 | random 0.6427
+[14:41:22 +  193.9s]   same-centre C: cosine_ot mask_iou=0.7398 z=0.7226 nmi=0.4014 ssim=0.5997 psnr=13.4477 | random 0.6430
+[14:41:22 +  193.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:23 +  195.1s] [pixpca G3 K=256 soft draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3605 ssim=0.4439 psnr=11.3157 same_patient=0.000 (0.00s)
+[14:41:24 +  195.9s] [pixpca G3 K=256 soft draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4288 ssim=0.6208 psnr=13.7486 same_patient=0.000 (0.00s)
+[14:41:25 +  196.8s] [pixpca G3 K=256 soft draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4635 ssim=0.6901 psnr=14.6482 same_patient=0.000 (0.03s)
+[14:41:26 +  197.6s] [pixpca G3 K=256 soft draw=1] nmi         mask_iou=0.7630 z=0.8847 nmi=0.5018 ssim=0.6352 psnr=13.9251 same_patient=0.000 (0.34s)
+[14:41:26 +  198.4s] [pixpca G3 K=256 soft draw=1] cosine_ot   mask_iou=0.7342 z=0.8263 nmi=0.4433 ssim=0.5977 psnr=13.4164 same_patient=0.000 (0.00s)
+[14:41:27 +  199.2s] [pixpca G3 K=256 soft draw=1] cosine_nn   mask_iou=0.6691 z=0.7784 nmi=0.4047 ssim=0.5347 psnr=13.4535 same_patient=0.000 (0.00s)
+[14:41:28 +  199.7s]   same-centre A: cosine_ot mask_iou=0.7103 z=0.8336 nmi=0.4129 ssim=0.5569 psnr=13.4768 | random 0.5366
+[14:41:28 +  200.3s]   same-centre B: cosine_ot mask_iou=0.7433 z=0.7827 nmi=0.4265 ssim=0.6250 psnr=12.7868 | random 0.6409
+[14:41:29 +  200.8s]   same-centre C: cosine_ot mask_iou=0.7738 z=0.7773 nmi=0.4175 ssim=0.6239 psnr=13.8341 | random 0.6421
+[14:41:29 +  200.8s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:30 +  202.1s] [pixpca G3 K=256 soft draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3614 ssim=0.4421 psnr=11.2847 same_patient=0.000 (0.00s)
+[14:41:31 +  202.9s] [pixpca G3 K=256 soft draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4169 ssim=0.6478 psnr=13.9974 same_patient=0.000 (0.00s)
+[14:41:32 +  203.8s] [pixpca G3 K=256 soft draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4493 ssim=0.6934 psnr=14.7018 same_patient=0.000 (0.03s)
+[14:41:33 +  204.6s] [pixpca G3 K=256 soft draw=2] nmi         mask_iou=0.7605 z=0.8737 nmi=0.4869 ssim=0.6277 psnr=13.8188 same_patient=0.000 (0.34s)
+[14:41:33 +  205.4s] [pixpca G3 K=256 soft draw=2] cosine_ot   mask_iou=0.7347 z=0.8199 nmi=0.4293 ssim=0.5895 psnr=13.2285 same_patient=0.000 (0.00s)
+[14:41:34 +  206.3s] [pixpca G3 K=256 soft draw=2] cosine_nn   mask_iou=0.6594 z=0.7929 nmi=0.3765 ssim=0.5160 psnr=13.1777 same_patient=0.000 (0.00s)
+[14:41:35 +  206.8s]   same-centre A: cosine_ot mask_iou=0.6985 z=0.8198 nmi=0.3908 ssim=0.5522 psnr=13.4808 | random 0.5637
+[14:41:35 +  207.4s]   same-centre B: cosine_ot mask_iou=0.7220 z=0.7539 nmi=0.4601 ssim=0.5911 psnr=12.4490 | random 0.6600
+[14:41:36 +  208.0s]   same-centre C: cosine_ot mask_iou=0.7475 z=0.7896 nmi=0.4093 ssim=0.6021 psnr=13.5467 | random 0.6481
+[14:41:40 +  212.2s] [window=bone (-200.0, 1500.0)] pool: 300 slices from 30 patients (4.3s)
+[14:41:46 +  217.9s] metric gate (same-centre control):
+[14:41:46 +  217.9s]   mask_iou     effect(same-z vs diff-z, same centre) = +0.82 SD  KEPT
+[14:41:46 +  217.9s]   z            effect(same-z vs diff-z, same centre) = +2.33 SD  KEPT
+[14:41:46 +  217.9s]   nmi          effect(same-z vs diff-z, same centre) = +0.56 SD  KEPT
+[14:41:46 +  217.9s]   ssim         effect(same-z vs diff-z, same centre) = +1.49 SD  KEPT
+[14:41:46 +  217.9s]   psnr         effect(same-z vs diff-z, same centre) = +1.28 SD  KEPT
+[14:41:46 +  217.9s] kept metrics: ['mask_iou', 'z', 'nmi', 'ssim', 'psnr']
+[14:41:48 +  220.5s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:50 +  221.7s] [dinov2 G2 K=128 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:41:50 +  222.5s] [dinov2 G2 K=128 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:41:51 +  223.3s] [dinov2 G2 K=128 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.02s)
+[14:41:52 +  224.1s] [dinov2 G2 K=128 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.33s)
+[14:41:53 +  224.9s] [dinov2 G2 K=128 bone draw=0] cosine_ot   mask_iou=0.6590 z=0.7580 nmi=0.4009 ssim=0.3047 psnr=15.5798 same_patient=0.000 (0.00s)
+[14:41:54 +  225.7s] [dinov2 G2 K=128 bone draw=0] cosine_nn   mask_iou=0.6613 z=0.7448 nmi=0.3792 ssim=0.3044 psnr=15.7732 same_patient=0.000 (0.00s)
+[14:41:54 +  226.3s]   same-centre A: cosine_ot mask_iou=0.6196 z=0.7109 nmi=0.3472 ssim=0.3144 psnr=16.0422 | random 0.5420
+[14:41:55 +  226.8s]   same-centre B: cosine_ot mask_iou=0.6988 z=0.6765 nmi=0.4274 ssim=0.3426 psnr=15.0137 | random 0.6427
+[14:41:55 +  227.4s]   same-centre C: cosine_ot mask_iou=0.7054 z=0.7544 nmi=0.3966 ssim=0.3644 psnr=16.3836 | random 0.6430
+[14:41:55 +  227.4s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:41:57 +  228.5s] [dinov2 G2 K=128 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:41:57 +  229.4s] [dinov2 G2 K=128 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:41:58 +  230.2s] [dinov2 G2 K=128 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:41:59 +  231.0s] [dinov2 G2 K=128 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.33s)
+[14:42:00 +  231.8s] [dinov2 G2 K=128 bone draw=1] cosine_ot   mask_iou=0.6571 z=0.7252 nmi=0.3927 ssim=0.3128 psnr=15.7011 same_patient=0.000 (0.00s)
+[14:42:01 +  232.6s] [dinov2 G2 K=128 bone draw=1] cosine_nn   mask_iou=0.6620 z=0.7253 nmi=0.3825 ssim=0.3108 psnr=15.7839 same_patient=0.000 (0.00s)
+[14:42:01 +  233.2s]   same-centre A: cosine_ot mask_iou=0.5962 z=0.7374 nmi=0.3401 ssim=0.2874 psnr=16.1335 | random 0.5366
+[14:42:02 +  233.7s]   same-centre B: cosine_ot mask_iou=0.6799 z=0.7081 nmi=0.4096 ssim=0.3167 psnr=14.8435 | random 0.6409
+[14:42:02 +  234.2s]   same-centre C: cosine_ot mask_iou=0.7157 z=0.7099 nmi=0.3898 ssim=0.3351 psnr=16.1767 | random 0.6421
+[14:42:02 +  234.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:05 +  237.4s] [dinov2 G2 K=128 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:42:06 +  238.2s] [dinov2 G2 K=128 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:42:07 +  239.0s] [dinov2 G2 K=128 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:42:08 +  239.8s] [dinov2 G2 K=128 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.33s)
+[14:42:09 +  240.6s] [dinov2 G2 K=128 bone draw=2] cosine_ot   mask_iou=0.6809 z=0.7644 nmi=0.3879 ssim=0.3066 psnr=15.6183 same_patient=0.000 (0.00s)
+[14:42:09 +  241.4s] [dinov2 G2 K=128 bone draw=2] cosine_nn   mask_iou=0.6895 z=0.7486 nmi=0.3828 ssim=0.3208 psnr=15.4570 same_patient=0.000 (0.00s)
+[14:42:10 +  241.9s]   same-centre A: cosine_ot mask_iou=0.6541 z=0.8033 nmi=0.3711 ssim=0.3651 psnr=16.6227 | random 0.5637
+[14:42:10 +  242.5s]   same-centre B: cosine_ot mask_iou=0.6701 z=0.7051 nmi=0.4409 ssim=0.3055 psnr=14.7109 | random 0.6600
+[14:42:11 +  243.0s]   same-centre C: cosine_ot mask_iou=0.6919 z=0.7404 nmi=0.3830 ssim=0.3337 psnr=16.0647 | random 0.6481
+[14:42:14 +  245.7s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:15 +  246.9s] [dinov2 G3 K=128 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:42:16 +  247.8s] [dinov2 G3 K=128 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:42:17 +  248.6s] [dinov2 G3 K=128 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.04s)
+[14:42:17 +  249.4s] [dinov2 G3 K=128 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.33s)
+[14:42:18 +  250.2s] [dinov2 G3 K=128 bone draw=0] cosine_ot   mask_iou=0.6808 z=0.7656 nmi=0.4084 ssim=0.3288 psnr=15.7722 same_patient=0.000 (0.00s)
+[14:42:19 +  251.1s] [dinov2 G3 K=128 bone draw=0] cosine_nn   mask_iou=0.6758 z=0.7637 nmi=0.3923 ssim=0.3239 psnr=15.8250 same_patient=0.000 (0.00s)
+[14:42:20 +  251.6s]   same-centre A: cosine_ot mask_iou=0.6469 z=0.7335 nmi=0.3690 ssim=0.3263 psnr=16.1088 | random 0.5420
+[14:42:20 +  252.2s]   same-centre B: cosine_ot mask_iou=0.6988 z=0.6765 nmi=0.4274 ssim=0.3426 psnr=15.0137 | random 0.6427
+[14:42:21 +  252.7s]   same-centre C: cosine_ot mask_iou=0.7162 z=0.7713 nmi=0.3970 ssim=0.3612 psnr=16.3830 | random 0.6430
+[14:42:21 +  252.7s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:22 +  253.9s] [dinov2 G3 K=128 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:42:23 +  254.7s] [dinov2 G3 K=128 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:42:24 +  255.6s] [dinov2 G3 K=128 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:42:24 +  256.4s] [dinov2 G3 K=128 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:42:25 +  257.2s] [dinov2 G3 K=128 bone draw=1] cosine_ot   mask_iou=0.6681 z=0.7275 nmi=0.3983 ssim=0.3161 psnr=15.7831 same_patient=0.000 (0.00s)
+[14:42:26 +  258.0s] [dinov2 G3 K=128 bone draw=1] cosine_nn   mask_iou=0.6797 z=0.7390 nmi=0.3989 ssim=0.3324 psnr=15.9553 same_patient=0.000 (0.00s)
+[14:42:27 +  258.6s]   same-centre A: cosine_ot mask_iou=0.6469 z=0.7600 nmi=0.3525 ssim=0.3102 psnr=16.1660 | random 0.5366
+[14:42:27 +  259.1s]   same-centre B: cosine_ot mask_iou=0.6799 z=0.7081 nmi=0.4096 ssim=0.3167 psnr=14.8435 | random 0.6409
+[14:42:28 +  259.7s]   same-centre C: cosine_ot mask_iou=0.7157 z=0.7099 nmi=0.3898 ssim=0.3351 psnr=16.1767 | random 0.6421
+[14:42:28 +  259.7s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:29 +  260.9s] [dinov2 G3 K=128 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:42:30 +  261.7s] [dinov2 G3 K=128 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:42:31 +  262.5s] [dinov2 G3 K=128 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:42:31 +  263.4s] [dinov2 G3 K=128 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.34s)
+[14:42:32 +  264.2s] [dinov2 G3 K=128 bone draw=2] cosine_ot   mask_iou=0.6934 z=0.7817 nmi=0.3947 ssim=0.3217 psnr=15.7654 same_patient=0.000 (0.00s)
+[14:42:33 +  265.0s] [dinov2 G3 K=128 bone draw=2] cosine_nn   mask_iou=0.7007 z=0.7632 nmi=0.3886 ssim=0.3344 psnr=15.6936 same_patient=0.000 (0.00s)
+[14:42:34 +  265.6s]   same-centre A: cosine_ot mask_iou=0.6757 z=0.8349 nmi=0.3781 ssim=0.3821 psnr=16.7796 | random 0.5637
+[14:42:34 +  266.1s]   same-centre B: cosine_ot mask_iou=0.6717 z=0.7184 nmi=0.4425 ssim=0.3235 psnr=14.8503 | random 0.6600
+[14:42:35 +  266.7s]   same-centre C: cosine_ot mask_iou=0.7084 z=0.7562 nmi=0.3936 ssim=0.3518 psnr=16.2082 | random 0.6481
+[14:42:37 +  269.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:39 +  270.6s] [dinov2 G2 K=256 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:42:39 +  271.4s] [dinov2 G2 K=256 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:42:40 +  272.2s] [dinov2 G2 K=256 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:42:41 +  273.0s] [dinov2 G2 K=256 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.33s)
+[14:42:42 +  273.8s] [dinov2 G2 K=256 bone draw=0] cosine_ot   mask_iou=0.6865 z=0.7683 nmi=0.4081 ssim=0.3243 psnr=15.8095 same_patient=0.000 (0.01s)
+[14:42:43 +  274.6s] [dinov2 G2 K=256 bone draw=0] cosine_nn   mask_iou=0.7232 z=0.7855 nmi=0.4307 ssim=0.3364 psnr=15.3833 same_patient=0.000 (0.00s)
+[14:42:43 +  275.1s]   same-centre A: cosine_ot mask_iou=0.6235 z=0.7403 nmi=0.3604 ssim=0.2914 psnr=15.6352 | random 0.5420
+[14:42:44 +  275.7s]   same-centre B: cosine_ot mask_iou=0.6574 z=0.7256 nmi=0.4200 ssim=0.3094 psnr=14.7445 | random 0.6427
+[14:42:44 +  276.2s]   same-centre C: cosine_ot mask_iou=0.6714 z=0.6916 nmi=0.3803 ssim=0.3104 psnr=15.8808 | random 0.6430
+[14:42:44 +  276.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:45 +  277.4s] [dinov2 G2 K=256 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:42:46 +  278.3s] [dinov2 G2 K=256 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:42:47 +  279.1s] [dinov2 G2 K=256 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:42:48 +  279.9s] [dinov2 G2 K=256 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:42:49 +  280.7s] [dinov2 G2 K=256 bone draw=1] cosine_ot   mask_iou=0.6623 z=0.7414 nmi=0.3898 ssim=0.3048 psnr=15.6819 same_patient=0.000 (0.00s)
+[14:42:50 +  281.6s] [dinov2 G2 K=256 bone draw=1] cosine_nn   mask_iou=0.7046 z=0.7694 nmi=0.4216 ssim=0.3182 psnr=15.5332 same_patient=0.000 (0.00s)
+[14:42:50 +  282.1s]   same-centre A: cosine_ot mask_iou=0.5988 z=0.7252 nmi=0.3361 ssim=0.2492 psnr=15.6647 | random 0.5366
+[14:42:51 +  282.7s]   same-centre B: cosine_ot mask_iou=0.6661 z=0.6806 nmi=0.4083 ssim=0.2969 psnr=14.6582 | random 0.6409
+[14:42:51 +  283.2s]   same-centre C: cosine_ot mask_iou=0.6672 z=0.6829 nmi=0.3628 ssim=0.2887 psnr=15.7637 | random 0.6421
+[14:42:51 +  283.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:42:52 +  284.4s] [dinov2 G2 K=256 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:42:53 +  285.3s] [dinov2 G2 K=256 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:42:54 +  286.1s] [dinov2 G2 K=256 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:42:55 +  286.9s] [dinov2 G2 K=256 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.34s)
+[14:42:56 +  287.8s] [dinov2 G2 K=256 bone draw=2] cosine_ot   mask_iou=0.6650 z=0.7319 nmi=0.3791 ssim=0.2988 psnr=15.4756 same_patient=0.000 (0.00s)
+[14:42:57 +  288.6s] [dinov2 G2 K=256 bone draw=2] cosine_nn   mask_iou=0.7107 z=0.7612 nmi=0.4046 ssim=0.3327 psnr=15.3304 same_patient=0.000 (0.00s)
+[14:42:57 +  289.1s]   same-centre A: cosine_ot mask_iou=0.6063 z=0.7374 nmi=0.3347 ssim=0.2863 psnr=15.6504 | random 0.5637
+[14:42:58 +  289.7s]   same-centre B: cosine_ot mask_iou=0.6680 z=0.7208 nmi=0.4429 ssim=0.3113 psnr=14.7720 | random 0.6600
+[14:42:58 +  290.2s]   same-centre C: cosine_ot mask_iou=0.6804 z=0.7592 nmi=0.3704 ssim=0.3218 psnr=15.9970 | random 0.6481
+[14:43:01 +  292.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:02 +  294.1s] [dinov2 G3 K=256 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:43:03 +  295.0s] [dinov2 G3 K=256 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:43:06 +  298.1s] [dinov2 G3 K=256 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:43:07 +  299.0s] [dinov2 G3 K=256 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.34s)
+[14:43:08 +  299.8s] [dinov2 G3 K=256 bone draw=0] cosine_ot   mask_iou=0.6998 z=0.7738 nmi=0.4137 ssim=0.3368 psnr=15.9776 same_patient=0.000 (0.00s)
+[14:43:09 +  300.6s] [dinov2 G3 K=256 bone draw=0] cosine_nn   mask_iou=0.7278 z=0.7888 nmi=0.4343 ssim=0.3366 psnr=15.3332 same_patient=0.000 (0.00s)
+[14:43:09 +  301.2s]   same-centre A: cosine_ot mask_iou=0.6482 z=0.7692 nmi=0.3733 ssim=0.3153 psnr=15.9644 | random 0.5420
+[14:43:10 +  301.7s]   same-centre B: cosine_ot mask_iou=0.6907 z=0.7400 nmi=0.4348 ssim=0.3344 psnr=15.0047 | random 0.6427
+[14:43:10 +  302.3s]   same-centre C: cosine_ot mask_iou=0.6714 z=0.6916 nmi=0.3803 ssim=0.3104 psnr=15.8808 | random 0.6430
+[14:43:10 +  302.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:11 +  303.5s] [dinov2 G3 K=256 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:43:12 +  304.3s] [dinov2 G3 K=256 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:43:13 +  305.1s] [dinov2 G3 K=256 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:43:14 +  306.0s] [dinov2 G3 K=256 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:43:15 +  306.8s] [dinov2 G3 K=256 bone draw=1] cosine_ot   mask_iou=0.6746 z=0.7493 nmi=0.3975 ssim=0.3176 psnr=15.8158 same_patient=0.000 (0.00s)
+[14:43:16 +  307.6s] [dinov2 G3 K=256 bone draw=1] cosine_nn   mask_iou=0.7076 z=0.7663 nmi=0.4249 ssim=0.3261 psnr=15.5702 same_patient=0.000 (0.00s)
+[14:43:16 +  308.1s]   same-centre A: cosine_ot mask_iou=0.6161 z=0.7252 nmi=0.3424 ssim=0.2741 psnr=15.8227 | random 0.5366
+[14:43:17 +  308.7s]   same-centre B: cosine_ot mask_iou=0.6837 z=0.6581 nmi=0.4120 ssim=0.3096 psnr=14.8145 | random 0.6409
+[14:43:17 +  309.2s]   same-centre C: cosine_ot mask_iou=0.6681 z=0.6949 nmi=0.3724 ssim=0.2865 psnr=15.7872 | random 0.6421
+[14:43:17 +  309.2s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:18 +  310.5s] [dinov2 G3 K=256 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:43:19 +  311.3s] [dinov2 G3 K=256 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:43:20 +  312.1s] [dinov2 G3 K=256 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:43:21 +  313.0s] [dinov2 G3 K=256 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.34s)
+[14:43:22 +  313.8s] [dinov2 G3 K=256 bone draw=2] cosine_ot   mask_iou=0.6710 z=0.7326 nmi=0.3795 ssim=0.2960 psnr=15.4639 same_patient=0.000 (0.00s)
+[14:43:23 +  314.6s] [dinov2 G3 K=256 bone draw=2] cosine_nn   mask_iou=0.7143 z=0.7678 nmi=0.4121 ssim=0.3425 psnr=15.5100 same_patient=0.000 (0.00s)
+[14:43:23 +  315.2s]   same-centre A: cosine_ot mask_iou=0.6299 z=0.7569 nmi=0.3425 ssim=0.3039 psnr=15.8231 | random 0.5637
+[14:43:24 +  315.7s]   same-centre B: cosine_ot mask_iou=0.6680 z=0.7208 nmi=0.4429 ssim=0.3113 psnr=14.7720 | random 0.6600
+[14:43:24 +  316.3s]   same-centre C: cosine_ot mask_iou=0.6804 z=0.7592 nmi=0.3704 ssim=0.3218 psnr=15.9970 | random 0.6481
+[14:43:26 +  318.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:28 +  319.6s] [pixpca G2 K=128 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:43:28 +  320.4s] [pixpca G2 K=128 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:43:29 +  321.2s] [pixpca G2 K=128 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:43:30 +  322.0s] [pixpca G2 K=128 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.34s)
+[14:43:31 +  322.9s] [pixpca G2 K=128 bone draw=0] cosine_ot   mask_iou=0.7378 z=0.8461 nmi=0.4574 ssim=0.3732 psnr=16.2775 same_patient=0.000 (0.00s)
+[14:43:32 +  323.7s] [pixpca G2 K=128 bone draw=0] cosine_nn   mask_iou=0.7454 z=0.8688 nmi=0.4571 ssim=0.3734 psnr=16.3697 same_patient=0.000 (0.00s)
+[14:43:32 +  324.2s]   same-centre A: cosine_ot mask_iou=0.6652 z=0.7670 nmi=0.3923 ssim=0.3297 psnr=16.5279 | random 0.5420
+[14:43:33 +  324.8s]   same-centre B: cosine_ot mask_iou=0.7569 z=0.8738 nmi=0.4704 ssim=0.3832 psnr=15.5744 | random 0.6427
+[14:43:33 +  325.3s]   same-centre C: cosine_ot mask_iou=0.7349 z=0.7460 nmi=0.4066 ssim=0.3493 psnr=16.3853 | random 0.6430
+[14:43:33 +  325.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:35 +  326.5s] [pixpca G2 K=128 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:43:35 +  327.4s] [pixpca G2 K=128 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:43:36 +  328.2s] [pixpca G2 K=128 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:43:37 +  329.0s] [pixpca G2 K=128 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:43:38 +  329.8s] [pixpca G2 K=128 bone draw=1] cosine_ot   mask_iou=0.7076 z=0.8001 nmi=0.4318 ssim=0.3442 psnr=16.0235 same_patient=0.000 (0.00s)
+[14:43:39 +  330.6s] [pixpca G2 K=128 bone draw=1] cosine_nn   mask_iou=0.7094 z=0.8107 nmi=0.4310 ssim=0.3577 psnr=16.3997 same_patient=0.000 (0.00s)
+[14:43:39 +  331.2s]   same-centre A: cosine_ot mask_iou=0.6760 z=0.7648 nmi=0.3928 ssim=0.3591 psnr=16.9773 | random 0.5366
+[14:43:40 +  331.7s]   same-centre B: cosine_ot mask_iou=0.7254 z=0.7804 nmi=0.4314 ssim=0.3589 psnr=15.3609 | random 0.6409
+[14:43:40 +  332.3s]   same-centre C: cosine_ot mask_iou=0.7646 z=0.7803 nmi=0.4092 ssim=0.3779 psnr=16.5997 | random 0.6421
+[14:43:40 +  332.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:41 +  333.4s] [pixpca G2 K=128 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:43:42 +  334.3s] [pixpca G2 K=128 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:43:43 +  335.1s] [pixpca G2 K=128 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:43:44 +  335.9s] [pixpca G2 K=128 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.34s)
+[14:43:45 +  336.7s] [pixpca G2 K=128 bone draw=2] cosine_ot   mask_iou=0.7287 z=0.8053 nmi=0.4263 ssim=0.3490 psnr=15.9138 same_patient=0.000 (0.00s)
+[14:43:45 +  337.5s] [pixpca G2 K=128 bone draw=2] cosine_nn   mask_iou=0.7391 z=0.8351 nmi=0.4531 ssim=0.3714 psnr=16.1654 same_patient=0.000 (0.00s)
+[14:43:46 +  338.0s]   same-centre A: cosine_ot mask_iou=0.6706 z=0.7994 nmi=0.3877 ssim=0.3314 psnr=16.3543 | random 0.5637
+[14:43:47 +  338.6s]   same-centre B: cosine_ot mask_iou=0.7573 z=0.8142 nmi=0.4753 ssim=0.3734 psnr=15.4855 | random 0.6600
+[14:43:47 +  339.1s]   same-centre C: cosine_ot mask_iou=0.7616 z=0.7836 nmi=0.4138 ssim=0.4133 psnr=16.9282 | random 0.6481
+[14:43:49 +  341.0s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:50 +  342.2s] [pixpca G3 K=128 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:43:51 +  343.0s] [pixpca G3 K=128 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:43:52 +  343.8s] [pixpca G3 K=128 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:43:53 +  344.6s] [pixpca G3 K=128 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.34s)
+[14:43:53 +  345.4s] [pixpca G3 K=128 bone draw=0] cosine_ot   mask_iou=0.7407 z=0.8442 nmi=0.4561 ssim=0.3816 psnr=16.3212 same_patient=0.000 (0.00s)
+[14:43:54 +  346.2s] [pixpca G3 K=128 bone draw=0] cosine_nn   mask_iou=0.7339 z=0.8576 nmi=0.4481 ssim=0.3692 psnr=16.5748 same_patient=0.000 (0.00s)
+[14:43:55 +  346.7s]   same-centre A: cosine_ot mask_iou=0.6815 z=0.7814 nmi=0.3995 ssim=0.3438 psnr=16.7527 | random 0.5420
+[14:43:55 +  347.3s]   same-centre B: cosine_ot mask_iou=0.7569 z=0.8738 nmi=0.4704 ssim=0.3832 psnr=15.5744 | random 0.6427
+[14:43:56 +  347.8s]   same-centre C: cosine_ot mask_iou=0.7508 z=0.7375 nmi=0.4077 ssim=0.3564 psnr=16.4182 | random 0.6430
+[14:43:56 +  347.8s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:43:57 +  349.0s] [pixpca G3 K=128 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:43:58 +  349.8s] [pixpca G3 K=128 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:43:59 +  350.6s] [pixpca G3 K=128 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:43:59 +  351.4s] [pixpca G3 K=128 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:44:00 +  352.2s] [pixpca G3 K=128 bone draw=1] cosine_ot   mask_iou=0.7077 z=0.8027 nmi=0.4309 ssim=0.3419 psnr=15.9832 same_patient=0.000 (0.00s)
+[14:44:01 +  353.0s] [pixpca G3 K=128 bone draw=1] cosine_nn   mask_iou=0.7040 z=0.8139 nmi=0.4279 ssim=0.3546 psnr=16.4469 same_patient=0.000 (0.00s)
+[14:44:02 +  353.6s]   same-centre A: cosine_ot mask_iou=0.6934 z=0.7940 nmi=0.4027 ssim=0.3684 psnr=17.0372 | random 0.5366
+[14:44:02 +  354.1s]   same-centre B: cosine_ot mask_iou=0.7397 z=0.7937 nmi=0.4370 ssim=0.3740 psnr=15.4845 | random 0.6409
+[14:44:03 +  354.6s]   same-centre C: cosine_ot mask_iou=0.7646 z=0.7803 nmi=0.4092 ssim=0.3779 psnr=16.5997 | random 0.6421
+[14:44:03 +  354.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:04 +  355.8s] [pixpca G3 K=128 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:44:05 +  356.7s] [pixpca G3 K=128 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:44:05 +  357.5s] [pixpca G3 K=128 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:44:06 +  358.3s] [pixpca G3 K=128 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.33s)
+[14:44:07 +  359.1s] [pixpca G3 K=128 bone draw=2] cosine_ot   mask_iou=0.7277 z=0.8042 nmi=0.4302 ssim=0.3632 psnr=16.1362 same_patient=0.000 (0.00s)
+[14:44:08 +  359.9s] [pixpca G3 K=128 bone draw=2] cosine_nn   mask_iou=0.7319 z=0.8297 nmi=0.4473 ssim=0.3695 psnr=16.2633 same_patient=0.000 (0.00s)
+[14:44:08 +  360.4s]   same-centre A: cosine_ot mask_iou=0.7019 z=0.8214 nmi=0.4001 ssim=0.3654 psnr=16.9341 | random 0.5637
+[14:44:09 +  360.9s]   same-centre B: cosine_ot mask_iou=0.7715 z=0.8261 nmi=0.4777 ssim=0.3967 psnr=15.7010 | random 0.6600
+[14:44:09 +  361.5s]   same-centre C: cosine_ot mask_iou=0.7647 z=0.7832 nmi=0.4120 ssim=0.4135 psnr=16.9336 | random 0.6481
+[14:44:11 +  363.3s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:12 +  364.5s] [pixpca G2 K=256 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:44:13 +  365.3s] [pixpca G2 K=256 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:44:14 +  366.1s] [pixpca G2 K=256 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:44:18 +  369.8s] [pixpca G2 K=256 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.33s)
+[14:44:19 +  370.6s] [pixpca G2 K=256 bone draw=0] cosine_ot   mask_iou=0.7324 z=0.8051 nmi=0.4539 ssim=0.3735 psnr=16.2517 same_patient=0.000 (0.00s)
+[14:44:19 +  371.4s] [pixpca G2 K=256 bone draw=0] cosine_nn   mask_iou=0.6950 z=0.8227 nmi=0.4295 ssim=0.3773 psnr=16.8299 same_patient=0.000 (0.00s)
+[14:44:20 +  372.0s]   same-centre A: cosine_ot mask_iou=0.7233 z=0.8113 nmi=0.4279 ssim=0.4210 psnr=17.4873 | random 0.5420
+[14:44:20 +  372.5s]   same-centre B: cosine_ot mask_iou=0.7617 z=0.8018 nmi=0.4594 ssim=0.4009 psnr=15.7307 | random 0.6427
+[14:44:21 +  373.1s]   same-centre C: cosine_ot mask_iou=0.7303 z=0.7258 nmi=0.4000 ssim=0.3690 psnr=16.5212 | random 0.6430
+[14:44:21 +  373.1s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:22 +  374.2s] [pixpca G2 K=256 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:44:23 +  375.1s] [pixpca G2 K=256 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:44:24 +  375.9s] [pixpca G2 K=256 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:44:25 +  376.7s] [pixpca G2 K=256 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.33s)
+[14:44:25 +  377.5s] [pixpca G2 K=256 bone draw=1] cosine_ot   mask_iou=0.7278 z=0.8105 nmi=0.4364 ssim=0.3712 psnr=16.2483 same_patient=0.000 (0.00s)
+[14:44:26 +  378.3s] [pixpca G2 K=256 bone draw=1] cosine_nn   mask_iou=0.6810 z=0.8091 nmi=0.4236 ssim=0.3797 psnr=16.8982 same_patient=0.000 (0.00s)
+[14:44:27 +  378.9s]   same-centre A: cosine_ot mask_iou=0.7119 z=0.8270 nmi=0.4196 ssim=0.3999 psnr=17.3637 | random 0.5366
+[14:44:27 +  379.4s]   same-centre B: cosine_ot mask_iou=0.7253 z=0.7675 nmi=0.4178 ssim=0.3801 psnr=15.5688 | random 0.6409
+[14:44:28 +  380.0s]   same-centre C: cosine_ot mask_iou=0.7691 z=0.7818 nmi=0.4100 ssim=0.4115 psnr=16.8551 | random 0.6421
+[14:44:28 +  380.0s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:29 +  381.2s] [pixpca G2 K=256 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:44:30 +  382.0s] [pixpca G2 K=256 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:44:31 +  382.8s] [pixpca G2 K=256 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:44:32 +  383.6s] [pixpca G2 K=256 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.33s)
+[14:44:32 +  384.4s] [pixpca G2 K=256 bone draw=2] cosine_ot   mask_iou=0.7155 z=0.7924 nmi=0.4172 ssim=0.3658 psnr=16.1084 same_patient=0.000 (0.00s)
+[14:44:33 +  385.3s] [pixpca G2 K=256 bone draw=2] cosine_nn   mask_iou=0.6847 z=0.8020 nmi=0.3980 ssim=0.3453 psnr=16.3737 same_patient=0.000 (0.00s)
+[14:44:34 +  385.8s]   same-centre A: cosine_ot mask_iou=0.6922 z=0.8192 nmi=0.3974 ssim=0.3828 psnr=16.9733 | random 0.5637
+[14:44:34 +  386.4s]   same-centre B: cosine_ot mask_iou=0.7338 z=0.7786 nmi=0.4653 ssim=0.3623 psnr=15.4123 | random 0.6600
+[14:44:35 +  386.9s]   same-centre C: cosine_ot mask_iou=0.7479 z=0.7865 nmi=0.4097 ssim=0.3825 psnr=16.6424 | random 0.6481
+[14:44:37 +  388.9s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:38 +  390.1s] [pixpca G3 K=256 bone draw=0] random      mask_iou=0.6070 z=0.6434 nmi=0.3530 ssim=0.2475 psnr=14.8230 same_patient=0.000 (0.00s)
+[14:44:39 +  390.9s] [pixpca G3 K=256 bone draw=0] z_only      mask_iou=0.7534 z=0.9785 nmi=0.4349 ssim=0.4533 psnr=17.0101 same_patient=0.000 (0.00s)
+[14:44:40 +  391.7s] [pixpca G3 K=256 bone draw=0] mask_iou    mask_iou=0.8686 z=0.9171 nmi=0.4848 ssim=0.5224 psnr=17.7327 same_patient=0.000 (0.03s)
+[14:44:40 +  392.5s] [pixpca G3 K=256 bone draw=0] nmi         mask_iou=0.7894 z=0.8978 nmi=0.5191 ssim=0.4732 psnr=17.2344 same_patient=0.000 (0.34s)
+[14:44:41 +  393.3s] [pixpca G3 K=256 bone draw=0] cosine_ot   mask_iou=0.7345 z=0.8072 nmi=0.4542 ssim=0.3799 psnr=16.3210 same_patient=0.000 (0.00s)
+[14:44:42 +  394.1s] [pixpca G3 K=256 bone draw=0] cosine_nn   mask_iou=0.6984 z=0.8325 nmi=0.4297 ssim=0.3719 psnr=16.9248 same_patient=0.000 (0.00s)
+[14:44:43 +  394.6s]   same-centre A: cosine_ot mask_iou=0.7233 z=0.8113 nmi=0.4279 ssim=0.4210 psnr=17.4873 | random 0.5420
+[14:44:43 +  395.2s]   same-centre B: cosine_ot mask_iou=0.7625 z=0.7978 nmi=0.4578 ssim=0.4005 psnr=15.7248 | random 0.6427
+[14:44:44 +  395.7s]   same-centre C: cosine_ot mask_iou=0.7245 z=0.7169 nmi=0.3983 ssim=0.3591 psnr=16.4482 | random 0.6430
+[14:44:44 +  395.7s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:45 +  397.0s] [pixpca G3 K=256 bone draw=1] random      mask_iou=0.5989 z=0.6810 nmi=0.3600 ssim=0.2543 psnr=14.9171 same_patient=0.000 (0.00s)
+[14:44:46 +  397.8s] [pixpca G3 K=256 bone draw=1] z_only      mask_iou=0.7440 z=0.9596 nmi=0.4274 ssim=0.4318 psnr=16.9192 same_patient=0.000 (0.00s)
+[14:44:47 +  398.6s] [pixpca G3 K=256 bone draw=1] mask_iou    mask_iou=0.8338 z=0.8977 nmi=0.4620 ssim=0.4865 psnr=17.4809 same_patient=0.000 (0.03s)
+[14:44:47 +  399.4s] [pixpca G3 K=256 bone draw=1] nmi         mask_iou=0.7620 z=0.8826 nmi=0.5005 ssim=0.4332 psnr=16.8465 same_patient=0.000 (0.34s)
+[14:44:48 +  400.2s] [pixpca G3 K=256 bone draw=1] cosine_ot   mask_iou=0.7281 z=0.8147 nmi=0.4382 ssim=0.3792 psnr=16.3337 same_patient=0.000 (0.00s)
+[14:44:49 +  401.0s] [pixpca G3 K=256 bone draw=1] cosine_nn   mask_iou=0.6827 z=0.7955 nmi=0.4211 ssim=0.3679 psnr=16.8513 same_patient=0.000 (0.00s)
+[14:44:49 +  401.5s]   same-centre A: cosine_ot mask_iou=0.7179 z=0.8263 nmi=0.4158 ssim=0.3967 psnr=17.3578 | random 0.5366
+[14:44:50 +  402.1s]   same-centre B: cosine_ot mask_iou=0.7280 z=0.7733 nmi=0.4181 ssim=0.3864 psnr=15.6168 | random 0.6409
+[14:44:51 +  402.6s]   same-centre C: cosine_ot mask_iou=0.7691 z=0.7818 nmi=0.4100 ssim=0.4115 psnr=16.8551 | random 0.6421
+[14:44:51 +  402.6s]   note: pool yields only 150 slices per side (30 probe patients x <= 10/patient), not the 1000 target
+[14:44:52 +  403.8s] [pixpca G3 K=256 bone draw=2] random      mask_iou=0.6147 z=0.6756 nmi=0.3611 ssim=0.2449 psnr=14.8709 same_patient=0.000 (0.00s)
+[14:44:53 +  404.6s] [pixpca G3 K=256 bone draw=2] z_only      mask_iou=0.7666 z=0.9860 nmi=0.4161 ssim=0.4593 psnr=17.1117 same_patient=0.000 (0.00s)
+[14:44:53 +  405.4s] [pixpca G3 K=256 bone draw=2] mask_iou    mask_iou=0.8597 z=0.9073 nmi=0.4484 ssim=0.4973 psnr=17.4652 same_patient=0.000 (0.03s)
+[14:44:54 +  406.2s] [pixpca G3 K=256 bone draw=2] nmi         mask_iou=0.7590 z=0.8734 nmi=0.4856 ssim=0.4377 psnr=16.7351 same_patient=0.000 (0.34s)
+[14:44:55 +  407.0s] [pixpca G3 K=256 bone draw=2] cosine_ot   mask_iou=0.7233 z=0.7968 nmi=0.4196 ssim=0.3645 psnr=16.1111 same_patient=0.000 (0.00s)
+[14:44:56 +  407.8s] [pixpca G3 K=256 bone draw=2] cosine_nn   mask_iou=0.7038 z=0.8071 nmi=0.4143 ssim=0.3586 psnr=16.4478 same_patient=0.000 (0.00s)
+[14:44:56 +  408.3s]   same-centre A: cosine_ot mask_iou=0.6974 z=0.8312 nmi=0.3940 ssim=0.3775 psnr=16.9401 | random 0.5637
+[14:44:57 +  408.9s]   same-centre B: cosine_ot mask_iou=0.7403 z=0.7894 nmi=0.4688 ssim=0.3881 psnr=15.6207 | random 0.6600
+[14:44:57 +  409.4s]   same-centre C: cosine_ot mask_iou=0.7485 z=0.7887 nmi=0.4078 ssim=0.3866 psnr=16.6698 | random 0.6481
+[14:44:58 +  409.5s] 
+                   geometry                    arm  n_draws  mask_iou_mean  z_mean  nmi_mean  ssim_mean  psnr_mean
+---------------------------  ---------------------  -------  -------------  ------  --------  ---------  ---------
+        dinov2|G2|K128|bone              cosine_nn        3         0.6709  0.7396    0.3815     0.3120    15.6714
+        dinov2|G2|K128|bone              cosine_ot        3         0.6657  0.7492    0.3938     0.3080    15.6331
+        dinov2|G2|K128|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        dinov2|G2|K128|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        dinov2|G2|K128|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        dinov2|G2|K128|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+dinov2|G2|K128|bone|centreA  cosine_ot_same_centre        3         0.6233  0.7505    0.3528     0.3223    16.2661
+dinov2|G2|K128|bone|centreB  cosine_ot_same_centre        3         0.6829  0.6966    0.4260     0.3216    14.8561
+dinov2|G2|K128|bone|centreC  cosine_ot_same_centre        3         0.7043  0.7349    0.3898     0.3444    16.2084
+        dinov2|G2|K128|soft              cosine_nn        3         0.6888  0.7623    0.4088     0.5357    12.5917
+        dinov2|G2|K128|soft              cosine_ot        3         0.6709  0.7453    0.3976     0.5179    12.3818
+        dinov2|G2|K128|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        dinov2|G2|K128|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        dinov2|G2|K128|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        dinov2|G2|K128|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+dinov2|G2|K128|soft|centreA  cosine_ot_same_centre        3         0.6358  0.7560    0.3664     0.4812    12.4768
+dinov2|G2|K128|soft|centreB  cosine_ot_same_centre        3         0.6731  0.6802    0.4168     0.5358    11.6847
+dinov2|G2|K128|soft|centreC  cosine_ot_same_centre        3         0.6921  0.7353    0.3894     0.5390    12.8092
+        dinov2|G2|K256|bone              cosine_nn        3         0.7128  0.7720    0.4190     0.3291    15.4156
+        dinov2|G2|K256|bone              cosine_ot        3         0.6712  0.7472    0.3923     0.3093    15.6557
+        dinov2|G2|K256|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        dinov2|G2|K256|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        dinov2|G2|K256|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        dinov2|G2|K256|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+dinov2|G2|K256|bone|centreA  cosine_ot_same_centre        3         0.6095  0.7343    0.3437     0.2756    15.6501
+dinov2|G2|K256|bone|centreB  cosine_ot_same_centre        3         0.6638  0.7090    0.4237     0.3059    14.7249
+dinov2|G2|K256|bone|centreC  cosine_ot_same_centre        3         0.6730  0.7112    0.3712     0.3070    15.8805
+        dinov2|G2|K256|soft              cosine_nn        3         0.7019  0.7671    0.4093     0.5438    12.3551
+        dinov2|G2|K256|soft              cosine_ot        3         0.6606  0.7416    0.3874     0.5169    12.3117
+        dinov2|G2|K256|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        dinov2|G2|K256|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        dinov2|G2|K256|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        dinov2|G2|K256|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+dinov2|G2|K256|soft|centreA  cosine_ot_same_centre        3         0.6005  0.7094    0.3367     0.4324    11.8498
+dinov2|G2|K256|soft|centreB  cosine_ot_same_centre        3         0.6697  0.6800    0.4193     0.5349    11.7331
+dinov2|G2|K256|soft|centreC  cosine_ot_same_centre        3         0.6833  0.7087    0.3763     0.5282    12.5905
+        dinov2|G3|K128|bone              cosine_nn        3         0.6854  0.7553    0.3933     0.3302    15.8246
+        dinov2|G3|K128|bone              cosine_ot        3         0.6808  0.7583    0.4005     0.3222    15.7735
+        dinov2|G3|K128|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        dinov2|G3|K128|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        dinov2|G3|K128|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        dinov2|G3|K128|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+dinov2|G3|K128|bone|centreA  cosine_ot_same_centre        3         0.6565  0.7761    0.3666     0.3396    16.3515
+dinov2|G3|K128|bone|centreB  cosine_ot_same_centre        3         0.6835  0.7010    0.4265     0.3276    14.9025
+dinov2|G3|K128|bone|centreC  cosine_ot_same_centre        3         0.7134  0.7458    0.3935     0.3494    16.2560
+        dinov2|G3|K128|soft              cosine_nn        3         0.6983  0.7695    0.4148     0.5456    12.6985
+        dinov2|G3|K128|soft              cosine_ot        3         0.6714  0.7386    0.4000     0.5211    12.4099
+        dinov2|G3|K128|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        dinov2|G3|K128|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        dinov2|G3|K128|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        dinov2|G3|K128|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+dinov2|G3|K128|soft|centreA  cosine_ot_same_centre        3         0.6375  0.7543    0.3632     0.4748    12.4224
+dinov2|G3|K128|soft|centreB  cosine_ot_same_centre        3         0.6797  0.6860    0.4185     0.5452    11.8029
+dinov2|G3|K128|soft|centreC  cosine_ot_same_centre        3         0.7122  0.7583    0.3949     0.5603    13.1047
+        dinov2|G3|K256|bone              cosine_nn        3         0.7166  0.7743    0.4238     0.3351    15.4711
+        dinov2|G3|K256|bone              cosine_ot        3         0.6818  0.7519    0.3969     0.3168    15.7524
+        dinov2|G3|K256|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        dinov2|G3|K256|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        dinov2|G3|K256|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        dinov2|G3|K256|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+dinov2|G3|K256|bone|centreA  cosine_ot_same_centre        3         0.6314  0.7505    0.3527     0.2977    15.8701
+dinov2|G3|K256|bone|centreB  cosine_ot_same_centre        3         0.6808  0.7063    0.4299     0.3185    14.8638
+dinov2|G3|K256|bone|centreC  cosine_ot_same_centre        3         0.6733  0.7152    0.3744     0.3062    15.8883
+        dinov2|G3|K256|soft              cosine_nn        3         0.7095  0.7786    0.4113     0.5492    12.5028
+        dinov2|G3|K256|soft              cosine_ot        3         0.6708  0.7468    0.3926     0.5276    12.4561
+        dinov2|G3|K256|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        dinov2|G3|K256|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        dinov2|G3|K256|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        dinov2|G3|K256|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+dinov2|G3|K256|soft|centreA  cosine_ot_same_centre        3         0.6135  0.7109    0.3392     0.4513    12.0811
+dinov2|G3|K256|soft|centreB  cosine_ot_same_centre        3         0.6765  0.6708    0.4177     0.5423    11.8152
+dinov2|G3|K256|soft|centreC  cosine_ot_same_centre        3         0.6826  0.7000    0.3756     0.5266    12.5617
+        pixpca|G2|K128|bone              cosine_nn        3         0.7313  0.8382    0.4471     0.3675    16.3116
+        pixpca|G2|K128|bone              cosine_ot        3         0.7247  0.8171    0.4385     0.3555    16.0716
+        pixpca|G2|K128|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        pixpca|G2|K128|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        pixpca|G2|K128|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        pixpca|G2|K128|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+pixpca|G2|K128|bone|centreA  cosine_ot_same_centre        3         0.6706  0.7770    0.3909     0.3401    16.6198
+pixpca|G2|K128|bone|centreB  cosine_ot_same_centre        3         0.7465  0.8228    0.4590     0.3719    15.4736
+pixpca|G2|K128|bone|centreC  cosine_ot_same_centre        3         0.7537  0.7700    0.4098     0.3802    16.6378
+        pixpca|G2|K128|soft              cosine_nn        3         0.6824  0.8200    0.4163     0.5627    13.6393
+        pixpca|G2|K128|soft              cosine_ot        3         0.7487  0.8391    0.4530     0.6147    13.5510
+        pixpca|G2|K128|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        pixpca|G2|K128|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        pixpca|G2|K128|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        pixpca|G2|K128|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+pixpca|G2|K128|soft|centreA  cosine_ot_same_centre        3         0.6807  0.8034    0.4085     0.5301    13.2390
+pixpca|G2|K128|soft|centreB  cosine_ot_same_centre        3         0.7592  0.8418    0.4676     0.6545    13.2212
+pixpca|G2|K128|soft|centreC  cosine_ot_same_centre        3         0.7537  0.7518    0.4118     0.6168    13.6775
+        pixpca|G2|K256|bone              cosine_nn        3         0.6869  0.8113    0.4170     0.3674    16.7006
+        pixpca|G2|K256|bone              cosine_ot        3         0.7252  0.8027    0.4358     0.3701    16.2028
+        pixpca|G2|K256|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        pixpca|G2|K256|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        pixpca|G2|K256|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        pixpca|G2|K256|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+pixpca|G2|K256|bone|centreA  cosine_ot_same_centre        3         0.7091  0.8192    0.4150     0.4012    17.2748
+pixpca|G2|K256|bone|centreB  cosine_ot_same_centre        3         0.7403  0.7826    0.4475     0.3811    15.5706
+pixpca|G2|K256|bone|centreC  cosine_ot_same_centre        3         0.7491  0.7647    0.4066     0.3877    16.6729
+        pixpca|G2|K256|soft              cosine_nn        3         0.6562  0.7927    0.3912     0.5238    13.4441
+        pixpca|G2|K256|soft              cosine_ot        3         0.7385  0.8286    0.4429     0.5959    13.3405
+        pixpca|G2|K256|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        pixpca|G2|K256|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        pixpca|G2|K256|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        pixpca|G2|K256|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+pixpca|G2|K256|soft|centreA  cosine_ot_same_centre        3         0.7095  0.8371    0.4095     0.5564    13.4765
+pixpca|G2|K256|soft|centreB  cosine_ot_same_centre        3         0.7441  0.7835    0.4517     0.6280    12.8944
+pixpca|G2|K256|soft|centreC  cosine_ot_same_centre        3         0.7513  0.7595    0.4078     0.6059    13.5685
+        pixpca|G3|K128|bone              cosine_nn        3         0.7232  0.8337    0.4411     0.3644    16.4283
+        pixpca|G3|K128|bone              cosine_ot        3         0.7253  0.8170    0.4390     0.3622    16.1469
+        pixpca|G3|K128|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        pixpca|G3|K128|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        pixpca|G3|K128|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        pixpca|G3|K128|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+pixpca|G3|K128|bone|centreA  cosine_ot_same_centre        3         0.6923  0.7989    0.4008     0.3592    16.9080
+pixpca|G3|K128|bone|centreB  cosine_ot_same_centre        3         0.7560  0.8312    0.4617     0.3847    15.5867
+pixpca|G3|K128|bone|centreC  cosine_ot_same_centre        3         0.7601  0.7670    0.4096     0.3826    16.6505
+        pixpca|G3|K128|soft              cosine_nn        3         0.6984  0.8208    0.4260     0.5779    13.7092
+        pixpca|G3|K128|soft              cosine_ot        3         0.7455  0.8415    0.4520     0.6099    13.5084
+        pixpca|G3|K128|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        pixpca|G3|K128|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        pixpca|G3|K128|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        pixpca|G3|K128|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+pixpca|G3|K128|soft|centreA  cosine_ot_same_centre        3         0.6870  0.8090    0.4107     0.5375    13.3157
+pixpca|G3|K128|soft|centreB  cosine_ot_same_centre        3         0.7592  0.8433    0.4677     0.6546    13.2226
+pixpca|G3|K128|soft|centreC  cosine_ot_same_centre        3         0.7536  0.7556    0.4115     0.6159    13.6691
+        pixpca|G3|K256|bone              cosine_nn        3         0.6950  0.8117    0.4217     0.3661    16.7413
+        pixpca|G3|K256|bone              cosine_ot        3         0.7286  0.8062    0.4374     0.3745    16.2553
+        pixpca|G3|K256|bone               mask_iou        3         0.8540  0.9074    0.4651     0.5020    17.5596
+        pixpca|G3|K256|bone                    nmi        3         0.7701  0.8846    0.5018     0.4480    16.9387
+        pixpca|G3|K256|bone                 random        3         0.6069  0.6666    0.3580     0.2489    14.8704
+        pixpca|G3|K256|bone                 z_only        3         0.7547  0.9747    0.4261     0.4481    17.0137
+pixpca|G3|K256|bone|centreA  cosine_ot_same_centre        3         0.7129  0.8230    0.4125     0.3984    17.2617
+pixpca|G3|K256|bone|centreB  cosine_ot_same_centre        3         0.7436  0.7868    0.4482     0.3917    15.6541
+pixpca|G3|K256|bone|centreC  cosine_ot_same_centre        3         0.7474  0.7625    0.4054     0.3857    16.6577
+        pixpca|G3|K256|soft              cosine_nn        3         0.6693  0.7941    0.3984     0.5334    13.4255
+        pixpca|G3|K256|soft              cosine_ot        3         0.7400  0.8294    0.4429     0.5960    13.3345
+        pixpca|G3|K256|soft               mask_iou        3         0.8540  0.9074    0.4664     0.6980    14.7640
+        pixpca|G3|K256|soft                    nmi        3         0.7709  0.8855    0.5033     0.6419    14.0384
+        pixpca|G3|K256|soft                 random        3         0.6069  0.6666    0.3586     0.4436    11.3042
+        pixpca|G3|K256|soft                 z_only        3         0.7547  0.9747    0.4273     0.6340    13.8573
+pixpca|G3|K256|soft|centreA  cosine_ot_same_centre        3         0.7053  0.8306    0.4062     0.5505    13.4170
+pixpca|G3|K256|soft|centreB  cosine_ot_same_centre        3         0.7443  0.7898    0.4518     0.6290    12.9111
+pixpca|G3|K256|soft|centreC  cosine_ot_same_centre        3         0.7537  0.7631    0.4094     0.6086    13.6095
+[14:44:58 +  409.6s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/synthrad_gate/records.json
+[14:44:58 +  409.6s] log closed after 409.6s
