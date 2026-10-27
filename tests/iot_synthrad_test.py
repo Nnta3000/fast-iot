@@ -170,3 +170,27 @@ def test_all_slices_dropped_raises(tmp_path: Path) -> None:
     write_nifti(folder / "mask.nii.gz", np.zeros((8, 8, 3)))
     with pytest.raises(SynthRadError):
         preprocess_patient(PatientPaths.from_dir(folder))
+
+
+def test_discover_handles_two_level_layout(tmp_path: Path) -> None:
+    """
+    CN: 真实布局是**两层**：`root/brain/1BA001/`，不是 `root/1BA001/`。
+        此前 `discover_patients` 只在 `root` 的直接子目录里找患者，真实数据下会一个也找不到——
+        这条测试用真实的两层结构固定该行为。
+    EN: the real layout is **two levels**: `root/brain/1BA001/`, not `root/1BA001/`. The earlier
+        `discover_patients` scanned only `root`'s immediate children and found nothing on real data; this
+        test pins the two-level behaviour.
+    """
+    brain = tmp_path / "brain"
+    pelvis = tmp_path / "pelvis"
+    brain.mkdir()
+    pelvis.mkdir()
+    make_case(brain, "1BA001", slices=4, size=16)
+    make_case(brain, "1BC002", slices=4, size=16)
+    make_case(pelvis, "1PA001", slices=4, size=16)
+
+    found_brain = discover_patients(tmp_path, anatomy="brain")
+    found_pelvis = discover_patients(tmp_path, anatomy="pelvis")
+    assert [p.patient for p in found_brain] == ["1BA001", "1BC002"]
+    assert [p.patient for p in found_pelvis] == ["1PA001"]
+    assert found_brain[1].centre == "C"

@@ -252,20 +252,30 @@ class PatientPaths:
 
 def discover_patients(root: str | Path, *, anatomy: str) -> list[PatientPaths]:
     """
-    CN: 列出某解剖结构下的全部患者（按 id 排序）。`anatomy` 取 `"brain"` 或 `"pelvis"`。
-    EN: list every patient under one anatomy (sorted by id). `anatomy` is `"brain"` or `"pelvis"`.
+    CN: 列出某解剖结构下的全部患者（按 id 排序）。**两层布局**：`root` 下先是解剖目录（`brain/`、`pelvis/`），患者目录在其内部
+        （`data/Task1/brain/1BA001/`）。因此这里先按解剖取子目录，再在其内部找以 `1<letter>` 开头的患者目录。
+        （早先的实现只在 `root` 的**直接**子目录里找患者，真实布局下会一个也找不到。）
+    EN: **two-level layout**: `root` holds anatomy folders (`brain/`, `pelvis/`) and patient folders live
+        inside them (`data/Task1/brain/1BA001/`). So take the anatomy subdirectory first, then look for
+        `1<letter>` patient folders inside it. (The earlier version scanned only `root`'s **immediate**
+        children, which found nothing in the real layout.)
     """
     base = Path(root)
     if not base.is_dir():
         raise SynthRadError(f"missing dataset root: {base}")
-    folders = sorted(p for p in base.iterdir() if p.is_dir())
+    letter = {"brain": "B", "pelvis": "P"}.get(str(anatomy).lower())
+    if letter is None:
+        raise SynthRadError(f"unknown anatomy {anatomy!r}; expected 'brain' or 'pelvis'")
     out: list[PatientPaths] = []
-    for folder in folders:
-        letter = {"brain": "B", "pelvis": "P"}.get(str(anatomy).lower())
-        if letter is None:
-            raise SynthRadError(f"unknown anatomy {anatomy!r}; expected 'brain' or 'pelvis'")
-        if folder.name[1:2].upper() == letter:
-            out.append(PatientPaths.from_dir(folder))
+    # CN: 先找 `root/<anatomy>`；若不存在，则退回"`root` 直接含患者目录"的扁平布局（测试用）。
+    # EN: prefer `root/<anatomy>`; fall back to the flat layout where `root` holds patient folders directly
+    #     (used by the tests).
+    anatomy_dir = base / str(anatomy).lower()
+    search_dirs = [anatomy_dir] if anatomy_dir.is_dir() else [base]
+    for parent in search_dirs:
+        for folder in sorted(p for p in parent.iterdir() if p.is_dir()):
+            if folder.name[:1] == "1" and folder.name[1:2].upper() == letter:
+                out.append(PatientPaths.from_dir(folder))
     if not out:
         raise SynthRadError(f"no {anatomy} patients under {base}")
     return out
