@@ -352,11 +352,11 @@ def preprocess_patient(paths: PatientPaths, *, size: int = IMAGE_SIZE,
                        mr_percentiles: tuple[float, float] = MR_PERCENTILES,
                        min_mask_area: float = MIN_MASK_AREA) -> SynthRadSlices:
     """
-    CN: 对一个病例施加**固定的**预处理，返回有效切片（掩膜面积 >= `min_mask_area`）。
+    CN: 对一个病例施加**固定的**预处理，返回**纳入的**切片（原始网格上身体掩膜面积 >= `min_mask_area`）。
         任何一步不符合（例如第 3 轴不是头足方向）都**报错**，而不是静默旋转。
     EN: apply the **fixed** preprocessing to one case and return the valid slices (mask area >=
-        `min_mask_area`). Any mismatch -- e.g. axis 2 not being superior-inferior -- **raises** rather than
-        silently rotating.
+        `min_mask_area`, evaluated on the **native** grid). Any mismatch -- e.g. axis 2 not being
+        superior-inferior -- **raises** rather than silently rotating.
     """
     mr = load_volume(paths.mr)
     ct = load_volume(paths.ct)
@@ -381,6 +381,11 @@ def preprocess_patient(paths: PatientPaths, *, size: int = IMAGE_SIZE,
     z_kept: list[int] = []
     for z in range(n_slices):
         m_slice: Bool[np.ndarray, "x y"] = mask_b[:, :, z]
+        # CN: **纳入判据在原始网格上**（不是 192 缩放后）：判据是解剖学性质，不应取决于插值。
+        #     缩放后的面积会与原始面积略有不同（实测 0.0501 -> 0.0492），但阈值只按原始网格判定。
+        # EN: the **inclusion rule is evaluated on the NATIVE grid**, not after the 192 resize: the criterion
+        #     is an anatomical property and must not depend on interpolation. The resized area differs
+        #     slightly (measured 0.0501 -> 0.0492) but only the native value is compared to the threshold.
         if float(m_slice.mean()) < float(min_mask_area):
             continue
         mr_rows.append(_resize(mr_n[:, :, z], size=int(size), order=1).ravel())

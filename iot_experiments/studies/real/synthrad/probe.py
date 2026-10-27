@@ -51,6 +51,7 @@ from iot_experiments.harness.records import RunLog, format_table, write_records 
 from iot_experiments.harness.synthrad import (  # noqa: E402
     CT_WINDOW,
     IMAGE_SIZE,
+    MASK_THRESHOLD,
     MIN_MASK_AREA,
     MR_PERCENTILES,
     PatientPaths,
@@ -196,17 +197,32 @@ def main(argv: list[str] | None = None) -> int:
         if mr_vol.data.shape != ct_vol.data.shape:
             anomalies.append(f"{paths.patient}: mr/ct shape mismatch {mr_vol.data.shape} vs {ct_vol.data.shape}")
         mask_area: Float[np.ndarray, "slices"] = slices.mask.mean(axis=1)
+        # CN: 纳入判据在**原始网格**上判定，因此这里同时记录原始网格的掩膜面积，
+        #     以免把"缩放后面积"误当成判据（0.0501 -> 0.0492 的差别就是这个）。
+        # EN: the inclusion rule is evaluated on the **native** grid, so record the native mask area too,
+        #     rather than letting the resized area pass for the criterion (the 0.0501 -> 0.0492 gap is that).
+        mask_vol = load_volume(paths.mask)
+        native_areas: Float[np.ndarray, "z"] = np.asarray(
+            [(mask_vol.data[:, :, z] >= MASK_THRESHOLD).mean() for z in range(mask_vol.data.shape[2])],
+            dtype=np.float64)
         if len(slices) == 0:
             anomalies.append(f"{paths.patient}: no slices survived the mask rule")
             continue
-        if float(mask_area.min()) < MIN_MASK_AREA:
-            anomalies.append(f"{paths.patient}: kept a slice with mask area {float(mask_area.min()):.4f}")
+        # CN: 判据在原始网格上 ⇒ 检查原始面积；缩放后的面积**不**参与判定。
+        # EN: the rule is on the native grid, so check the native area; the resized area does not decide.
+        if float(native_areas[slices.z_index].min()) < MIN_MASK_AREA:
+            anomalies.append(f"{paths.patient}: included a slice with native mask area "
+                             f"{float(native_areas[slices.z_index].min()):.4f} < {MIN_MASK_AREA}")
         # CN: 同一个患者内 MR 与 CT 的切片必须对齐（同一 z）。
         # EN: within a patient, MR and CT slices must be aligned (same z).
         rows.append({
             "patient": paths.patient, "centre": paths.centre,
             "n_total": int(slices.meta["n_total_slices"]), "n_kept": int(len(slices)),
-            "dropped": int(slices.meta["n_total_slices"]) - int(len(slices)),
+            # CN: **排除**（不是"丢弃"）：被固定纳入判据排除的切片数，判据 = 原始网格掩膜面积 < 5%。
+            # EN: **excluded** (not "dropped"): slices removed by the fixed inclusion rule, i.e. native-grid
+            #     mask area < 5% of the frame.
+            "n_excluded_low_mask": int(slices.meta["n_total_slices"]) - int(len(slices)),
+            "mask_area_native_min_kept": float(native_areas[slices.z_index].min()),
             "z_min": float(slices.z_normalised.min()), "z_max": float(slices.z_normalised.max()),
             "mask_mean": float(mask_area.mean()), "mask_p05": float(np.percentile(mask_area, 5)),
             "mask_p95": float(np.percentile(mask_area, 95)),
@@ -229,9 +245,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if not rows:
         raise ProbeError("no probe patient produced slices")
-    log.line("\n" + format_table(rows, ("patient", "centre", "n_total", "n_kept", "dropped",
-                                        "mask_mean", "mask_p05", "mr_mean", "ct_mean",
-                                        "raw_ct_hu_p95")))
+    log.line("\n" + format_table(rows, ("patient", "centre", "n_total", "n_kept",
+                                        "n_excluded_low_mask", "mask_area_native_min_kept",
+                                        "mask_mean", "mask_p05", "mr_mean", "ct_mean")))
 
     # CN: 按中心汇总：切片数、z 覆盖、掩膜面积、强度分位数。
     # EN: per-centre summary: slice counts, z coverage, mask area, intensity quantiles.
@@ -240,7 +256,9 @@ def main(argv: list[str] | None = None) -> int:
         group = [r for r in rows if r["centre"] == centre]
         summary.append({
             "centre": centre, "patients": len(group),
-            "slices_kept": sum(int(r["n_kept"]) for r in group),
+            "slices_total": sum(int(r["n_total"]) for r in group),
+            "slices_included": sum(int(r["n_kept"]) for r in group),
+            "excluded_low_mask": sum(int(r["n_excluded_low_mask"]) for r in group),
             "slices_per_patient": round(float(np.mean([int(r["n_kept"]) for r in group])), 1),
             "z_min": round(min(float(r["z_min"]) for r in group), 3),
             "z_max": round(max(float(r["z_max"]) for r in group), 3),
@@ -250,7 +268,8 @@ def main(argv: list[str] | None = None) -> int:
             "mr_p95_nz": round(float(np.nanmean([float(r["raw_mr_p95_nonzero"]) for r in group])), 1),
             "raw_ct_hu_p95": round(float(np.mean([float(r["raw_ct_hu_p95"]) for r in group])), 1),
         })
-    log.line("\n" + format_table(summary, ("centre", "patients", "slices_kept", "slices_per_patient",
+    log.line("\n" + format_table(summary, ("centre", "patients", "slices_total", "slices_included",
+                                           "excluded_low_mask", "slices_per_patient",
                                            "z_min", "z_max", "mask_mean", "mask_p05",
                                            "mr_p50_nz", "mr_p95_nz", "raw_ct_hu_p95")))
 
