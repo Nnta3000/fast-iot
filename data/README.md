@@ -23,14 +23,15 @@ data/
 The patient folder name encodes `<task><anatomy><centre><index>`: `1` + `B`/`P` + centre letter
 + index. **Position 2 is the anatomy, position 3 is the centre** (`1BA001` = task 1, brain,
 centre A). The loader (`harness/synthrad.py`) derives both from that name and will refuse a
-folder it cannot parse rather than guessing.
+folder it cannot parse rather than guessing. Note the layout is **two levels**:
+`data/Task1/<anatomy>/<patient>/`.
 
 ## SynthRAD2023
 
 - Zenodo DOI [`10.5281/zenodo.7260705`](https://doi.org/10.5281/zenodo.7260705), open, **CC BY-NC 4.0**,
   training split only.
 - Task 1 archive: `Task1.zip`, 14 471 900 926 bytes, md5 `360bc61e2320d5c5a7145454a81c566a`.
-- Uncompressed: brain 3.54 GB, pelvis 10.76 GB.
+- Uncompressed: brain 3.54 GB, pelvis 10.76 GB (measured: 3.5 GB / 11 GB).
 - Extract only what is needed:
 
   ```bash
@@ -39,6 +40,13 @@ folder it cannot parse rather than guessing.
   ```
 
 Verify the checksum before trusting any number produced from the data.
+
+**Status of this machine's copy (2026-10-27).** `Task1.zip` was downloaded, its md5 verified as
+`360bc61e2320d5c5a7145454a81c566a` (exact match to the Zenodo record), and the archive was then
+**deleted after verification**. Only the extracted `Task1/{brain,pelvis,overview}` folders are kept
+(14 GB total, 1807 files). Audit at extraction time: brain 180 patients (A 60 / B 60 / C 60),
+pelvis 180 patients (A 120 / C 60, **no centre B**), every patient has exactly `mr/ct/mask`.
+If these folders are ever moved or restored from elsewhere, re-download and re-verify the md5.
 
 ## T1/T2
 

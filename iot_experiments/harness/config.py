@@ -128,7 +128,7 @@ class RunConfig:
 
     @property
     def run_dir(self) -> Path:
-        """CN: 本次运行的结果目录（位于被拉取的 `gpu_bench/out` 下）。EN: this run's output directory."""
+        """CN: 本次运行的结果目录 `iot_experiments/out/<study>/`。EN: this run's output directory."""
         return Path(self.out) / str(self.study)
 
     # ---------------- construction ----------------
@@ -195,8 +195,11 @@ def base_argument_specs() -> dict[str, dict[str, object]]:
         },
         "out": {
             "type": Path,
-            "default": _REPO_ROOT / "iot_experiments" / "gpu_bench" / "out",
-            "help": "output root (must be inside a pulled directory)",
+            # CN: 与 dataclass 字段保持同一默认值；两处不一致会让 argparse 悄悄覆盖字段（曾经如此）。
+            # EN: keep this identical to the dataclass field; when the two disagreed argparse silently
+            #     overrode the field (which is what happened).
+            "default": _REPO_ROOT / "iot_experiments" / "out",
+            "help": "output root",
         },
         "solver": {
             "choices": sorted(_KNOWN_SOLVERS),

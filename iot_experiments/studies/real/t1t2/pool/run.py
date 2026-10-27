@@ -27,7 +27,7 @@ import numpy as np
 import ot
 from jaxtyping import Bool, Float, Int
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
