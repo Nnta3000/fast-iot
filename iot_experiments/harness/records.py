@@ -12,6 +12,7 @@ EN: **Run records and tables** -- every reading carries the configuration that p
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Iterable, Mapping, Sequence
@@ -140,3 +141,53 @@ def write_records(path: Path, records: Sequence[RunRecord], *,
 
 
 __all__ = ["RunRecord", "format_table", "mean_std", "summarise", "verdict", "write_records"]
+
+
+class RunLog:
+    """
+    CN: **每次运行的自带日志**。研究脚本不再依赖 `nohup ... >> log`：日志写到 `run_dir/run.log`，
+        同时打印到 stdout。每行带时间戳与已用秒数，便于在长任务里定位慢步骤。
+
+        CN: 为什么放在 harness 里：此前长任务要靠 shell 重定向，一旦忘了就**没有任何记录**——
+            这正是"代码不够模块化"的信号。日志应该由运行本身产生。
+
+    EN: **Per-run logging owned by the run itself.** Study scripts no longer depend on shell redirection:
+        the log goes to `run_dir/run.log` and to stdout, each line timestamped with elapsed seconds so slow
+        steps in a long job are locatable.
+
+        It lives in the harness because a long job that forgot its shell redirect previously left **no record
+        at all** -- the signal that the code was not modular enough. The run should produce its own log.
+    """
+
+    def __init__(self, path: Path) -> None:
+        """CN: 打开日志文件并写入起始时间。EN: open the log and record the start time."""
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._start = time.perf_counter()
+        self._handle = self.path.open("w", encoding="utf-8")
+        self.line(f"log opened: {self.path}")
+
+    def line(self, message: str) -> None:
+        """CN: 写一行（时间戳 + 已用秒数），并 flush 到磁盘。EN: write one line (stamp + elapsed) and flush."""
+        elapsed = time.perf_counter() - self._start
+        stamp = time.strftime("%H:%M:%S")
+        text = f"[{stamp} +{elapsed:7.1f}s] {message}"
+        print(text, flush=True)
+        self._handle.write(text + "\n")
+        self._handle.flush()
+
+    def close(self) -> None:
+        """CN: 关闭日志并记录总时长。EN: close the log, recording the total wall time."""
+        self.line(f"log closed after {time.perf_counter() - self._start:.1f}s")
+        self._handle.close()
+
+    def __enter__(self) -> "RunLog":
+        """CN: 上下文管理。EN: context manager."""
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        """CN: 退出时关闭。EN: close on exit."""
+        self.close()
+
+
+__all__ = [*__all__, "RunLog"]
