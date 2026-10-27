@@ -226,6 +226,11 @@ __pycache__/
 !/data/.gitignore
 !/data/.gitkeep
 
+# CN: 实验缓存（预处理切片、池化的 DINOv2 特征）。**可随时删除**，由 `scripts/wipe_cache.sh` 清理。
+#     体积小但可重建，因此从不入版本库。caches are rebuildable, never committed.
+/cache/
+/iot_experiments/cache/
+
 # CN: legacy（历史）实验整目录不推送（含不适合公开的报告/脚本）
 # EN: the whole legacy experiments directory is not pushed (holds files unfit for public)
 /iot_experiments/legacy/

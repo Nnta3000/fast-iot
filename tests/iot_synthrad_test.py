@@ -194,3 +194,54 @@ def test_discover_handles_two_level_layout(tmp_path: Path) -> None:
     assert [p.patient for p in found_brain] == ["1BA001", "1BC002"]
     assert [p.patient for p in found_pelvis] == ["1PA001"]
     assert found_brain[1].centre == "C"
+
+
+REAL_DATA_ROOT = Path("/home/agent/Documents/fast-iot/data/Task1")
+
+
+@pytest.mark.skipif(not REAL_DATA_ROOT.is_dir(),
+                    reason="real SynthRAD archive not present at data/Task1")
+def test_real_archive_discovery_and_preprocessing() -> None:
+    """
+    CN: **真实数据冒烟测试**：在真实归档上跑 `discover_patients` + 固定预处理。
+        存在即运行，不存在则跳过。
+
+        CN: 为什么必须有这一条：`discover_patients` 曾在真实的两层布局
+            (`data/Task1/brain/1BA001/`) 下一个患者都找不到，而合成 fixture 把患者直接放在根目录，
+            所以测试全绿而真实调用崩溃。**fixture 必须与真实布局一致**，这条测试就是那个保证。
+
+    EN: **Real-data smoke test**: run `discover_patients` + the fixed preprocessing against the actual
+        archive; skipped when the archive is absent.
+
+        Why it must exist: `discover_patients` once found zero patients on the real two-level layout
+        (`data/Task1/brain/1BA001/`) while the synthetic fixture placed patients directly under the root, so
+        every test passed and the real call crashed. **The fixture must agree with the real layout**; this
+        test is that guarantee.
+    """
+    patients: dict[str, list] = {}
+    for anatomy in ("brain", "pelvis"):
+        found = discover_patients(REAL_DATA_ROOT, anatomy=anatomy)
+        assert found, f"no {anatomy} patients found in the real archive"
+        patients[anatomy] = found
+        # CN: 目录名必须能被解析出解剖与中心，且三个文件齐全。
+        # EN: every folder must parse to an anatomy and centre, with all three files present.
+        sample = found[0]
+        assert sample.patient.startswith("1")
+        assert sample.anatomy == ("B" if anatomy == "brain" else "P")
+        assert sample.centre in {"A", "B", "C"}
+        for path in (sample.mr, sample.ct, sample.mask):
+            assert path.is_file(), path
+
+    # CN: 对**一个真实患者**跑完整的固定预处理，检查输出契约。
+    # EN: run the full fixed preprocessing on **one real patient** and check the output contract.
+    slices = preprocess_patient(patients["brain"][0])
+    assert len(slices) > 0
+    assert slices.mr.shape[1] == IMAGE_SIZE * IMAGE_SIZE
+    assert slices.mr.shape == slices.ct.shape == slices.mask.shape
+    assert 0.0 <= float(slices.mr.min()) and float(slices.mr.max()) <= 1.0
+    assert 0.0 <= float(slices.ct.min()) and float(slices.ct.max()) <= 1.0
+    assert float(slices.z_normalised[0]) == 0.0
+    assert float(slices.z_normalised[-1]) == 1.0
+    # CN: 掩膜不少于 5%——否则该切片本该被丢弃。
+    # EN: every kept slice carries at least 5% mask area, else it should have been dropped.
+    assert float(slices.mask.mean(axis=1).min()) >= 0.05
