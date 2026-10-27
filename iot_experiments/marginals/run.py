@@ -21,7 +21,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot_experiments.core import RunSpec, run_grid  # noqa: E402
+from iot_experiments.harness.lib.records import RunSpec  # noqa: E402
+from iot_experiments.harness.lib.runner import run_grid  # noqa: E402
 
 _OUT_DIR = Path(__file__).resolve().parent / "out"
 
