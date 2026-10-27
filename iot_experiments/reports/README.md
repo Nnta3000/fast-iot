@@ -15,7 +15,8 @@ The **data** column says whether a result is about **real images** (`studies/rea
 | **`NMI_PAIRING_REPORT.md`** | *real* | **NMI + Hungarian pairing on all 1000 pairs vs whitened-DINOv2 cosine/OT vs the learned cost** |
 | **`metric_learning/`** | *real* | **InfoNCE / Sinkhorn-InfoNCE / CCA / residual vs relaxed iOT on a fixed 400-pair pool: `records.json` + self-written `run.log`; protocol in `studies/real/t1t2/metric_learning/README.md`** |
 | **`E5_SCOPE.md`** | *real* | **scope only: pseudo-pair synthesis with the existing N=1 trainer (not started)** |
-| **`synthrad_gate.md`** | *real* | **SynthRAD brain pairing gate (Phase 2): GATE 1 FAILS in all 16 configs; plain-language arm and measure definitions** |
+| **`synthrad_recovery.md`** | *real* | **SynthRAD brain PAIR RECOVERY scored against ground truth (patient, z) ids; learned cost beats cosine with DINOv2 but both trail metadata baselines** |
+| `synthrad_gate.md` | *real* | earlier compatibility test, superseded by `synthrad_recovery.md`; retained for its data findings |
 | `SCALING_REPORT.md` | *synthetic* | growth in `K, m, n`; where the solve exceeds 2 s (study 1) |
 | `MARGINAL_REPORT.md` | *synthetic* | uniform vs Gaussian / GMM marginals; support structure and cost (study 2) |
 | `FAMILY_REPORT.md` | *synthetic* | diagonal / quadratic / low-rank (+ tiny-n PSD) (study 3) |
