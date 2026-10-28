@@ -3,6 +3,12 @@
 **Status: CURRENT (2026-10-27).** Data: `data/Task1/brain`, probe patients only. The reserved test set was
 not touched.
 
+## Solver
+
+Every learned-cost number in this file was produced by `harness/solver.fit_full_lp` (dense LP over all
+`m*m` edges, CuPDLPx). At the `m` used here (75) the dense LP and the constraint-generation loop solve the
+same problem, so the numbers stand; the `solver` column is now given explicitly rather than left implicit.
+
 ## What "pairing" means here, in plain words
 
 SynthRAD ships, for each patient, an MRI and a CT **already resampled onto the same voxel grid** — we
@@ -110,3 +116,13 @@ correctness. It could not measure recovery and no conclusion about pairing follo
 true partner present and scores against the label. `synthrad_gate.md` is retained for its data findings
 (the centre-B gadolinium signature, the preprocessing audit), but its gate verdict should be read as
 superseded by this file.
+
+## Correction (2026-10-28)
+
+- **Solver:** every learned-cost number here used `harness/solver.fit_full_lp` (dense LP, all `m*m` edges,
+  CuPDLPx). At the `m` used (75) the dense LP and the constraint-generation loop solve the same problem.
+- **Superseded by the v2 protocol** (60 fit / 15 eval patients, DEV 45, FINAL TEST 30). The sample here is
+  15/15 and small; the numbers stand as a small-sample observation only.
+- The "pairing" question was later re-scoped: **ground-truth ids are the yardstick**, and `mask_iou` /
+  `z_only` are dropped as competitors because they are tautological for registered pairs.
+- Current state and all verified numbers: `reports/STATE.md`.

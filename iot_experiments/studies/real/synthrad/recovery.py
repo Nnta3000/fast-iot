@@ -236,7 +236,7 @@ def exact_ot(cost: Float[np.ndarray, "n n"]) -> Int[np.ndarray, "n"]:
 
 
 def nmi_cost(mr: Float[np.ndarray, "n pixels"], ct: Float[np.ndarray, "n pixels"], *, size: int = 128,
-             bins: int = 32, block: int = 64) -> Float[np.ndarray, "n n"]:
+             bins: int = 32, block: int = 16) -> Float[np.ndarray, "n n"]:
     """CN: 像素互信息代价（负 MI，GPU 分块）。EN: pixel mutual-information cost (negative MI, GPU-batched)."""
     import torch  # noqa: PLC0415
 

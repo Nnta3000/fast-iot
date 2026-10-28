@@ -58,6 +58,16 @@ DEFAULT_TOL = 1e-7
 # CN: 分离容差至少是代价尺度的这个倍数，否则求解器噪声会把 F 填满。
 # EN: the separation tolerance is at least this fraction of the cost scale, otherwise solver noise fills F.
 TOL_SCALE_FRACTION = 1e-5
+# CN: **求解器地板**。CuPDLPx 的相对精度约 1e-4，因此扫描容差再紧也不会更准；`tol_eff` 必须至少是
+#     `SOLVER_FLOOR_FRACTION * cost_scale`，否则循环会把求解器噪声当成违例、反复重加同一条边、`F_t` 重复。
+#     实测：K=64 的对角代价尺度约 `1/k = 0.0156`，`tol_eff` 落在 1e-7 而求解器精度是 1e-4 ⇒ 循环报
+#     "revisited F_t"。这一项就是此前已知的 scan-tolerance 修正。
+# EN: **solver floor**. CuPDLPx's relative accuracy is about 1e-4, so a tighter scan tolerance buys nothing;
+#     `tol_eff` must be at least `SOLVER_FLOOR_FRACTION * cost_scale`, otherwise the loop treats solver noise
+#     as violations, re-adds the same edge and `F_t` repeats. Measured: at K=64 the diagonal cost scale is about
+#     `1/k = 0.0156` while `tol_eff` sat at 1e-7 against 1e-4 solver accuracy => "revisited F_t". This is the
+#     scan-tolerance fix that was pending.
+SOLVER_FLOOR_FRACTION = 1e-4
 DEFAULT_TAU = 1e-7
 IDENTITY_RTOL = 1e-10
 SelectionMode = Literal["central", "uniform", "none"]
@@ -113,6 +123,13 @@ class RegretResult:
     total_wall_time: float
     eps_r: float
     selection_max_sigma: float | None = None
+    # CN: **求解器地板**：F 内不可消除的 `s_pre` 会给出一个非零的 floor；当 `eps_r` 低于它时，
+    #     继续迭代只是在追求解器噪声，因此标记为 `solver_floor` 而不是"已收敛"或反复迭代。
+    # EN: **solver floor**: the irreducible `s_pre` inside F yields a nonzero floor; when `eps_r` is below it,
+    #     further rounds chase solver noise, so the run is marked `solver_floor` rather than "converged" or
+    #     left to spin.
+    solver_floor: float = float("nan")
+    stall_status: str = "none"
 
 
 def full_regret(problem: InverseOTProblem, theta: np.ndarray, *,
@@ -144,6 +161,53 @@ def _sigma(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.nd
         return np.zeros(0, dtype=np.float64)
     cost = np.asarray(problem.features.costs(theta, rows, cols), dtype=np.float64)
     return f[rows] + g[cols] - cost
+
+
+def _median_cost_blockwise(problem: InverseOTProblem, theta: np.ndarray, *, m: int, n: int,
+                           rows_per_block: int = 256, max_samples: int = 2_000_000) -> float:
+    """
+    CN: 用**分块流式**方式估计 uniform theta 下 `|c|` 的中位数，内存与 `m·n` 无关。
+        每个块取一个等距子样本，累积到 `max_samples` 为止；对中位数而言这个样本量远超所需。
+    EN: estimate the median of `|c|` under uniform theta by **streaming blocks**, with memory independent of
+        `m·n`. Each block contributes an equally spaced subsample, accumulated up to `max_samples`; for a
+        median this is far more than enough.
+    """
+    cols = np.arange(n)
+    chunks: list[np.ndarray] = []
+    taken = 0
+    for r0 in range(0, int(m), int(rows_per_block)):
+        r1 = min(r0 + int(rows_per_block), int(m))
+        rows = np.repeat(np.arange(r0, r1), n)
+        cols_tiled = np.tile(cols, r1 - r0)
+        block = np.abs(np.asarray(problem.features.costs(theta, rows, cols_tiled), dtype=np.float64))
+        if block.size > 20_000:
+            step = max(1, block.size // 20_000)
+            block = block[::step]
+        chunks.append(block)
+        taken += block.size
+        if taken >= int(max_samples):
+            break
+    if not chunks:
+        return 1.0
+    return float(np.median(np.concatenate(chunks)))
+
+
+def _sigma_max(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.ndarray,
+               rows: np.ndarray, cols: np.ndarray, *, block: int = 2_000_000) -> float:
+    """
+    CN: `max sigma` **分块**计算，从不一次性求值所有边。m=5000 时全边代价需要约 13 GB（实测 OOM），
+        而这里每块只保留 `block` 个值。
+    EN: `max sigma` computed **in blocks**, never evaluating all edges at once. At m=5000 the all-edge cost
+        needs ~13 GB (measured OOM); here only `block` values are live at a time.
+    """
+    if rows.size == 0:
+        return 0.0
+    worst = -np.inf
+    for start in range(0, rows.size, int(block)):
+        stop = min(start + int(block), rows.size)
+        part = _sigma(problem, theta, f, g, rows[start:stop], cols[start:stop])
+        worst = max(worst, float(part.max()))
+    return float(worst)
 
 
 def _assert_identity(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.ndarray,
@@ -250,25 +314,41 @@ def solve_inverse_ot_regret(
 
     m = int(problem.n_source)
     n = int(problem.n_target)
+    total_mass = float(np.sum(support_values))
+    # CN: 容差 = max(用户给定或默认, 1e-5 * 代价尺度)。代价尺度用 uniform theta 下 |c| 的**中位数**。
+    #
+    #     **关键**：中位数只需要一个**样本**，不需要全部 `m·n` 条边。此前一次性求值所有边，
+    #     m=5000 时需要约 13 GB（实测 OOM，进程被 kill），这才是规模瓶颈——不是 master 的规模。
+    #     这里用分块流式的**分位数估计**（保留每块的样本值），内存与 `m·n` 无关。
+    # EN: the tolerance is `max(user/default, 1e-5 * cost scale)`, the scale being the **median** of |c| at
+    #     uniform theta.
+    #
+    #     **Critical**: a median needs a **sample**, not all `m·n` edges. Evaluating every edge needed ~13 GB
+    #     at m=5000 and the process was OOM-killed; that, not the master size, is the scaling bottleneck.
+    #     A blockwise streaming quantile keeps memory independent of `m·n`.
+    probe = _uniform_theta(problem)
+    cost_scale = _median_cost_blockwise(problem, probe, m=int(m), n=int(n))
+    # CN: `all_rows/all_cols` 只用于**分块**扫描（`_sigma_max` 与 tiled 的 scan_violations），
+    #     本身只是索引数组（m=5000 时约 0.4 GB），代价矩阵从不再落地。
+    # EN: `all_rows`/`all_cols` serve the **blockwise** scan only (`_sigma_max` and the tiled
+    #     `scan_violations`); they are plain index arrays (~0.4 GB at m=5000) and the cost matrix never
+    #     materialises again.
     r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
     all_rows, all_cols = r_idx.reshape(-1), c_idx.reshape(-1)
-    total_mass = float(np.sum(support_values))
-    # CN: 容差 = max(用户给定或默认, 1e-5 * 代价尺度)。代价尺度用 uniform theta 下的 |c| 中位数。
-    # EN: tolerance = max(user/default, 1e-5 * cost scale), the scale being the median |c| at uniform theta.
-    probe = _uniform_theta(problem)
-    cost_probe = np.abs(np.asarray(problem.features.costs(probe, all_rows, all_cols),
-                                   dtype=np.float64))
-    cost_scale = float(np.median(cost_probe)) if cost_probe.size else 1.0
+    del r_idx, c_idx
     tol_eff = max(float(tol) if tol is not None else DEFAULT_TOL,
-                  float(TOL_SCALE_FRACTION) * max(cost_scale, 1e-30))
+                  float(TOL_SCALE_FRACTION) * max(cost_scale, 1e-30),
+                  float(SOLVER_FLOOR_FRACTION) * max(cost_scale, 1e-30))
 
     records: list[RegretIteration] = []
+    solver_floor_value: float = float("nan")
+    stall_status: str = "none"
     # CN: uniform theta 作为初始 best-so-far（可行点，`s=0`，`U = R_uniform`）。
     # EN: uniform theta seeds best-so-far (feasible, `s=0`, `U = R_uniform`).
     uni0 = _uniform_theta(problem)
     f_u, g_u = _best_dual_for(problem, uni0)
-    sig_u = _sigma(problem, uni0, f_u, g_u, all_rows, all_cols)
-    su = max(0.0, float(sig_u.max())) if sig_u.size else 0.0
+    sig_u_max = _sigma_max(problem, uni0, f_u, g_u, all_rows, all_cols)
+    su = max(0.0, sig_u_max)
     u_uniform = float(np.dot(regret_objective(problem)[: int(problem.n_features)], uni0)
                       - float(np.dot(problem.resolved_source_mass, f_u))
                       - float(np.dot(problem.resolved_target_mass, g_u))) + su * total_mass
@@ -311,8 +391,7 @@ def solve_inverse_ot_regret(
                                    status=solution.status)
         scan = scan_violations(problem, as_master, excluded=finite, tol=float(tol_eff),
                                gamma=int(gamma))
-        sigma_all = _sigma(problem, theta_pre, f_pre, g_pre, all_rows, all_cols)
-        s_pre = max(0.0, float(sigma_all.max()))
+        s_pre = max(0.0, _sigma_max(problem, theta_pre, f_pre, g_pre, all_rows, all_cols))
         # CN: U = R_pre + s_pre*|pi_hat|（= 修复后的 R'），这是证书的上界。
         # EN: U = R_pre + s_pre*|pi_hat| (= the repaired R'), the certified upper bound.
         r_pre = float(solution.regret_pre)
@@ -334,9 +413,25 @@ def solve_inverse_ot_regret(
             sigma_max_out_F=float(solution.sigma_max_out_F),
             solver_iterations=int(solution.solver_iterations),
             solver_status=str(solution.solver_status)))
-        if s_pre * total_mass <= eps_r:
+        # CN: **地板检测**：`s_pre * |pi_hat|` 在 F 内无法被消除（它来自求解器的精度，而非真正的违例）。
+        #     若它已经不超过 `eps_r`，即视为收敛；若连续若干轮都停在同一个 level，则判为 `solver_floor`。
+        # EN: **floor detection**: `s_pre * |pi_hat|` cannot be eliminated inside F (it comes from solver
+        #     accuracy, not a genuine violation). If it already fits under `eps_r`, that is convergence; if it
+        #     stays at the same level for several rounds, the run is marked `solver_floor`.
+        gap_now = float(s_pre * total_mass)
+        if gap_now <= eps_r:
             converged = True
+            solver_floor_value = gap_now
+            stall_status = "converged"
             break
+        if len(records) >= 3:
+            prev = [float(rec.max_sigma_all) * total_mass for rec in records[-3:-1]]
+            if prev and all(abs(g - gap_now) <= max(1e-12, 0.05 * gap_now) for g in prev):
+                # CN: 连续三轮 gap 几乎不变 ⇒ 已到求解器地板；**保留** best-so-far 并标记。
+                # EN: three rounds within 5% => at the solver floor; keep best-so-far and mark it.
+                solver_floor_value = gap_now
+                stall_status = "solver_floor"
+                break
 
         candidates = EdgeSet.from_arrays(scan.rows, scan.cols, n_target=n)
         if pruning and pruning_disabled is False:
@@ -362,8 +457,17 @@ def solve_inverse_ot_regret(
                 pruning = False
                 seen.clear()
                 continue
-            raise InverseOTError(
-                "regret loop revisited F_t without pruning; the instance or tolerances are inconsistent")
+            # CN: **同一 `F_t` 重复出现且没有新边可加** ⇒ 剩下的违例都来自求解器精度（地板），
+            #     不是真正的缺边。此时**保留 best-so-far** 并标记为 `solver_floor`，而不是抛错——
+            #     抛错会把"已到精度上限"误报成"实例/容差不一致"。实测：K=64、m=300 时 `|F|` 在 2731
+            #     条边（约 3%）后稳定，第 7 轮没有新边。
+            # EN: **the same `F_t` recurs with no new edge to add** => the remaining violations come from solver
+            #     accuracy (the floor), not from missing edges. Keep best-so-far and mark `solver_floor` instead
+            #     of raising -- raising misreports "hit the accuracy limit" as "inconsistent instance/tolerances".
+            #     Measured: at K=64, m=300 `|F|` stabilises at 2731 edges (~3%) and round 7 adds nothing.
+            solver_floor_value = float(gap)
+            stall_status = "solver_floor_no_new_edges"
+            break
         seen[fingerprint] = index
 
     # CN: 后处理改为**可选的第二阶段约束生成**，且**不替换**解：证书区间永远来自收敛的 stage-1 点。
@@ -372,7 +476,9 @@ def solve_inverse_ot_regret(
     regret_at_solution = regret
     selection_sigma: float | None = None
     if converged and selection == "central":
-        selected = _select_central_cg(problem, finite, eta=float(eta), tol=float(tol),
+        # CN: `tol=None` 时必须用**已解析的** `tol_eff`，而不是 `float(None)`（此前会在中央选择阶段崩溃）。
+        # EN: with `tol=None` use the **resolved** `tol_eff`; `float(None)` crashed the central-selection stage.
+        selected = _select_central_cg(problem, finite, eta=float(eta), tol=float(tol_eff),
                                       tau_prune=float(tau_prune), gamma=int(gamma),
                                       max_iterations=int(max_iterations), solver=solver)
         selection_sigma = float(selected)
@@ -390,16 +496,29 @@ def solve_inverse_ot_regret(
         support_size=int(support.size), iterations=tuple(records), converged=bool(converged),
         pruning_disabled=bool(pruning_disabled), pot_regret=pot_regret, pot_matches=pot_matches,
         total_wall_time=float(time.perf_counter() - start), eps_r=eps_r,
-        selection_max_sigma=selection_sigma)
+        selection_max_sigma=selection_sigma, solver_floor=float(solver_floor_value),
+        stall_status=str(stall_status))
 
 
-def _best_dual_for(problem: InverseOTProblem, theta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """CN: 可行对偶点 `f_i = min_j c_ij(theta)`，`g = 0`。EN: feasible duals `f_i = min_j c_ij`, `g = 0`."""
+def _best_dual_for(problem: InverseOTProblem, theta: np.ndarray, *, block: int = 512
+                   ) -> tuple[np.ndarray, np.ndarray]:
+    """
+    CN: 可行对偶点 `f_i = min_j c_ij(theta)`，`g = 0`。**按行分块**计算，从不落地整个 `m×n` 代价矩阵：
+        此前一次性算全部边会在 m=5000 时需要约 13 GB（实测 OOM）。
+    EN: feasible duals `f_i = min_j c_ij(theta)`, `g = 0`, computed **in row blocks** so the full `m x n` cost
+        matrix never materialises; computing all edges at once needed ~13 GB at m=5000 (measured OOM).
+    """
     m, n = int(problem.n_source), int(problem.n_target)
-    r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
-    cost = np.asarray(problem.features.costs(theta, r_idx.reshape(-1), c_idx.reshape(-1)),
-                      dtype=np.float64).reshape(m, n)
-    return cost.min(axis=1), np.zeros(n, dtype=np.float64)
+    f = np.empty(m, dtype=np.float64)
+    cols = np.arange(n)
+    for r0 in range(0, m, int(block)):
+        r1 = min(r0 + int(block), m)
+        rows = np.repeat(np.arange(r0, r1), n)
+        cols_tiled = np.tile(cols, r1 - r0)
+        block_cost = np.asarray(problem.features.costs(theta, rows, cols_tiled),
+                                dtype=np.float64).reshape(r1 - r0, n)
+        f[r0:r1] = block_cost.min(axis=1)
+    return f, np.zeros(n, dtype=np.float64)
 
 
 def select_nearest_uniform(problem: InverseOTProblem, finite: EdgeSet, *, eta: float,

@@ -10,6 +10,7 @@ The **data** column says whether a result is about **real images** (`studies/rea
 
 | report | data | question |
 | --- | --- | --- |
+| **`STATE.md`** | *—* | **START HERE: goal, decisions, verified results with paths, open items, resource rules** |
 | **`SERVER_TESTS_REPORT.md`** | *synthetic* | **consolidated A100 server runs (GPU-only target path); cite this for server results** |
 | **`REAL_PAIRS_REPORT.md`** | *real* | **inverse OT on the real T1/T2 pairs: pool recovery, controls, baselines** |
 | **`NMI_PAIRING_REPORT.md`** | *real* | **NMI + Hungarian pairing on all 1000 pairs vs whitened-DINOv2 cosine/OT vs the learned cost** |
