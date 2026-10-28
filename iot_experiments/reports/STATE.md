@@ -66,8 +66,26 @@ DEV pool, 630 slices, 45 patients, 1 draw. Chance: exact **0.0016** (1/630), pat
 
 Records: `iot_experiments/out/synthrad_cheap/records.json`, log `out/synthrad_cheap/run.log`.
 
-**Reading:** raw pixel correlation recovers the right patient 19% of the time, ~9× chance. The learned
-feature methods scored ~0.20 patient, so **learning is only marginally ahead of correlating pixels**.
+### 3.3b Pixel correlation vs features, on BOTH metrics (correction, 2026-10-28)
+
+The two metrics tell **different stories**, and the earlier wording ("learning only marginally ahead")
+was too coarse. Soft window, same DEV pool, chance 0.0016 exact / 0.022 patient:
+
+| arm | exact_hit | vs pixel corr | patient_hit | vs pixel corr |
+|---|---|---|---|---|
+| pixel correlation | 0.049 | 1× | 0.190 | 1× |
+| pixel MSE | 0.019 | 0.4× | 0.146 | 0.8× |
+| cosine nearest-neighbour | 0.111 | **2.3×** | 0.189 | 1.0× |
+| cosine + exact OT | 0.114 | **2.3×** | 0.178 | 0.9× |
+| learned cost (dense LP) | 0.140 | **2.9×** | 0.203 | 1.1× |
+| learned cost (loop) | 0.135 | **2.8×** | 0.198 | 1.0× |
+
+- **On exact-slice recovery, features win clearly**: 0.111–0.140 against 0.049 — a **2.3–2.9×** improvement
+  over pixel correlation. This is the metric that distinguishes methods.
+- **On same-patient recovery they are all ~0.19–0.20**, i.e. indistinguishable. Almost any method that finds
+  the right *level* also finds the right *patient*, so this metric saturates far too early to separate them.
+- The correct summary is therefore: **features roughly triple exact-slice recovery and buy nothing on
+  patient recovery at this pool size.**
 
 ### 3.4 Paired soft-vs-bone table (same patients, same pool, same draw)
 
@@ -161,7 +179,21 @@ Measured results of trying to cap a 2 GB allocation at a 1 GB limit:
 | `systemd-run --user --scope -p MemoryMax=1G` | **unavailable** | `Failed to connect to user scope bus`; with `XDG_RUNTIME_DIR=/run/user/1000` set: `Operation not permitted` |
 | cgroup v2 child creation | **unavailable** | `mkdir /sys/fs/cgroup/...` → Permission denied; current scope's `memory.max` is `max` and not writable |
 
-**Conclusion: no hard memory limit can be enforced in this session.** Therefore the rules are manual:
+**Conclusion: no hard memory limit can be enforced by the OS in this session.** Protection therefore has
+two layers:
+
+**Launcher (`iot_experiments/scripts/run_job.sh`).**
+- records each job's exit code in `cache/jobs/<name>.state`;
+- **refuses to start the same command again** if the last run failed, unless `--ack` is passed;
+- checks `MemAvailable` first and refuses if `< budget + 2 GB`;
+- runs `nice -n 19 ionice -c3`; no address-space limit (it would break CUDA).
+
+**Watchdog (`iot_experiments/harness/watchdog.py`).** A daemon thread in the driver that aborts with
+`os._exit(125)` if either the process RSS exceeds the stated budget or system `MemAvailable` drops below
+1.5 GB. **Measured: it trips correctly** (allocating 2.4 GB under a 0.5 GB budget aborted at 2.08 GB with
+exit 125) and does not fire on normal completion.
+
+Manual rules on top of those:
 
 1. **State the memory need before every job** and check `MemAvailable` in `/proc/meminfo`.
 2. **Do not launch** if estimate + 2 GB > available.
@@ -226,3 +258,32 @@ Every study writes `run.log` and `records.json` into `iot_experiments/out/<study
 - "Roughly halving" for the bone window is **true only for pixel exact-recovery** (−52%); patient-level
   recovery drops 8–15%. No feature-arm paired numbers exist.
 - The first pair-recovery study (15/15 patients) is **superseded**; its numbers are small-sample.
+
+---
+
+## 10. Backlog (do NOT start without approval)
+
+### 10.1 Tile the sigma scan so memory is not `O(m²)`
+
+The loop evaluates `sigma = f + g - c` over **all** `m·n` edges every round, so memory is `O(m²)`
+regardless of `|F|`. That is why m ≥ 3000 is not runnable here. The fix:
+- scan in **row blocks**, maintaining a **running top-`gamma` per row and per column** across blocks;
+- never materialise the full cost matrix or the full `sigma` array;
+- memory then becomes `O(block · n + gamma · (m + n))`.
+
+**Done already** (partial): `_sigma_max` and the median cost-scale probe are blockwise, and
+`_best_dual_for` is blocked. The violation scan itself still needs the running-top-`gamma` change.
+
+### 10.2 Explain the 7.8 s → 185 s step from m=600 to m=2000
+
+The time grew **24×** while `m` grew 3.3× and `|F|` grew 3.9×. `O(m·n)` scan work alone would predict
+~11×; the extra factor is unexplained. Three candidates to separate, measured per round rather than
+guessed:
+1. **`|F|` growth** — 6,689 → 26,163 edges (×3.9); the LP is solved on `F`, so this scales with `|F|`,
+   not `m²`.
+2. **LP time vs scan time** — currently only a single `wall_time` per round is recorded. Each round
+   needs its master solve timed **separately** from its scan.
+3. **Per-round count** — 10 → 12 rounds (×1.2), which explains little.
+
+Action if approved: instrument `RegretIteration` with `master_s` and `scan_s`, rerun m = 600 and 2000,
+and report the split. No new code paths, no larger m.
