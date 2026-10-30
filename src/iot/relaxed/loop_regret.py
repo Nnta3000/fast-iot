@@ -264,6 +264,8 @@ def solve_inverse_ot_regret(
     scan_device: str = "auto",
     scan_max_tile_bytes: int = 1 << 26,
     warm_start: bool = False,
+    hierarchical: "HierarchyParameters | None" = None,
+    _flat_only: bool = False,
 ) -> RegretResult:
     """
     CN: 求解 §2 的松弛逆 OT。
@@ -290,6 +292,27 @@ def solve_inverse_ot_regret(
         identity_rtol = 1e-8 if backend == "cupdlpx" else IDENTITY_RTOL
     support_rows, support_cols, support_values = problem.support()
     support = EdgeSet.from_arrays(support_rows, support_cols, n_target=int(problem.n_target))
+    # CN: **层级入口**。`hierarchical=None`（默认）走原来的扁平路径，逐位不变。
+    # EN: **hierarchical entry**. With `hierarchical=None` (default) the flat path runs unchanged.
+    if hierarchical is not None and not bool(_flat_only):
+        from ..hierarchical import solve_hierarchical  # noqa: PLC0415
+
+        run = solve_hierarchical(
+            problem,
+            lambda p, initial: solve_inverse_ot_regret(
+                p, tol=tol, tau_prune=tau_prune, gamma=gamma, max_iterations=max_iterations,
+                master=master, eps_r_rel=eps_r_rel, prune=prune,
+                prune_hysteresis=prune_hysteresis, selection=selection, eta=eta,
+                check_pot=check_pot, initial_extra=initial, identity_rtol=identity_rtol,
+                scan_backend=scan_backend, scan_device=scan_device,
+                scan_max_tile_bytes=scan_max_tile_bytes, warm_start=warm_start,
+                hierarchical=None, _flat_only=True),
+            hierarchical,
+            mandatory_of=lambda p: mandatory_edges(p)[0])
+        result = run.fine
+        if not isinstance(result, RegretResult):
+            raise InverseOTError("hierarchical fine level did not return a RegretResult")
+        return result
     mandatory, _partition = mandatory_edges(problem)
     finite = mandatory if initial_extra is None else mandatory.union(initial_extra)
     if not np.all(np.isin(support.keys, finite.keys)):

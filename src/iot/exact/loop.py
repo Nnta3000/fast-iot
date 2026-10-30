@@ -72,6 +72,7 @@ def _prune_by_slack(
 def solve_inverse_ot(
     problem: InverseOTProblem,
     *,
+    _flat_only: bool = False,
     tol: float = 1e-9,
     tau_prune: float = 1e-12,
     gamma: int = 1,
@@ -92,6 +93,7 @@ def solve_inverse_ot(
     scan_backend: str = "numpy",
     scan_device: str = "auto",
     scan_max_tile_bytes: int = 64 * 1024 * 1024,
+    hierarchical: "HierarchyParameters | None" = None,
 ) -> InverseOTResult:
     """
     CN: 求解逆 OT：返回使 pi_hat 最优的 max-margin theta（约束生成）。
@@ -116,6 +118,30 @@ def solve_inverse_ot(
         raise ValueError("tol and tau_prune must be nonnegative")
     if str(scan_backend) not in ("numpy", "hello", "torch"):
         raise ValueError("scan_backend must be 'numpy', 'hello' or 'torch'")
+    # CN: **层级入口**。`hierarchical=None`（默认）时完全走原来的扁平路径，结果逐位不变。
+    #     给了参数则粗到细求解，细层仍调用**本函数**（`_flat_only=True` 防止递归）。
+    # EN: **hierarchical entry**. With `hierarchical=None` (default) the original flat path runs unchanged,
+    #     bit for bit. With parameters, solve coarse to fine, and the fine level calls **this function**
+    #     again (`_flat_only=True` prevents recursion).
+    if hierarchical is not None and not bool(_flat_only):
+        from ..hierarchical import solve_hierarchical  # noqa: PLC0415
+
+        run = solve_hierarchical(
+            problem,
+            lambda p, initial: solve_inverse_ot(
+                p, tol=tol, tau_prune=tau_prune, gamma=gamma, tie_break=tie_break,
+                max_iterations=max_iterations, solver=solver, random_seed=random_seed,
+                validate=validate, validate_max_elements=validate_max_elements,
+                max_tile_elements=max_tile_elements, prune=prune,
+                prune_hysteresis=prune_hysteresis, scan_backend=scan_backend,
+                scan_device=scan_device, scan_max_tile_bytes=scan_max_tile_bytes,
+                hierarchical=None, _flat_only=True),
+            hierarchical,
+            mandatory_of=lambda p: mandatory_edges(p)[0])
+        result = run.fine
+        if not isinstance(result, InverseOTResult):
+            raise InverseOTError("hierarchical fine level did not return an InverseOTResult")
+        return result
     if solver is not None:
         master_solver: MasterSolver = solver
     elif tie_break == "lex_generic":

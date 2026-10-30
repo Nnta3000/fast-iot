@@ -1,6 +1,28 @@
-# Stage 0 / Stage 1 report: does a coarse-to-fine hierarchy pay for inverse OT?
+# Stage 0 / Stage 1 report: does coarse-to-fine warming pay for inverse OT?
 
-**Status: NEGATIVE.** The hierarchy was built, run, and **fails the pre-registered criterion**
+> **This report covers the RELAXED hierarchical variant only.**
+>
+> Every Stage 1 run used `solve_inverse_ot_regret` at **both** the coarse and the fine level: the
+> relaxed regret master with an inequality on all of `F`. **The exact hierarchical algorithm was
+> never run here.** That matters, because the Typst note (§5) is explicit that for the regret master
+> there is **no analogue of Lemma 2 and no finite-termination theorem**, so the coarse levels are
+> *warm starts only, with no bounds*.
+>
+> Consequently this report tests **none** of the hierarchy's proof:
+>
+> | claim | exercised here? |
+> | --- | --- |
+> | Lemma 2 (`δ*_{ℓ+1} ≥ δ*_ℓ`, restriction is a relaxation) | **no** — needs the exact master |
+> | Corollary 3 (monotone bounds, infeasibility propagation) | **no** |
+> | Theorem 6(b) (output identical to flat) | **no** — grow-only leaves θ unconstrained |
+> | Lemma 5 (seed admissible, `B ⊆ F₀`) | yes |
+>
+> The exact variant is now implemented in `src/iot/hierarchical/` and tested on **synthetic,
+> planted** instances in `tests/iot_hierarchical_test.py`, which is where Lemma 2, Corollary 3 and
+> Theorem 6(b) are actually checked. The verdict below should be read as *"relaxed two-level
+> warming is 1.6–1.9× slower than flat on SynthRAD"*, not as a verdict on the hierarchy as proved.
+
+**Status: NEGATIVE (relaxed variant).** Two-level warming was built, run, and **fails the pre-registered criterion**
 (`hier ≤ 0.70 × best cheap baseline`). The two cheap alternatives also gave far less than hoped
 (γ tuning 21 %, warm start 4 %). Details and exact configurations below.
 
@@ -53,7 +75,30 @@ Sound because `LpLayout` depends only on `(has_delta, n_features, n_source, n_ta
 `|F|`** — so the previous `x` is dimensionally valid for the next round; only the constraint rows
 change. The binding requires `setInitSol(x0, y0)`; the dual is passed as `None`.
 
-### 1.6 Per-round timing and the Stage 0 / Stage 1 drivers
+### 1.6 `src/iot/hierarchical/` — the library home (added after the report was first written)
+
+The hierarchy originally lived **only** inside a study driver, which was the one-off-driver pattern
+the project forbids. It now lives in the library and is reachable from both solvers by a keyword:
+
+```python
+from iot.hierarchical import HierarchyParameters
+from iot.exact.loop import solve_inverse_ot
+
+solve_inverse_ot(problem, hierarchical=HierarchyParameters(rho=0.25, kappa=3))
+```
+
+| file | contents |
+| --- | --- |
+| `hierarchical/parameters.py` | `HierarchyParameters(rho, max_levels, grid_budget, kappa, level_seed, carry)` |
+| `hierarchical/levels.py` | `Level`, `full_level`, `coarsen`, `build_levels` (edge sampling; rejects a draw whose induced support fills the grid) |
+| `hierarchical/transfer.py` | `prolong` (dual completion, `f` before `g`), `seed` (`B ∪ A_row ∪ A_col`) |
+| `hierarchical/__init__.py` | `solve_hierarchical` — the driver, with the **level solver injected** so the exact and relaxed variants cannot diverge |
+
+`solve_inverse_ot(..., hierarchical=...)` and `solve_inverse_ot_regret(..., hierarchical=...)` both
+dispatch through the same code; the fine level calls the same solver with `_flat_only=True` to prevent
+recursion. With `hierarchical=None` (the default) both are **bit-identical to before**.
+
+### 1.7 Per-round timing and the Stage 0 / Stage 1 drivers
 
 - `RegretIteration` gained `master_time` / `scan_time` (measurement only).
 - `studies/real/synthrad/stage0_pivot.py` — master-vs-scan share, γ sweep, warm-start switch.
@@ -192,8 +237,12 @@ is 11–14, because the coarse problem's θ is not the fine θ that pins the bin
   4× oversized `F₀`.
 - **κ = 1 / ρ = 0.5 was not run.** It is the one variant that could change the answer by making
   `F₀` smaller, but κ = 1 still adds `2(m+n)`.
-- **Not tested:** planted δ* > 0 instances (where the bounds chain is informative), and the
-  decision regime at larger m, per the pre-registration.
+- **Planted δ* > 0 instances: now tested** (`tests/iot_hierarchical_test.py`): monotone bounds hold
+  across levels and hierarchical δ equals flat δ on synthetic instances with the exact loop. That is
+  the correctness evidence the proved algorithm needed, and it is **separate** from the SynthRAD
+  timing verdict above.
+- **Still not tested:** the exact hierarchy's *speed* on a synthetic instance at scale (only its
+  correctness), and the decision regime at larger m.
 
 ## 5. Recommendation
 
