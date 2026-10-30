@@ -235,7 +235,67 @@ class RelaxedObjective:
             raise ValueError(f"identity_rtol must be > 0 when given, got {self.identity_rtol!r}")
 
 
-Objective = ExactObjective | RelaxedObjective
+@dataclasses.dataclass(frozen=True)
+class EntropicObjective:
+    """
+    CN: **熵 OT 目标**：`min L_ε(θ) = <C_θ, π̂> - <C_θ, P_ε(θ)>`，`P_ε` 由 Sinkhorn 给出。
+
+    EN: **Entropic objective**: `min L_eps(theta) = <C_theta, pi_hat> - <C_theta, P_eps(theta)>` with
+        `P_eps` from Sinkhorn.
+
+    CN: **这不是证书。** 没有 `delta`、没有区间；它给的是"熵正则化模型下最可能的 θ"。
+        与精确/松弛循环不同，它没有 master。存在的理由是**泛化**：软、稠密、条件数好，
+        正是精确 master 不可行的实例所需要的。
+
+    EN: **This is not a certificate.** No `delta`, no bracket; it returns "the most likely theta under a
+        regularised model". Unlike the exact/relaxed loops there is no master. It exists for
+        **generalisation**: soft, dense, well-conditioned plans, exactly what instances with an infeasible
+        exact master need.
+
+    CN: 字段：
+        - `relative_epsilon`：**相对** ε，内部乘以 `std(C_θ)`。`Σθ = 1` 固定了代价尺度，所以绝对 ε
+          在 K=64 与 K=2080 上不可比。小 ε 更接近无正则化，但 Sinkhorn 迭代数急剧上升
+          （实测：1.0→9 步、0.5→25、0.2→196、0.1→>5000）。
+        - `learning_rate`：θ 的投影梯度步长。
+        - `max_steps`：外层步数上限。
+        - `sinkhorn_iterations` / `sinkhorn_tolerance`：内层 Sinkhorn 的上限与**边缘质量**容差。
+        - `gradient_tolerance`：`‖∇L‖_∞` 达到即收敛（梯度是"观测矩 − 模型矩"，与尺度同单位）。
+        - `device`：torch 设备（`"auto"` 取第一个可用 GPU）。
+
+    EN: Fields:
+        - `relative_epsilon`: **relative** epsilon, multiplied internally by `std(C_theta)`. `sum(theta) = 1`
+          fixes the cost scale, so an absolute epsilon is not comparable across K=64 and K=2080. Smaller
+          epsilon approaches the unregularised problem but the Sinkhorn iteration count rises sharply
+          (measured: 1.0 -> 9 steps, 0.5 -> 25, 0.2 -> 196, 0.1 -> >5000).
+        - `learning_rate`: projected-gradient step on theta.
+        - `max_steps`: outer step cap.
+        - `sinkhorn_iterations` / `sinkhorn_tolerance`: inner Sinkhorn cap and **marginal-mass** tolerance.
+        - `gradient_tolerance`: converge when `||grad L||_inf` reaches it (the gradient is "observed minus
+          model moment", in cost units).
+        - `device`: torch device (`"auto"` takes the first available GPU).
+    """
+
+    relative_epsilon: float = 0.25
+    learning_rate: float = 1.0
+    max_steps: int = 200
+    sinkhorn_iterations: int = 5000
+    sinkhorn_tolerance: float = 1e-9
+    gradient_tolerance: float = 1e-8
+    device: str = "auto"
+
+    def __post_init__(self) -> None:
+        """CN: 早失败。EN: fail early."""
+        if float(self.relative_epsilon) <= 0.0:
+            raise ValueError(f"relative_epsilon must be > 0, got {self.relative_epsilon!r}")
+        if float(self.learning_rate) <= 0.0:
+            raise ValueError(f"learning_rate must be > 0, got {self.learning_rate!r}")
+        if int(self.max_steps) < 1:
+            raise ValueError(f"max_steps must be >= 1, got {self.max_steps!r}")
+        if int(self.sinkhorn_iterations) < 1:
+            raise ValueError(f"sinkhorn_iterations must be >= 1, got {self.sinkhorn_iterations!r}")
+
+
+Objective = ExactObjective | RelaxedObjective | EntropicObjective
 """CN: 目标函数是 union，`match` 可穷尽。EN: the objective is a union, so `match` is exhaustive."""
 
 
@@ -286,6 +346,7 @@ class SolverParameters:
 
 
 __all__ = [
-    "Objective", "ExactObjective", "PruningParameters", "RelaxedObjective", "ScanParameters",
+    "EntropicObjective", "Objective", "ExactObjective", "PruningParameters", "RelaxedObjective",
+    "ScanParameters",
     "SelectionMode", "SolverParameters", "TAU_PRUNE_DEFAULT", "TieBreak",
 ]

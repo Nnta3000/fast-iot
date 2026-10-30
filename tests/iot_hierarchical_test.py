@@ -178,3 +178,106 @@ def test_hierarchy_parameters_reject_bad_values() -> None:
     for bad in ({"rho": 0.0}, {"rho": 1.0}, {"max_levels": 0}, {"grid_budget": 0}, {"kappa": 0}):
         with pytest.raises(ValueError):
             HierarchyParameters(**bad)
+
+
+# ---------------------------------------------------------------------------------------
+# Entropic family (src/iot/entropic)
+# ---------------------------------------------------------------------------------------
+def test_gpu_sinkhorn_matches_the_numpy_reference() -> None:
+    """
+    CN: torch Sinkhorn 与 NumPy 参考实现一致（`alternatives/entropic.py`）。
+    EN: torch Sinkhorn agrees with the NumPy reference (`alternatives/entropic.py`).
+    """
+    from iot.alternatives.entropic import sinkhorn_plan_with_potentials  # noqa: PLC0415
+    from iot.entropic import sinkhorn_plan_torch  # noqa: PLC0415
+
+    rng = np.random.default_rng(0)
+    m = n = 24
+    cost = rng.normal(size=(m, n))
+    a = np.full(m, 1.0 / m)
+    b = np.full(n, 1.0 / n)
+    for rel in (1.0, 0.5):
+        mine = sinkhorn_plan_torch(cost, a, b, relative_epsilon=rel, device="cpu")
+        ref = sinkhorn_plan_with_potentials(cost, a, b, epsilon=rel * float(cost.std()),
+                                            max_iterations=20000, tolerance=1e-12)
+        assert np.abs(mine.plan - np.asarray(ref.plan)).max() < 1e-8
+        assert abs(float(mine.plan.sum()) - 1.0) < 1e-9
+
+
+def test_sinkhorn_uses_a_relative_epsilon() -> None:
+    """
+    CN: ε 是**相对**量：绝对正则化 = `relative_epsilon * std(cost)`，且 std 写进结果。
+        （上游 HELLO-OT 的同一约定；`Σθ=1` 固定了代价尺度，绝对 ε 跨 K 不可比。）
+    EN: epsilon is **relative**: the absolute regularisation is `relative_epsilon * std(cost)`, and the std
+        is returned. (Same convention as upstream HELLO-OT; `sum(theta)=1` fixes the cost scale, so an
+        absolute epsilon is not comparable across K.)
+    """
+    from iot.entropic import sinkhorn_plan_torch  # noqa: PLC0415
+
+    rng = np.random.default_rng(1)
+    m = n = 16
+    a = np.full(m, 1.0 / m)
+    b = np.full(n, 1.0 / n)
+    small = rng.normal(size=(m, n))
+    large = 10.0 * small
+    one = sinkhorn_plan_torch(small, a, b, relative_epsilon=0.5, device="cpu")
+    two = sinkhorn_plan_torch(large, a, b, relative_epsilon=0.5, device="cpu")
+    assert one.regularization == pytest.approx(0.5 * one.cost_std)
+    assert two.regularization == pytest.approx(10.0 * one.regularization, rel=1e-9)
+    # CN: 缩放代价不改变相对 ε 下的**方案形状**，只改变绝对正则化。
+    # EN: scaling the cost leaves the plan shape unchanged at fixed relative epsilon.
+    assert np.abs(one.plan - two.plan).max() < 1e-9
+
+
+def test_entropic_recovers_a_planted_theta_as_epsilon_falls() -> None:
+    """
+    CN: 熵 OT 的回归测试：ε 越小，θ 越接近植入的 θ*（O(ε) 偏差，符合预期）。
+        **它不给证书**，所以这里只断言偏差**单调下降**，不断言精确恢复。
+    EN: regression test for the entropic fit: smaller epsilon gets closer to the planted theta* (O(epsilon)
+        bias, as expected). It **does not certify**, so this asserts the bias falls monotonically, not that
+        recovery is exact.
+    """
+    import ot  # noqa: PLC0415
+    import scipy.sparse as sparse  # noqa: PLC0415
+
+    from iot import DiagonalWeightFeatures  # noqa: PLC0415
+    from iot.core.theta import SimplexTheta  # noqa: PLC0415
+    from iot.entropic import EntropicObjective, solve_entropic  # noqa: PLC0415
+
+    rng = np.random.default_rng(0)
+    m = n = 30
+    d = 4
+    x = rng.normal(size=(m, d))
+    y = rng.normal(size=(n, d))
+    theta_star = np.abs(rng.normal(size=d))
+    theta_star = theta_star / theta_star.sum()
+    features = DiagonalWeightFeatures(x, y)
+    rows = np.repeat(np.arange(m), n)
+    cols = np.tile(np.arange(n), m)
+    cost = np.asarray(features.costs(theta_star, rows, cols)).reshape(m, n)
+    plan = ot.emd(np.full(m, 1 / m), np.full(n, 1 / n), cost, numItermax=10**7)
+    problem = InverseOTProblem(features=features, theta_set=SimplexTheta(dimension=d),
+                               plan=sparse.csr_matrix(plan))
+    errors = []
+    for rel in (0.5, 0.2):
+        res = solve_entropic(problem, objective=EntropicObjective(relative_epsilon=rel,
+                                                                  learning_rate=0.05, max_steps=150,
+                                                                  sinkhorn_iterations=20000,
+                                                                  gradient_tolerance=1e-9))
+        errors.append(float(np.abs(res.theta - theta_star).sum()))
+    assert errors[-1] < errors[0], f"entropic bias should fall with epsilon, got {errors}"
+
+
+def test_entropic_objective_carries_no_certificate_fields() -> None:
+    """
+    CN: 熵目标**没有**证书字段（没有 `delta`、没有 `tol` 区间的语义）；它是第三个目标函数而已。
+    EN: the entropic objective has **no** certificate fields (no `delta`, no bracket semantics); it is just a
+        third objective.
+    """
+    from iot.core.parameters import EntropicObjective  # noqa: PLC0415
+
+    obj = EntropicObjective()
+    for banned in ("tol", "eps_r_rel", "tie_break", "validate"):
+        assert not hasattr(obj, banned), f"{banned} does not belong to the entropic objective"
+    with pytest.raises(ValueError):
+        EntropicObjective(relative_epsilon=0.0)
