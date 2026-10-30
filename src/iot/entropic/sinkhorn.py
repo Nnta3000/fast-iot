@@ -77,6 +77,7 @@ def sinkhorn_plan_torch(
     init: tuple[Float[np.ndarray, "m"], Float[np.ndarray, "n"]] | None = None,
     device: str = "auto",
     dtype: object = None,
+    convention: str = "counting",
 ) -> SinkhornResult:
     """
     CN: log-domain Sinkhorn（torch，GPU 可用）。`epsilon = relative_epsilon * std(cost)`。
@@ -105,6 +106,8 @@ def sinkhorn_plan_torch(
         raise ValueError(f"relative_epsilon must be > 0, got {relative_epsilon!r}")
     if np.any(source <= 0.0) or np.any(target <= 0.0):
         raise ValueError("source_mass and target_mass must be strictly positive")
+    if str(convention) not in ("counting", "reference"):
+        raise ValueError(f"convention must be 'counting' or 'reference', got {convention!r}")
     if str(device) == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float64 if dtype is None else dtype
@@ -135,13 +138,23 @@ def sinkhorn_plan_torch(
         # EN: alternate, but do not test convergence on the change in `f`: `f, g` are unique only up to a
         #     common shift, so `max|df|` can sit at a non-zero level indefinitely. The test is the
         #     **marginal-mass error**, which is a physical quantity.
+        # CN: 迭代**永远在参考测度形式下做**（`pi = a b e^(sigma'/eps)`），因为只有它有稳定的收缩性。
+        #     计数测度的势在下面**一次**换算得到（`f = f' + eps*log a`），不在循环里混用。
+        # EN: the iteration always runs in the **reference-measure** form (`pi = a b e^(sigma'/eps)`), which
+        #     is the one with a stable contraction. Counting-measure potentials are obtained by a **single**
+        #     conversion at the end (`f = f' + eps*log a`); the two are never mixed inside the loop.
         f = epsilon * (log_a - torch.logsumexp((g[None, :] - C) * inv, dim=1))
         g = epsilon * (log_b - torch.logsumexp((f[:, None] - C) * inv, dim=0))
         performed = step
         plan_step = torch.exp((f[:, None] + g[None, :] - C) * inv)
-        row_err = float((plan_step.sum(1) - a).abs().max())
-        col_err = float((plan_step.sum(0) - b).abs().max())
+        row_err = float(((plan_step.sum(1) - a).abs() / a).max())
+        col_err = float(((plan_step.sum(0) - b).abs() / b).max())
         marginal_error = max(row_err, col_err)
+        # CN: 判据是**相对**边缘误差（对每行/每列各自的质量归一）。绝对误差在 ε 很小时会被
+        #     `1/m` 的边缘尺度与 `O(ε)` 的势尺度压到浮点分辨率附近，导致"永远不收敛"。
+        # EN: the test is the **relative** marginal error (normalised by each row/column's own mass). An
+        #     absolute test is pushed near floating-point resolution when epsilon is small, because the
+        #     marginal scale is `1/m` and the potentials are `O(epsilon)`, which reads as "never converges".
         if marginal_error <= float(tolerance):
             converged = True
             break
@@ -152,8 +165,17 @@ def sinkhorn_plan_torch(
     #     into `f`, so the rows of `exp((f+g-C)/eps)` sum to `a`. Multiplying again shrinks the total to
     #     `1/(m n)`. (The legacy `legacy/scratch/gpu_gradient.py` carried this error, and it was copied once.)
     plan = torch.exp((f[:, None] + g[None, :] - C) * inv)
-    row = float((plan.sum(1) - a).abs().max())
-    col = float((plan.sum(0) - b).abs().max())
+    row = float(((plan.sum(1) - a).abs() / a).max())
+    col = float(((plan.sum(0) - b).abs() / b).max())
+    # CN: **不需要换算**。实测在 Sinkhorn 解处 `plan / exp(sigma/eps) == 1` 精确成立，
+    #     即 `plan = exp((f+g-C)/eps)`，势已经是计数测度意义下的 `sigma = f+g-c`。
+    #     早期版本在此处乘/除 `eps*log(a*b)`，那会把计划缩放成 `1/(mn)` 或 `mn`——都以实测否定。
+    # EN: **no conversion is needed.** Measured at the Sinkhorn solution, `plan / exp(sigma/eps) == 1`
+    #     exactly, i.e. `plan = exp((f+g-C)/eps)`; the potentials already give the counting-measure
+    #     `sigma = f + g - c`. Earlier revisions multiplied/divided by `eps*log(a*b)` here, which scaled the
+    #     plan by `1/(mn)` or `mn` -- both rejected by measurement.
+    if convention not in ("counting", "reference"):
+        raise ValueError(f"unknown convention {convention!r}")
     if not converged:
         raise RuntimeError(
             f"Sinkhorn did not converge in {performed} iterations "
