@@ -106,7 +106,7 @@ independent ranking. `R@1` and `recovered` are not interchangeable measures.
 **Confidence works — the earlier negative was a scorer bug.** The earlier measurement reported
 precision staying within ±0.08 of the overall rate at every coverage, i.e. no ordering information.
 That run scored against **shuffled column ids** instead of `argsort(perm)` (the index bug documented in
-`SERVER_TESTS_REPORT.md` §6.6); with the index fixed and the geometry set to G2 (standardise-then-L2),
+`current/SERVER_TESTS_REPORT.md` §6.6); with the index fixed and the geometry set to G2 (standardise-then-L2),
 confidence carries real signal.
 
 K=256, G2, m ∈ {100, 300}, 3 draws each (`studies/pool`; `P@100 = hit` asserted per record).

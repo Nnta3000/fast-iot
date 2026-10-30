@@ -67,7 +67,7 @@ improves 1.1–1.25× — bounded now entirely by the CPU master.
 - **The CPU scan bottleneck is gone.** 10–16× lower oracle time in-loop; the loop is now
   master-bound.
 - **What remains non-GPU:** the HiGHS master and the assembly/prune bookkeeping. Pairing this with
-  the CuPDLPx master (`CUPDLPX_MASTER_REPORT.md`) would in principle make the loop fully GPU, but
+  the CuPDLPx master (`components/CUPDLPX_MASTER_REPORT.md`) would in principle make the loop fully GPU, but
   CuPDLPx is currently slower than HiGHS and needs `prune=False`, so the pair is not a win today.
 - **Scope:** only `DiagonalWeightFeatures` maps to the inner-product scan today; other families
   fall back to NumPy. Low-rank/bilinear/quadratic families can be added with the same identity

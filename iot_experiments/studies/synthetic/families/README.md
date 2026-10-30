@@ -29,4 +29,4 @@ Outputs land in `out/` (git-ignored).
 The `gmm` structure (fractional plan, `p=1`, few iterations) carries over to quadratic and
 low-rank. On `bilinear-psd`, the marginals matter qualitatively: under uniform marginals
 (`p=n`) the SDP master does not converge at `n≥8`, while under non-uniform marginals (`p=1`)
-it converges in a few iterations up to `n=128`. See `../reports/FAMILY_REPORT.md`.
+it converges in a few iterations up to `n=128`. See `../reports/superseded/FAMILY_REPORT.md`.

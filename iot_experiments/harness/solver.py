@@ -18,7 +18,7 @@ import scipy.sparse as sparse
 from jaxtyping import Bool, Float, Int
 
 from iot.core.edges import EdgeSet
-from iot.core.features import DiagonalWeightFeatures
+from iot.core.features import DiagonalWeightFeatures, FeatureMap
 from iot.core.problem import InverseOTProblem
 from iot.core.theta import LinearThetaConstraints
 from iot.relaxed.master_regret import RegretMasterSolver, regret_objective
@@ -152,17 +152,38 @@ def rank_metrics(cost: Float[np.ndarray, "n n"]) -> dict[str, float]:
 
 
 def fit_full_lp(xl: Float[np.ndarray, "m k"], yl: Float[np.ndarray, "m k"], *,
-                solver: str, solve_limit_s: float, box_relative: float = 0.25) -> FitResult:
+                solver: str, solve_limit_s: float, box_relative: float = 0.25,
+                features: FeatureMap | None = None) -> FitResult:
     """
     CN: 在全部 `m·m` 边上解一次 LP（Θ = box ∩ simplex）。失败时 `status` 以 `FAILED` 开头，
         **绝不**回退成 uniform θ。
+
+        CN: `features` 允许使用**任意** `FeatureMap`（对角、二次、低秩……），默认 `None` 表示
+            `DiagonalWeightFeatures`，因此所有既有调用与已发布结果**逐位不变**。Θ 的维度取自
+            `features.n_features`，而不是 `xl.shape[1]`：对二次族二者不同（`d(d+1)/2` vs `d`）。
+        CN: 注意 `m` 是**方案**的维度（对角选择），`xl`/`yl` 可以与它不同长；只有 `features` 的
+            行列数必须与之相符。
     EN: one LP solve over all `m*m` edges (Θ = box ∩ simplex). On failure `status` starts with `FAILED`;
         it **never** falls back to uniform theta.
+
+        `features` accepts **any** `FeatureMap` (diagonal, quadratic, low-rank, ...); the default `None`
+        means `DiagonalWeightFeatures`, so every existing caller and published result is **bit-identical**.
+        The theta dimension comes from `features.n_features`, not `xl.shape[1]`: for the quadratic family
+        those differ (`d(d+1)/2` vs `d`).
     """
-    k = int(xl.shape[1])
     m = int(xl.shape[0])
+    family: FeatureMap = DiagonalWeightFeatures(xl, yl) if features is None else features
+    # CN: 方案是对角 m x m，所以 `features` 必须是 m x m；`xl`/`yl` 自己的行数不参与检查
+    #     （允许调用方传入更长的点集再取子集）。
+    # EN: the plan is the m x m diagonal, so `features` must be m x m; `xl`/`yl` row counts are not
+    #     checked (callers may pass a longer point set and subset it).
+    if int(family.n_source) != m or int(family.n_target) != m:
+        raise MetricsError(
+            f"features shape ({family.n_source}, {family.n_target}) does not match the "
+            f"{m} x {m} diagonal plan")
+    k = int(family.n_features)
     plan = sparse.csr_matrix((np.full(m, 1.0 / m), (np.arange(m), np.arange(m))), shape=(m, m))
-    problem = InverseOTProblem(features=DiagonalWeightFeatures(xl, yl),
+    problem = InverseOTProblem(features=family,
                                theta_set=box_simplex(k, box_relative=box_relative), plan=plan)
     r: Int[np.ndarray, "m m"]
     c: Int[np.ndarray, "m m"]

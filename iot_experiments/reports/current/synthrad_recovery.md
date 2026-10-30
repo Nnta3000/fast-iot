@@ -106,14 +106,14 @@ exactly this purpose.
 
 ## Files
 
-`records.json`, `run.log` (self-written), committed in `reports/synthrad_probe/`. Code:
+`records.json`, `run.log` (self-written), committed in `out/records/synthrad_probe/`. Code:
 `studies/real/synthrad/recovery.py`, encoders in `harness/dinov2.py`.
 
 ## This supersedes the earlier "GATE 1 FAILED"
 
 The previous test deliberately excluded the true partner from the pool and scored compatibility instead of
 correctness. It could not measure recovery and no conclusion about pairing followed from it. This one has the
-true partner present and scores against the label. `synthrad_gate.md` is retained for its data findings
+true partner present and scores against the label. `superseded/synthrad_gate.md` is retained for its data findings
 (the centre-B gadolinium signature, the preprocessing audit), but its gate verdict should be read as
 superseded by this file.
 

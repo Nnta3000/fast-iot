@@ -1,0 +1,63 @@
+# pruning_sweep — hysteresis + regularized vs no pruning: |F| growth, time, memory.
+# GPU-only (hello scan + cupdlpx master). Planted Monge instances (exact, no OT solver).
+#
+# QUESTION: with a *working* pruning strategy (hysteresis + regularized tie-break, the 4/4 winner),
+#   how does |F| grow vs prune=none, and what does it cost in time and memory? Sweep the axis
+#   parameters and compare every arm against its prune=none baseline (each job records both).
+#
+# READ-OUTS (in planting_sweep.json per record): max_support_over_m_plus_n, final_support_over_m_plus_n,
+#   peak_memory_mb, mean master/scan seconds (from the trajectory), solve_seconds, converged, is_optimal.
+#
+# AXES (kept small on purpose -- one question per job):
+#   prune strategy  : none | hysteresis | hysteresis+regularized
+#   epsilon  (reg)  : 3e-5, 1e-4, 3e-4           (1e-4 works, 1e-6 fails -> locate the window)
+#   tau_prune       : 1e-12, 1e-3, 1e-1          (1e-12 default; larger = more conservative)
+#   time budget t   : 60, 300                    (60 = comparable to the no_prune batch; 300 = validated)
+#   tie-break       : none | regularized
+#   tol_sep         : 1e-9 (default) + one 1e-3 control   (was never tested; could cut |F| most)
+#   gamma           : 1      (default) + one 2    control
+#   n               : 3200, 12800, 51200         (51200 = the large run)
+#   family/d/g      : quadratic, d=8, g=zero     (fixed)
+
+# ===========================================================================
+# A. Baseline vs winner at the two "known" sizes, cap 60 (fast, comparable)
+# ===========================================================================
+# A1 prune=none baseline, n=3200 12800
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tau-prune 1e-12 --tol-sep 1e-9 --gamma 1 --tie-break none --max-iterations 60 --out iot_experiments/core/out/planting/sw_A1_noprune
+# A2 hysteresis only (the failing control), tau=1e-3, eps n/a
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tol-sep 1e-9 --gamma 1 --tie-break none --max-iterations 60 --out iot_experiments/core/out/planting/sw_A2_hyst_tau1e3
+# A3 hysteresis + regularized, eps=1e-4, tau=1e-3  (the leader)
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 1e-4 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_A3_hystreg_e1e4_tau1e3
+
+# ===========================================================================
+# B. epsilon window for the working strategy (n=3200, cap 60)
+# ===========================================================================
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 3e-5 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_B1_eps3e5
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 3e-4 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_B2_eps3e4
+
+# ===========================================================================
+# C. tau_prune for the working strategy (n=3200, cap 60)
+# ===========================================================================
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-12 --tie-break regularized --epsilon 1e-4 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_C1_tau1e12
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-1 --tie-break regularized --epsilon 1e-4 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_C2_tau1e1
+
+# ===========================================================================
+# D. time budget t (n=12800, the previously cap-bound size)
+# ===========================================================================
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 1e-4 --tol-sep 1e-9 --gamma 1 --master-time-limit 300 --max-iterations 60 --out iot_experiments/core/out/planting/sw_D1_t12800
+# D2 prune=none at n=12800 with the same raised cap, for the |F| comparison
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tau-prune 1e-12 --tol-sep 1e-9 --gamma 1 --tie-break none --master-time-limit 300 --max-iterations 60 --out iot_experiments/core/out/planting/sw_D2_noprune12800
+
+# ===========================================================================
+# E. controls for the two never-tested knobs (n=12800, prune=none, cap 60)
+# ===========================================================================
+# E1 tol_sep = 1e-3 (admit only well-separated violations -> fewer edges enter F?)
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tau-prune 1e-12 --tol-sep 1e-3 --gamma 1 --tie-break none --max-iterations 60 --out iot_experiments/core/out/planting/sw_E1_tolsep1e3
+# E2 gamma = 2 (up to 2 violators per row/column enter F each iteration)
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tau-prune 1e-12 --tol-sep 1e-9 --gamma 2 --tie-break none --max-iterations 60 --out iot_experiments/core/out/planting/sw_E2_gamma2
+
+# ===========================================================================
+# F. THE LARGE RUN: n=51200, prune=none vs hysteresis+regularized (cap 60; expect ~15-20 min/run)
+# ===========================================================================
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tau-prune 1e-12 --tol-sep 1e-9 --gamma 1 --tie-break none --max-iterations 60 --out iot_experiments/core/out/planting/sw_F1_n51200_noprune
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 1e-4 --tol-sep 1e-9 --gamma 1 --max-iterations 60 --out iot_experiments/core/out/planting/sw_F2_n51200_hystreg

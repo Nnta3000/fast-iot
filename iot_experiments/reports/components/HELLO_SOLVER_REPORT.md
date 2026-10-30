@@ -2,7 +2,7 @@
 
 > **Status: HISTORICAL (other method) — do NOT cite as current.** HELLO here is an *inner* exact-OT
 > solver for the subgradient / cutting-plane methods, not the constraint-generation loop. For GPU
-> results on the target path see `SERVER_TESTS_REPORT.md`.
+> results on the target path see `current/SERVER_TESTS_REPORT.md`.
 
 **Status: CURRENT, empirical (2026-10-09).** `src/iot/hello_solver.py` exposes
 `make_hello_solver(problem, device=...)`, an optional `ExactPlanSolver` for the subgradient /

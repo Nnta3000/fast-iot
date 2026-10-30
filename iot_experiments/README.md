@@ -46,18 +46,18 @@ next to its `records.json` — a long job that is launched with plain `python -u
 
 | study | question | report |
 |---|---|---|
-| `t1t2/geometry` | which post-PCA transform makes retrieval work (G0–G3)? | `REAL_PAIRS_REPORT.md` |
-| `t1t2/pool` | which of the selected pairs can be trusted (precision at coverage)? | `REAL_PAIRS_REPORT.md` |
-| `t1t2/nmi` | NMI + Hungarian vs cosine + OT vs the learned cost | `NMI_PAIRING_REPORT.md` |
+| `t1t2/geometry` | which post-PCA transform makes retrieval work (G0–G3)? | `current/REAL_PAIRS_REPORT.md` |
+| `t1t2/pool` | which of the selected pairs can be trusted (precision at coverage)? | `current/REAL_PAIRS_REPORT.md` |
+| `t1t2/nmi` | NMI + Hungarian vs cosine + OT vs the learned cost | `current/NMI_PAIRING_REPORT.md` |
 | `t1t2/metric_learning` | InfoNCE / Sinkhorn-InfoNCE / CCA / residual vs relaxed iOT | `studies/real/t1t2/metric_learning/README.md` |
 
 ### `studies/synthetic/`
 
 | study | question | report |
 |---|---|---|
-| `synthetic/scaling` | where does the solve exceed 2 s in `(m, n, K)`? | `SCALING_REPORT.md` |
-| `synthetic/marginals` | uniform vs Gaussian / GMM marginals: structure and cost | `MARGINAL_REPORT.md` |
-| `synthetic/families` | diagonal / quadratic / low-rank (+ tiny-`n` PSD) | `FAMILY_REPORT.md` |
+| `synthetic/scaling` | where does the solve exceed 2 s in `(m, n, K)`? | `superseded/SCALING_REPORT.md` |
+| `synthetic/marginals` | uniform vs Gaussian / GMM marginals: structure and cost | `superseded/MARGINAL_REPORT.md` |
+| `synthetic/families` | diagonal / quadratic / low-rank (+ tiny-`n` PSD) | `superseded/FAMILY_REPORT.md` |
 
 These three are driven by `harness/lib/` generators (`planting`, `marginals`, `families`) and
 `harness/lib/runner.py`; every record carries a full `RunSpec`, so results from different studies
@@ -78,6 +78,32 @@ PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
 ```
 
 Output lands in `iot_experiments/out/<study>/` with its `run.log`.
+
+## The rule: no one-off drivers
+
+**Every experiment is a study, and every study has the same shape:**
+
+```
+studies/<axis>/<study>/
+├── README.md     what question it answers, the exact command, the result
+├── run.py        the driver: config + one fit call + records. Nothing else.
+└── analyse.py    optional: turns records into tables/figures
+```
+
+A driver may be **short**. It must not contain:
+
+- its own data preamble (load split, discover, stream, reduce, subset) — that is
+  `harness/datasets.py`;
+- its own solver assembly (`plan`, `theta_set`, `RegretMasterSolver`, `fit_full_lp`) — that is
+  `harness/fit.py`;
+- its own JSON schema — that is `harness/records.py`.
+
+If answering a question would need a new file, first ask whether it is a **new axis value** for an
+existing study (`--family`, `--marginal`, `--k`, `--engine`). It usually is.
+
+**Never write a second file to re-ask a question an existing file already asks.** That is how
+`quadratic.py`, `loop_quadratic.py`, `quad_task.py` and `quadratic_f2.py` came to exist — four
+files, one question. Files that do this are retired to `legacy/`, not extended.
 
 ## Conventions
 

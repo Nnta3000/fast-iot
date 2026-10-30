@@ -2,8 +2,8 @@
 
 > **Status: HISTORICAL (CPU path) — do NOT cite as current.** NumPy scan + HiGHS master, **POT**
 > ground truth. Also note the GMM construction here is the **pre-fix** one (mixture applied along the
-> sample generation order; see `SERVER_TESTS_REPORT.md` §6). For GPU-path marginals see
-> `SERVER_TESTS_REPORT.md`.
+> sample generation order; see `current/SERVER_TESTS_REPORT.md` §6). For GPU-path marginals see
+> `current/SERVER_TESTS_REPORT.md`.
 
 **Status: CURRENT, empirical.** Study 2. Backing data:
 `../marginals/out/marginals_n800.{json,csv}` (git-ignored), from `../marginals/run.py`.
@@ -13,7 +13,7 @@
 - `m = n = 800`, seeds {0,1};
 - marginals defined on the latent axis `z_i=(i+0.5)/n`:
   `uniform`; `gaussian` = `N(0.5, 0.15²)`; `gmm` = `0.5·N(0.30,0.07²)+0.5·N(0.72,0.09²)`;
-- shipped solver path as in `SCALING_REPORT.md`.
+- shipped solver path as in `superseded/SCALING_REPORT.md`.
 
 ## Result (medians over 2 seeds)
 

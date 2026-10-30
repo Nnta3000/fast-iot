@@ -105,7 +105,7 @@ def nmi(a: Float[np.ndarray, "pixels"], b: Float[np.ndarray, "pixels"], *,
         `size=128, bins=32` 给出 16 样本/格子（见 `NMI_PAIRING_REPORT` 的样本饥饿结论）。
     EN: mutual information (nats) between two slices with equal-frequency bins. **Each pair provides only
         `size**2` samples**, so `size=128, bins=32` gives 16 samples per cell (see the sample-starvation
-        finding in `NMI_PAIRING_REPORT.md`).
+        finding in `current/NMI_PAIRING_REPORT.md`).
     """
     from .nmi_helpers import mutual_information_pair  # noqa: PLC0415
 

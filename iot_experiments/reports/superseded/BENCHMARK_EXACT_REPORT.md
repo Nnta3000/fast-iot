@@ -2,7 +2,7 @@
 
 > **Status: HISTORICAL (CPU path) — do NOT cite as current.** Produced by the **HiGHS** exact
 > constraint-generation arm (NumPy scan), not the GPU target path. For GPU results see
-> `SERVER_TESTS_REPORT.md`.
+> `current/SERVER_TESTS_REPORT.md`.
 
 **Method label: `exact-constraint-generation` — empirical, not proved.** Shipped configuration: hysteresis pruning ON, perturbed one-solve master `RegularizedMasterSolver(ε=1e-4)`, K=8, γ=1, tol=1e-9, τ=1e-12. Median [IQR] over seeds; per-run budget 600 s; threads pinned to 8; peak RSS = real process RSS.
 

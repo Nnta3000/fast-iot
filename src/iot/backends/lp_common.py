@@ -387,7 +387,8 @@ CUPDLPX_KNOWN_PARAMS: frozenset[str] = frozenset({
 
 
 def solve_lp_cupdlpx(system: LpSystem, *, params: dict[str, Any] | None = None,
-                     project: InverseOTProblem | None = None) -> LpResult:
+                     project: InverseOTProblem | None = None,
+                     init_solution: np.ndarray | None = None) -> LpResult:
     """
     CN: 用 CuPDLPx 解 `LpSystem`（等式行在前）。**两个 master 共用**。一阶求解只近似满足 Theta，
         因此给出 `project` 时把 theta 投回集合。
@@ -404,6 +405,14 @@ def solve_lp_cupdlpx(system: LpSystem, *, params: dict[str, Any] | None = None,
     solver = pycupdlpx.cupdlpx()
     solver.loadData(A=a, c=system.c, rhs=rhs, lb=system.lb, ub=system.ub,
                     nEqs=int(system.a_eq.shape[0]))
+    if init_solution is not None:
+        warm = np.asarray(init_solution, dtype=np.float64).reshape(-1)
+        if warm.size != system.size:
+            raise InverseOTError(
+                f"init_solution has length {warm.size}, expected {system.size}; the layout changed")
+        # CN: 绑定要求 (x0, y0)；只给原始变量起点，对偶传 None（由求解器自选）。
+        # EN: the binding needs (x0, y0); supply the primal start only and pass None for the dual.
+        solver.setInitSol(warm, None)
     out = solver.solve(dict(params or {}))
     primal = out.get("x") if isinstance(out, dict) else None
     if primal is None:

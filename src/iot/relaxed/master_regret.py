@@ -190,6 +190,15 @@ class RegretMasterSolver:
         self.tie_break = bool(tie_break)
         self.backend = str(backend)
         self.params = dict(params or {})
+        # CN: 热启动点（`setInitSol`）。只影响迭代起点，不影响最优值；布局在轮间不变。
+        # EN: warm start (`setInitSol`). Affects the iteration start only, never the optimal value; the
+        #     layout is unchanged between rounds.
+        self.init_solution: np.ndarray | None = None
+
+    def set_warm_start(self, x: np.ndarray | None) -> None:
+        """CN: 设置下一轮的热启动点（`None` 关闭）。EN: set the next round's warm start (`None` disables)."""
+        self.init_solution = None if x is None else np.ascontiguousarray(
+            np.asarray(x, dtype=np.float64).reshape(-1))
 
     def solve(self, problem: InverseOTProblem, edges: EdgeSet) -> RegretSolution:
         """CN: 求解一次（含两段式）。EN: One solve (including the two-stage rule)."""
@@ -323,7 +332,7 @@ class RegretMasterSolver:
                       c=np.asarray(objective, dtype=np.float64), lb=lb, ub=ub, layout=layout)
         try:
             if self.backend == "cupdlpx":
-                res = solve_lp_cupdlpx(lp, params=self.params)
+                res = solve_lp_cupdlpx(lp, params=self.params, init_solution=self.init_solution)
             else:
                 res = solve_lp_highs(lp)
         except InverseOTError as error:

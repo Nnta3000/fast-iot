@@ -307,15 +307,15 @@ Notes on this table:
 
 | file (in `reports/`, unless noted) | why it is off-path |
 | --- | --- |
-| `SCALING_REPORT.md` | HiGHS master + NumPy scan; CPU cost studies |
-| `MARGINAL_REPORT.md` | POT ground truth; `p`/component framing; pre-GPU |
-| `FAMILY_REPORT.md` | CPU solvers (regularized/SDP); `bilinear-PSD` not exact-OT at scale |
-| `BENCHMARK_EXACT_REPORT.md` | HiGHS exact constraint generation |
-| `MEASUREMENT_NOTES.md` | gradient-method arms, not constraint generation |
+| `superseded/SCALING_REPORT.md` | HiGHS master + NumPy scan; CPU cost studies |
+| `superseded/MARGINAL_REPORT.md` | POT ground truth; `p`/component framing; pre-GPU |
+| `superseded/FAMILY_REPORT.md` | CPU solvers (regularized/SDP); `bilinear-PSD` not exact-OT at scale |
+| `superseded/BENCHMARK_EXACT_REPORT.md` | HiGHS exact constraint generation |
+| `superseded/MEASUREMENT_NOTES.md` | gradient-method arms, not constraint generation |
 | `CUTTING_PLANE_REPORT.md` | a different algorithm (Kelley cutting plane) |
-| `CUPDLPX_MASTER_REPORT.md` | partially current; measured with HiGHS comparisons |
-| `HELLO_SCAN_REPORT.md` | current for the diagonal scan only |
-| `HELLO_SOLVER_REPORT.md` | HELLO as an inner solver for other methods |
+| `components/CUPDLPX_MASTER_REPORT.md` | partially current; measured with HiGHS comparisons |
+| `components/HELLO_SCAN_REPORT.md` | current for the diagonal scan only |
+| `components/HELLO_SOLVER_REPORT.md` | HELLO as an inner solver for other methods |
 | `SERVER_TESTS_REPORT_narrative.md` (this directory's `legacy/`) | the prose revision of this report |
 | `legacy/reports/*` | all retired |
 

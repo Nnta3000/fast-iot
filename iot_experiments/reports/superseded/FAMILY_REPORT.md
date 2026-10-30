@@ -2,7 +2,7 @@
 
 > **Status: HISTORICAL (CPU path) — do NOT cite as current.** NumPy scan + HiGHS/SDP CPU masters.
 > The `bilinear-PSD` family here is a **tiny-n prototype and is not exact-OT at scale**. For the GPU
-> path (quadratic base) see `SERVER_TESTS_REPORT.md`.
+> path (quadratic base) see `current/SERVER_TESTS_REPORT.md`.
 
 **Status: CURRENT, empirical.** Study 3. Backing data:
 `../families/out/families_gmm.{json,csv}`, `../families/out/psd_gmm.{json,csv}`,
@@ -22,7 +22,7 @@ meaningful. It is a documented structural trap, not a test of the solver.
 Seeds {0,1}. Every LP run reaches `converged=True` with the generic `gmm` structure
 (`|S|≈2n−1`, `p=1–2`, 4–7 iterations). The cost family changes the per-iteration constant
 (`K`) but not the qualitative behaviour: the `p=1` fractional regime is what makes the loop
-cheap (`MARGINAL_REPORT.md`).
+cheap (`superseded/MARGINAL_REPORT.md`).
 
 ## bilinear-PSD (spectrahedron, `SdpMasterSolver`, `point_dimension=2` → K=4)
 
@@ -39,7 +39,7 @@ prototype" brittleness is, at least here, a **marginal-structure artifact**: und
 marginals the plan is a permutation (`p=n`) and the SDP master never certifies; under a
 non-uniform marginal the plan is fractional (`p=1`) and the same master converges in a handful
 of iterations up to `n=128`. The driver of the difference is the support-graph component count
-`p`, not the PSD cost itself (see also `MARGINAL_REPORT.md`).
+`p`, not the PSD cost itself (see also `superseded/MARGINAL_REPORT.md`).
 
 ## Caveats
 Two seeds, tiny `n` for PSD (the SDP master is only run to `n=128` here); `is_optimal` not run

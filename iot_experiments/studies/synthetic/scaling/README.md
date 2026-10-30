@@ -32,4 +32,4 @@ algorithm's budget.
 ## Takeaway to date
 Two regimes: scan-bound (`~m·n·K`, sub-2 s for `m·n·K ≲ 10⁷`) and master-bound (super-linear
 in `K`; at `n=800` the 2 s crossing is around `K≈40–50`). Regenerate the numbers with the
-commands above; see `../reports/SCALING_REPORT.md`.
+commands above; see `../reports/superseded/SCALING_REPORT.md`.

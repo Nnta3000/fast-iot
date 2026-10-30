@@ -20,7 +20,7 @@ CN: **SynthRAD2023 数据加载** —— 只读 NIfTI（自带最小解析器，
         破坏层与层之间的可比性；体数据归一化是同一患者的整体对比度，符合配对任务。
 
     CN: **登记对是"同患者对齐"的**（MR 与 CT 来自同一患者、同一层位），所以"隐藏配对"测试对像素方法
-        会**饱和**（见 `reports/NMI_PAIRING_REPORT.md`）。这个数据集只能把隐藏配对当**健全性检查**，
+        会**饱和**（见 `reports/current/NMI_PAIRING_REPORT.md`）。这个数据集只能把隐藏配对当**健全性检查**，
         不能当头条结果。
 
 EN: **SynthRAD2023 data loading** -- NIfTI reading (a minimal self-contained parser; no new dependency) and
@@ -39,7 +39,7 @@ EN: **SynthRAD2023 data loading** -- NIfTI reading (a minimal self-contained par
     to full range and destroy slice-to-slice comparability.
 
     **Registered pairs are same-patient and aligned**, so the hidden-partner test is **saturated** for pixel
-    methods (see `reports/NMI_PAIRING_REPORT.md`). On this dataset it is a **sanity check only**, never a
+    methods (see `reports/current/NMI_PAIRING_REPORT.md`). On this dataset it is a **sanity check only**, never a
     headline result.
 """
 

@@ -2,7 +2,7 @@
 
 > **Status: HISTORICAL (other method) — do NOT cite as current.** These notes concern the
 > gradient/entropic arm, not the constraint-generation loop on the GPU path. For GPU results see
-> `SERVER_TESTS_REPORT.md`.
+> `current/SERVER_TESTS_REPORT.md`.
 
 ## What was wrong
 

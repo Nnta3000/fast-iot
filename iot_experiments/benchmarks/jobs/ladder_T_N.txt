@@ -1,0 +1,23 @@
+# A — T(N) exponent ladder. The decisive test: does the iteration count grow with N?
+#
+# QUESTION: |F|/N = O(1) or Theta(N^c)? |F| = |B| + sum_t intake_t with intake_t <= 2*gamma*(m+n), so
+#   Theta(N^c) requires the ITERATION COUNT T to grow with N. Read T(N) and fit log(|F|/N) vs log(N).
+#
+# GENERATORS (3 axes, all quadratic, d from the generator):
+#   planted (Monge)  : clean, |S| = n            [planting_sweep]
+#   fractional       : |S| in [n, 2n]            [fractional_sweep]   <- the regime we just unlocked
+#   duplicate (d=1)  : natural ties              [degenerate_natural]
+#
+# SIZES: 3200 6400 12800 25600 51200 (full 5-point ladder; ~24h budget approved).
+# MAX-ITERATIONS 200 so nothing caps spuriously. --scan hello --solver cupdlpx (the target path).
+
+# --- A1-A5: planted Monge, prune=none (baseline) ---
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 6400 12800 25600 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tie-break none --max-iterations 200 --out iot_experiments/core/out/planting/A1_monge_noprune
+# --- A6-A10: planted Monge, hyst+reg (the winner; eps=1e-4 tau=1e-1) ---
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 3200 6400 12800 25600 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-1 --tie-break regularized --epsilon 1e-4 --max-iterations 200 --out iot_experiments/core/out/planting/A2_monge_hystreg
+# --- A11-A15: fractional sf=1.0, prune=none ---
+python -m iot_experiments.core.fractional_sweep --family quadratic --point-dimension 8 --sizes 3200 6400 12800 25600 51200 --seeds 0 --split-fractions 1.0 --split-ratios 0.5 --slide-caps 4.0 --scan hello --solver cupdlpx --prune-strategy none --tie-break none --max-iterations 200 --out iot_experiments/core/out/fractional/A3_frac_noprune
+# --- A16-A20: fractional sf=1.0, hyst+reg ---
+python -m iot_experiments.core.fractional_sweep --family quadratic --point-dimension 8 --sizes 3200 6400 12800 25600 51200 --seeds 0 --split-fractions 1.0 --split-ratios 0.5 --slide-caps 4.0 --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-1 --tie-break regularized --epsilon 1e-4 --max-iterations 200 --out iot_experiments/core/out/fractional/A4_frac_hystreg
+# --- A21-A25: duplicate d=1, prune=none (natural degeneracy alarm) ---
+python -m iot_experiments.core.degenerate_natural --kinds duplicate --family quadratic --dims 1 --n 3200 6400 12800 25600 51200 --seeds 0 --scan hello --prune-strategy none --max-iterations 200 --out iot_experiments/core/out/degenerate/A5_dup1_noprune

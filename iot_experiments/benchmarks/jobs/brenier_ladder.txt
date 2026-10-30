@@ -1,0 +1,27 @@
+# brenier_ladder — continue the Brenier / correlated ladder on the server.
+#
+# WHY: the local run (brenier_toy.py, 2026-10-19) stopped at n=800:
+#   - the whole ladder only reached n=800 (max 25 min wall locally),
+#   - correlated d=8 n=800 never finished (timeout),
+#   - and every row used the same ABSOLUTE tol=1e-9 while brenier costs ~0.004 and
+#     correlated costs ~1.0, i.e. a ~250x difference in relative accuracy. Rows are therefore
+#     NOT comparable until delta is normalised by median(c); the driver now writes tol and the
+#     config into the JSON for that purpose.
+#
+# DESIGN: one job per (kind, dim) so a slow correlated cell cannot block the rest; --parallel runs
+#   one job per idle GPU. Each job writes its own JSON via --tag (no clobbering).
+#
+# NOTE on the timeout: correlated d=8 n=800 exceeded 25 min locally. master-time-limit is raised to
+#   300 s/job and --timeout is unset here so the queue does not kill it; use the queue's --timeout
+#   only if the server needs a hard cap.
+
+# --- brenier: cheap, completes quickly; extends the ladder past 800 ---
+python -m iot_experiments.core.brenier_toy --kinds brenier --dims 2   --n 800 1600 3200 6400 --seeds 0 --scan hello --solver cupdlpx --prune-strategy none --max-iterations 200 --master-time-limit 300 --tag brenier_d2
+python -m iot_experiments.core.brenier_toy --kinds brenier --dims 8   --n 800 1600 3200 6400 --seeds 0 --scan hello --solver cupdlpx --prune-strategy none --max-iterations 200 --master-time-limit 300 --tag brenier_d8
+
+# --- correlated: the hard cell; the n=800 gap from the local run plus the ladder ---
+python -m iot_experiments.core.brenier_toy --kinds correlated --dims 2 --n 800 1600 3200 6400 --seeds 0 --scan hello --solver cupdlpx --prune-strategy none --max-iterations 200 --master-time-limit 300 --tag correlated_d2
+python -m iot_experiments.core.brenier_toy --kinds correlated --dims 8 --n 800 1600 3200 6400 --seeds 0 --scan hello --solver cupdlpx --prune-strategy none --max-iterations 200 --master-time-limit 300 --tag correlated_d8
+
+# --- seed robustness at the size where the local ladder was strongest (correlated d=2 n=800) ---
+python -m iot_experiments.core.brenier_toy --kinds correlated --dims 2 --n 800 --seeds 1 2 --scan hello --solver cupdlpx --prune-strategy none --max-iterations 200 --master-time-limit 300 --tag correlated_d2_seeds

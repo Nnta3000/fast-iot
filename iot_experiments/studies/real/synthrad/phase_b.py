@@ -44,11 +44,7 @@ from iot_experiments.studies.real.synthrad.recovery import (  # noqa: E402
     exact_ot,
     score_permutation,
 )
-from iot_experiments.studies.real.synthrad.v2_run import (  # noqa: E402
-    build_table,
-    reduce_features,
-    stream_features,
-)
+from iot_experiments.harness.datasets import build_table, reduce_features, stream_features  # noqa: E402
 
 PROVENANCE: dict[str, object] = {
     "purpose": "dense LP vs relaxed loop on the same inverse-OT problem",

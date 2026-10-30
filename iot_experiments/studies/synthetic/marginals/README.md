@@ -27,4 +27,4 @@ Outputs land in `out/` (git-ignored).
 **permutation** (`|S|=n`, `p=n`), while a non-uniform marginal gives a fractional basic plan
 (`|S|≈2n-1`, `p=1`). Iterations and wall time track `p`. `cert_support_residual` flags the
 known certificate edge case on degenerate plans (a spurious `~1e-19` support entry), not a
-solver failure — `is_optimal` is the verdict. See `../reports/MARGINAL_REPORT.md`.
+solver failure — `is_optimal` is the verdict. See `../reports/superseded/MARGINAL_REPORT.md`.

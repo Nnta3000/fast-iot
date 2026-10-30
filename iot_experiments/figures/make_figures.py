@@ -67,8 +67,8 @@ TITLES: dict[str, tuple[str, str]] = {
 
 # CN: 记录路径（只读来源）。/ EN: record paths (read-only sources).
 RECORDS: dict[str, Path] = {
-    "F2": _REPO_ROOT / "iot_experiments" / "reports" / "metric_learning" / "records.json",
-    "F3": _REPO_ROOT / "iot_experiments" / "reports" / "REAL_PAIRS_REPORT.md",
+    "F2": _REPO_ROOT / "iot_experiments" / "out" / "records" / "metric_learning" / "records.json",
+    "F3": _REPO_ROOT / "iot_experiments" / "reports" / "current" / "REAL_PAIRS_REPORT.md",
     "F4_records": _REPO_ROOT / "iot_experiments" / "out" / "synthrad_v2" / "records.json",
     "F4_pixels": _REPO_ROOT / "iot_experiments" / "out" / "synthrad_cheap" / "records.json",
     "F5": _REPO_ROOT / "iot_experiments" / "reports" / "STATE.md",
@@ -118,10 +118,10 @@ def short_commit() -> str:
 
 def parse_precision_table(path: Path) -> dict[str, tuple[float, ...]]:
     """
-    CN: 从 `REAL_PAIRS_REPORT.md` 的**表格行**解析 P@25/50/75/100。
+    CN: 从 `current/REAL_PAIRS_REPORT.md` 的**表格行**解析 P@25/50/75/100。
         匹配形如 `| cosine | 0.8428 | **1.0000** | 0.9996 | 0.9456 | 0.8428 | ... |` 的行：
         取第 4–7 个数值（hit 之后就是 P@25..P@100）。**只解析，不重算。**
-    EN: parse P@25/50/75/100 from the **table rows** of `REAL_PAIRS_REPORT.md`: a row like
+    EN: parse P@25/50/75/100 from the **table rows** of `current/REAL_PAIRS_REPORT.md`: a row like
         `| cosine | 0.8428 | **1.0000** | 0.9996 | 0.9456 | 0.8428 | ... |`, where the values after `hit` are
         P@25..P@100. **Parsed only; nothing recomputed.**
     """
@@ -188,8 +188,11 @@ def build_f2() -> tuple[Path, Path]:
     arms = ("iot", "infonce", "residual64")
     # CN: 残差臂没有 theta；标签里写明它是 k 维空间内的秩 r 修正。
     # EN: the residual arm has no theta; the label states it is a rank-r correction inside the k-dim space.
-    labels = {"iot": "relaxed iOT", "infonce": "diagonal InfoNCE",
-              "residual64": "low-rank residual (r = 64)"}
+    # CN: 标签同时写清**目标函数**与**参数化**，两者是互相独立的轴；此前只写其一会让人误读。
+    # EN: labels name BOTH the objective and the parameterisation -- they are independent axes, and naming
+    #     only one caused a misreading.
+    labels = {"iot": "iOT (diagonal)", "infonce": "InfoNCE (diagonal)",
+              "residual64": "InfoNCE (low-rank r=64)"}
 
     # CN: 计算差值并与预期比对（m=300），不一致即停止。
     # EN: compute the deltas and compare with the expectation at m=300; a mismatch stops.
@@ -260,8 +263,8 @@ def build_f2() -> tuple[Path, Path]:
         fig,
         f"data: {record.relative_to(_REPO_ROOT)} | commit {short_commit()} | "
         "geometry G2, fixed 400-pair pool, 3 draws",
-        "hollow = solver-limited iOT fit; k is the PCA width, and |theta| = k for diagonal arms; "
-        "rule counts: iOT 1/9, InfoNCE 6/9, residual64 4/9",
+        "hollow = solver-limited iOT fit; k is the PCA width; |theta| = k for diagonal arms; "
+        "objective and parameterisation are independent axes",
         axes_left=0.085,
     )
     fig.subplots_adjust(left=0.085, right=0.985, top=0.78, bottom=0.30, wspace=0.12)

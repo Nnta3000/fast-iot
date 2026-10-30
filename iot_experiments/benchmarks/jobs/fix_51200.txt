@@ -1,0 +1,13 @@
+# B — why did hysteresis+regularized FAIL at n=51200? (F2 capped at 60 it / 3905 s while A3 at 12800 converged)
+#
+# QUESTION: is it SIZE, tau, or epsilon? Three arms at 51200 plus one midpoint at 25600.
+# All planted Monge, quadratic, d=8, seed 0, g=0, --scan hello --solver cupdlpx.
+
+# B1: midpoint 25600 with the standard winner -> locate the size where it breaks
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 25600 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 1e-4 --max-iterations 200 --out iot_experiments/core/out/planting/B1_mid25600
+# B2: 51200, tau=1e-1 (the C2 winner tau) -> is tau the problem at scale?
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-1 --tie-break regularized --epsilon 1e-4 --max-iterations 200 --out iot_experiments/core/out/planting/B2_51200_tau1e1
+# B3: 51200, eps=3e-5 -> is epsilon the problem at scale?
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 3e-5 --max-iterations 200 --out iot_experiments/core/out/planting/B3_51200_eps3e5
+# B4: 51200, winner settings, cap 200 -> "needs more rounds" vs "genuinely cycles"
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 51200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy hysteresis --tau-prune 1e-3 --tie-break regularized --epsilon 1e-4 --max-iterations 200 --out iot_experiments/core/out/planting/B4_51200_cap200

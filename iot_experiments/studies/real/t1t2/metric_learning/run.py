@@ -104,9 +104,13 @@ class MetricLearningError(RuntimeError):
 class Box:
     """
     CN: 对角 θ 的可行域，由 `rel` 参数化：`lo = rel/K`，`hi = 1/(rel*K)`。
-        `rel=1` 是单纯形；`rel<1` 是更窄的盒；`wide` 用固定 `rel=0.05`。
+        **`rel` 与盒宽是反比关系**：`rel = 1` 时 `lo = hi = 1/K`，即只剩均匀点（最窄）；`rel` 越小，
+        盒越**宽**。`rel = 0.05` 是**最宽**的一档（K=64 时窗口 [7.8e-4, 0.3125]，hi/lo = 400），
+        `rel = 0.9` 最窄（hi/lo = 1.2）。
     EN: the feasible set for diagonal theta, parameterised by `rel`: `lo = rel/K`, `hi = 1/(rel*K)`.
-        `rel = 1` is the simplex; `rel < 1` is narrower; `wide` uses `rel = 0.05`.
+        **`rel` is inverse to box width**: `rel = 1` collapses the box to the single point `theta = 1/K`
+        (narrowest); *smaller* `rel` is **wider**. `rel = 0.05` is the **widest** setting (K=64 window
+        [7.8e-4, 0.3125], hi/lo = 400); `rel = 0.9` is the narrowest (hi/lo = 1.2).
     """
 
     lo: float

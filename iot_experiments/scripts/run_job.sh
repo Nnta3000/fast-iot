@@ -35,6 +35,7 @@ RESERVE_GB=2
 BUDGET_GB=""
 JOB_NAME=""
 ACK=0
+SKIP_PREFLIGHT=0
 COMMAND=()
 
 while [[ $# -gt 0 ]]; do
@@ -43,6 +44,7 @@ while [[ $# -gt 0 ]]; do
         --name)      JOB_NAME="${2:-}";  shift 2 ;;
         --ack)       ACK=1; shift ;;
         --)          shift; COMMAND=("$@"); break ;;
+        --skip-preflight) SKIP_PREFLIGHT=1; shift ;;
         *)           echo "REFUSED: unknown argument '$1'" >&2; exit 2 ;;
     esac
 done
@@ -80,6 +82,23 @@ fi
 
 stamp="$(date +%Y%m%d_%H%M%S)"
 job_log="${LOG_DIR}/${JOB_NAME}_${stamp}.log"
+
+# CN: **环境自检**：整条链路（GPU 可见、CuPDLPx 可加载、扫描可用、一次极小已验证运行）必须活着。
+#     失败就拒绝启动——带病跑的实验会产生看似成功但无意义的结果。`--skip-preflight` 只用于
+#     已经确认过环境的重复作业。
+# EN: **Preflight**: the whole chain (GPU visible, CuPDLPx loadable, scan available, one tiny validated
+#     run) must be alive. On failure the launcher refuses to start -- a sick run produces results that
+#     look successful and are meaningless. `--skip-preflight` is for repeats after a confirmed check.
+if [[ "${SKIP_PREFLIGHT}" -eq 0 ]]; then
+    preflight_out="${LOG_DIR}/../preflight/${JOB_NAME}_${stamp}.json"
+    if ! "${PYTHON_BIN:-${REPO_ROOT}/.venv/bin/python}" -m iot_experiments.harness.preflight --out "${preflight_out}" \
+            >/dev/null 2>&1; then
+        echo "REFUSED: preflight failed (see ${preflight_out}). Run it directly to see why:" >&2
+        echo "  python -m iot_experiments.harness.preflight" >&2
+        exit 3
+    fi
+    echo "${JOB_NAME}: preflight ok" >&2
+fi
 
 echo "${JOB_NAME}: available ${avail_gb} GB, budget ${BUDGET_GB} GB -- starting" >&2
 echo "log: ${job_log}" >&2

@@ -24,7 +24,9 @@ from .master import (
     TieBreak,
     draw_generic_direction,
 )
-from .oracle import scan_violations
+from ..core.scan import scan_for_violations
+from ..core.edges_advance import advance_edges, slack_toward_cost
+from ..core.pruning import HysteresisPruner
 from ..core.problem import InverseOTError, InverseOTProblem
 from ..core.result import InverseOTResult, IterationRecord
 from ..eval.validation import is_optimal_plan
@@ -80,7 +82,12 @@ def solve_inverse_ot(
     validate: bool = True,
     validate_max_elements: int = 50_000_000,
     max_tile_elements: int = 1 << 20,
-    prune: bool = True,
+    # CN: **剪枝默认关闭**：剪枝是启发式，只有"剪掉严格正 slack 的边"被证明端到端安全；默认保留全部边
+    #     以保持**精确性**（保留多余边永远安全，只是更大更慢）。要剪枝请显式 `prune=True`。
+    # EN: **pruning is off by default**: pruning is a heuristic, and only dropping strictly-positive-slack
+    #     edges is proved safe end to end; the default keeps every edge so the result stays **exact**
+    #     (keeping extra edges is always safe, just bigger and slower). Pass `prune=True` explicitly.
+    prune: bool = False,
     prune_hysteresis: bool = True,
     scan_backend: str = "numpy",
     scan_device: str = "auto",
@@ -142,7 +149,7 @@ def solve_inverse_ot(
     converged = False
     started = time.perf_counter()
     final_max_violation = 0.0
-    previous_positive_keys = np.zeros(0, dtype=np.int64)
+    pruner = HysteresisPruner.fresh(tau_prune=float(tau_prune))
     master: MasterSolution | None = None
     for iteration in range(1, int(max_iterations) + 1):
         iteration_started = time.perf_counter()
@@ -150,41 +157,19 @@ def solve_inverse_ot(
         master = master_solver.solve(problem, edges, tie_break=tie_break)
         master_time = time.perf_counter() - master_started
         oracle_started = time.perf_counter()
-        if str(scan_backend) == "torch":
-            # CN: 通用 torch 扫描：任意线性于 theta 的代价；有嵌入走 O(m n d)，否则 O(m n K)。
-            # EN: generic torch scan: any cost linear in theta; O(m n d) with an embedding, else O(m n K).
-            from ..backends.generic_scan import scan_violations_torch
-
-            scan = scan_violations_torch(
-                problem,
-                master,
-                excluded=edges,
-                tol=float(tol),
-                gamma=int(gamma),
-                device=str(scan_device),
-                max_tile_bytes=int(scan_max_tile_bytes),
-            )
-        elif str(scan_backend) == "hello":
-            from ..backends.hello_scan import scan_violations_fast
-
-            scan = scan_violations_fast(
-                problem,
-                master,
-                excluded=edges,
-                tol=float(tol),
-                gamma=int(gamma),
-                device=str(scan_device),
-                max_tile_bytes=int(scan_max_tile_bytes),
-            )
-        else:
-            scan = scan_violations(
-                problem,
-                master,
-                excluded=edges,
-                tol=float(tol),
-                gamma=int(gamma),
-                max_tile_elements=int(max_tile_elements),
-            )
+        # CN: 后端调度已抽到 `core/scan.py`，与松弛循环共用同一份实现（语义逐字不变）。
+        # EN: the backend dispatch lives in `core/scan.py` now, shared with the relaxed loop (verbatim).
+        scan = scan_for_violations(
+            problem,
+            master,
+            excluded=edges,
+            tol=float(tol),
+            gamma=int(gamma),
+            scan_backend=scan_backend,
+            scan_device=str(scan_device),
+            scan_max_tile_bytes=int(scan_max_tile_bytes),
+            max_tile_elements=int(max_tile_elements),
+        )
         oracle_time = time.perf_counter() - oracle_started
         peak_mb = _peak_memory_mb()
         final_max_violation = float(scan.max_violation)
@@ -217,22 +202,14 @@ def solve_inverse_ot(
             #     (keeping extra edges is always safe).
             pruned = non_support
         elif bool(prune_hysteresis) and non_support.size:
-            # CN: 迟滞剪枝：只有当 slack 连续两轮 > tau 时才剪掉，抑制循环（Bland 风格）。
-            # EN: Hysteresis pruning: drop an edge only when its slack exceeded tau in two
-            #     consecutive iterations, suppressing cycling (Bland's-rule flavor).
-            slack = (
-                problem.features.costs(master.theta, non_support.rows, non_support.cols)
-                - master.source_dual[non_support.rows]
-                - master.target_dual[non_support.cols]
-                - float(master.delta)
-            )
-            positive = slack > float(tau_prune)
-            if previous_positive_keys.size:
-                prune_mask = positive & np.isin(non_support.keys, previous_positive_keys)
-            else:
-                prune_mask = np.zeros(non_support.size, dtype=bool)
-            pruned = non_support.select_mask(~prune_mask)
-            previous_positive_keys = np.ascontiguousarray(non_support.keys[positive], dtype=np.int64)
+            # CN: 迟滞剪枝已抽成 `core/pruning.HysteresisPruner`，与松弛循环共用同一份逻辑。
+            #     slack 由共用函数计算（`c - f - g - delta`，与原来的内联式子逐字等价）。
+            # EN: hysteresis now lives in `core/pruning.HysteresisPruner`, shared with the relaxed loop.
+            #     slack comes from the shared helper (`c - f - g - delta`, verbatim the old inline form).
+            slack = slack_toward_cost(problem, master.theta, master.source_dual,
+                                      master.target_dual, non_support.rows, non_support.cols,
+                                      delta=float(master.delta))
+            pruned, pruner = pruner.step(non_support, slack)
         else:
             pruned = _prune_by_slack(
                 problem,
@@ -245,8 +222,10 @@ def solve_inverse_ot(
             )
         prune_time = time.perf_counter() - prune_started
         assembly_started = time.perf_counter()
-        new_edges = mandatory.union(pruned).union(candidates)
-        added = int(new_edges.size) - int(edges.size)
+        # CN: 共用的边集推进（与松弛循环同一份代数）。
+        # EN: the shared edge-set advance (same algebra as the relaxed loop).
+        new_edges, _merged_size = advance_edges(mandatory, pruned, candidates)
+        added = int(_merged_size) - int(edges.size)
         assembly_time = time.perf_counter() - assembly_started
         records.append(
             IterationRecord(

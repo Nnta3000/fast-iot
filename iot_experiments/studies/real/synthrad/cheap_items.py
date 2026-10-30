@@ -40,7 +40,7 @@ from iot_experiments.harness.records import RunLog, RunRecord, format_table, sum
 from iot_experiments.harness.registry import apply_geometry, fit_geometry  # noqa: E402
 from iot_experiments.harness.synthrad import CT_WINDOW, IMAGE_SIZE, discover_patients  # noqa: E402
 from iot_experiments.studies.real.synthrad.recovery import score_permutation  # noqa: E402
-from iot_experiments.studies.real.synthrad.v2_run import build_table  # noqa: E402
+from iot_experiments.harness.datasets import build_table  # noqa: E402
 
 BONE_WINDOW: tuple[float, float] = (-200.0, 1500.0)
 

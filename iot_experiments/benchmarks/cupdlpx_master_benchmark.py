@@ -153,7 +153,7 @@ def _cupdlpx_arms(args: argparse.Namespace, n: int, seed: int) -> list[MasterRow
             print(f"[cupdlpx] n={n} seed={seed} {label}: {error}", file=sys.stderr)
             print(
                 "[cupdlpx] build the native extension first; "
-                "see iot_experiments/reports/CUPDLPX_MASTER_REPORT.md.",
+                "see iot_experiments/reports/components/CUPDLPX_MASTER_REPORT.md.",
                 file=sys.stderr,
             )
             raise

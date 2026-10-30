@@ -32,7 +32,7 @@ Outputs land in `iot_experiments/figures/out/` as PNG and PDF at 300 dpi.
 
 ## F2 — learned costs and cosine
 
-**Source:** `iot_experiments/reports/metric_learning/records.json` (committed).
+**Source:** `iot_experiments/out/records/metric_learning/records.json` (committed).
 **Config:** geometry G2, one fixed 400-pair held-out pool, 3 draws, arms cosine / iOT / InfoNCE /
 residual r=64.
 
@@ -50,7 +50,7 @@ residual64 4/9.
 
 ## F3 — matching precision by confidence
 
-**Source:** `iot_experiments/reports/REAL_PAIRS_REPORT.md`, table lines 115–118.
+**Source:** `iot_experiments/reports/current/REAL_PAIRS_REPORT.md`, table lines 115–118.
 **⚠️ The generating JSON was never committed.** `studies/real/t1t2/pool/run.py` still exists and asserts
 `P@100 == hit`, which is why the `hit` and `P@100` columns agree, but the raw records are gone. These numbers
 are therefore **parsed from a report table, not from primary data.**

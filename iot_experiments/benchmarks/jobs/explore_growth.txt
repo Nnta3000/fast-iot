@@ -1,0 +1,27 @@
+# EXPLORATORY: which instance families make the iteration count and |F| explode?
+# GPU-only (hello/torch scan + cupdlpx master). Lower priority than pruning_conservative.txt.
+#
+# The question (asked explicitly): is there an instance class where iterations and |F| blow up, so
+# that pruning is genuinely NEEDED, even a very conservative one? We now have three generators to
+# compare -- planted Monge (exact, no OT solver), HELLO ground truth (--plan-backend hello), POT
+# reference (small n only) -- plus the marginal profile, cost family and dimension as knobs.
+#
+# The driver records, per run: iterations, max |F|/(n_eff+m_eff) (the growth), converged, is_optimal,
+# and a prune=none comparison column. Rank by max_support_over_m_plus_n and by iterations.
+#
+# Interpretation:
+#   - if some family shows iterations >> others and |F|/(m+n) growing with n  -> that is the class that
+#     needs pruning; run it against the best conservative setting from pruning_conservative.txt.
+#   - if everything stays ~ constant |F| and <~15 iterations            -> pruning may be unnecessary.
+
+# --- cost family x dimension, planted Monge, prune=none (isolate the intrinsic growth) ---
+python -m iot_experiments.core.planting_sweep --families diagonal quadratic lowrank --dims 4 8 16 32 --sizes 3200 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tie-break none --max-iterations 200 --out iot_experiments/core/out/planting/explore_family_dim
+# --- scale ladder, all families, prune=none (does |F| grow with n?) ---
+python -m iot_experiments.core.planting_sweep --families diagonal quadratic lowrank --dims 8 --sizes 1600 3200 6400 12800 --seeds 0 --g-profiles zero --scan hello --solver cupdlpx --prune-strategy none --tie-break none --max-iterations 200 --out iot_experiments/core/out/planting/explore_scale_all
+# --- the induced-marginal lever: g=0 (few targets used) vs random g (spread) at fixed instance ---
+python -m iot_experiments.core.planting_sweep --families quadratic --dims 8 --sizes 6400 --seeds 0 1 2 --g-profiles zero random --scan hello --solver cupdlpx --prune-strategy none --tie-break none --max-iterations 200 --out iot_experiments/core/out/planting/explore_g_profile
+
+# --- HELLO ground truth (the OLD generator) for comparison, same sizes, prune=none ---
+#   run_batch already drives family x marginal; keep it small (it was the generator that masked cycling).
+python -m iot_experiments.gpu_bench.run_batch --batch e2e --gpu auto --family quadratic --marginal gmm --sizes 3200 6400 --point-dimension 8 --seeds 0 --scans hello --masters cupdlpx --plan-backend hello --prune-strategy none --max-iterations 200 --out iot_experiments/gpu_bench/out/explore_hello_quadratic
+python -m iot_experiments.gpu_bench.run_batch --batch e2e --gpu auto --family quadratic --marginal gmm --sizes 3200 6400 --point-dimension 8 --seeds 0 --scans hello --masters cupdlpx --plan-backend hello --prune-strategy hysteresis --max-iterations 200 --out iot_experiments/gpu_bench/out/explore_hello_quadratic_hyst

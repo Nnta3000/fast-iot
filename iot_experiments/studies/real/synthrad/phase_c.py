@@ -39,7 +39,7 @@ from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.records import RunLog, format_table  # noqa: E402
 from iot_experiments.harness.solver import box_simplex  # noqa: E402
 from iot_experiments.harness.synthrad import discover_patients  # noqa: E402
-from iot_experiments.studies.real.synthrad.v2_run import reduce_features, stream_features  # noqa: E402
+from iot_experiments.harness.datasets import reduce_features, stream_features  # noqa: E402
 
 PROVENANCE: dict[str, object] = {
     "purpose": "loop scaling in m with the GPU master and the GPU scan",

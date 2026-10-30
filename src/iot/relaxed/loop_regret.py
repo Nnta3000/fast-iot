@@ -41,7 +41,9 @@ from ..exact.components import mandatory_edges
 from ..core.edges import EdgeSet
 from .master_regret import RegretMasterSolver, regret_objective
 from ..exact.master import MasterSolution
-from ..exact.oracle import scan_violations
+from ..core.scan import scan_for_violations, maximum_slack
+from ..core.edges_advance import advance_edges, keep_by_tightness, slack_toward_cost
+from ..core.pruning import HysteresisPruner
 from ..core.problem import InverseOTError, InverseOTProblem
 
 __all__ = [
@@ -93,6 +95,12 @@ class RegretIteration:
     sigma_max_out_F: float = 0.0
     solver_iterations: int = 0
     solver_status: str = ""
+    # CN: 只用于**测量**：把一轮的时间拆成"master 求解"与"分离扫描（含修复）"，否则无法判断
+    #     层级是否有杠杆（若瓶颈是扫描，减少轮数不是唯一手段）。
+    # EN: **measurement only**: split one round into "master solve" and "separation scan (incl. repair)",
+    #     without which we cannot tell whether the hierarchy has any lever.
+    master_time: float = 0.0
+    scan_time: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -192,24 +200,6 @@ def _median_cost_blockwise(problem: InverseOTProblem, theta: np.ndarray, *, m: i
     return float(np.median(np.concatenate(chunks)))
 
 
-def _sigma_max(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.ndarray,
-               rows: np.ndarray, cols: np.ndarray, *, block: int = 2_000_000) -> float:
-    """
-    CN: `max sigma` **分块**计算，从不一次性求值所有边。m=5000 时全边代价需要约 13 GB（实测 OOM），
-        而这里每块只保留 `block` 个值。
-    EN: `max sigma` computed **in blocks**, never evaluating all edges at once. At m=5000 the all-edge cost
-        needs ~13 GB (measured OOM); here only `block` values are live at a time.
-    """
-    if rows.size == 0:
-        return 0.0
-    worst = -np.inf
-    for start in range(0, rows.size, int(block)):
-        stop = min(start + int(block), rows.size)
-        part = _sigma(problem, theta, f, g, rows[start:stop], cols[start:stop])
-        worst = max(worst, float(part.max()))
-    return float(worst)
-
-
 def _assert_identity(problem: InverseOTProblem, theta: np.ndarray, f: np.ndarray, g: np.ndarray,
                      rows: np.ndarray, cols: np.ndarray, values: np.ndarray, regret: float,
                      *, rtol: float = IDENTITY_RTOL) -> None:
@@ -264,11 +254,16 @@ def solve_inverse_ot_regret(
     master: RegretMasterSolver | None = None,
     eps_r_rel: float = 1e-6,
     prune: bool = False,
+    prune_hysteresis: bool = True,
     selection: SelectionMode = "central",
     eta: float = 1e-7,
     check_pot: bool = True,
     initial_extra: EdgeSet | None = None,
     identity_rtol: float | None = None,
+    scan_backend: str = "numpy",
+    scan_device: str = "auto",
+    scan_max_tile_bytes: int = 1 << 26,
+    warm_start: bool = False,
 ) -> RegretResult:
     """
     CN: 求解 §2 的松弛逆 OT。
@@ -299,6 +294,8 @@ def solve_inverse_ot_regret(
     finite = mandatory if initial_extra is None else mandatory.union(initial_extra)
     if not np.all(np.isin(support.keys, finite.keys)):
         raise InverseOTError("S must be a subset of F from the first iteration (B1)")
+    pruner = HysteresisPruner.fresh(tau_prune=float(tau_prune))
+    warm_x: np.ndarray | None = None
 
     # CN: eps_R 的尺度：uniform theta 处的 regret（全边集，用 master 直接算一次）。
     baseline_cost = np.asarray(
@@ -328,9 +325,9 @@ def solve_inverse_ot_regret(
     #     A blockwise streaming quantile keeps memory independent of `m·n`.
     probe = _uniform_theta(problem)
     cost_scale = _median_cost_blockwise(problem, probe, m=int(m), n=int(n))
-    # CN: `all_rows/all_cols` 只用于**分块**扫描（`_sigma_max` 与 tiled 的 scan_violations），
+    # CN: `all_rows/all_cols` 只用于**分块**扫描（`maximum_slack` 与 tiled 的 scan），
     #     本身只是索引数组（m=5000 时约 0.4 GB），代价矩阵从不再落地。
-    # EN: `all_rows`/`all_cols` serve the **blockwise** scan only (`_sigma_max` and the tiled
+    # EN: `all_rows`/`all_cols` serve the **blockwise** scan only (`maximum_slack` and the tiled
     #     `scan_violations`); they are plain index arrays (~0.4 GB at m=5000) and the cost matrix never
     #     materialises again.
     r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
@@ -347,7 +344,7 @@ def solve_inverse_ot_regret(
     # EN: uniform theta seeds best-so-far (feasible, `s=0`, `U = R_uniform`).
     uni0 = _uniform_theta(problem)
     f_u, g_u = _best_dual_for(problem, uni0)
-    sig_u_max = _sigma_max(problem, uni0, f_u, g_u, all_rows, all_cols)
+    sig_u_max = maximum_slack(problem, uni0, f_u, g_u, all_rows, all_cols)
     su = max(0.0, sig_u_max)
     u_uniform = float(np.dot(regret_objective(problem)[: int(problem.n_features)], uni0)
                       - float(np.dot(problem.resolved_source_mass, f_u))
@@ -370,7 +367,15 @@ def solve_inverse_ot_regret(
     while index < int(max_iterations):
         index += 1
         t0 = time.perf_counter()
+        # CN: 热启动：把**上一轮**的 `(theta, f, g)` 交给一阶求解器作起点。布局在轮间不变（只看
+        #     `n_features, n_source, n_target`），因此上一轮的 `x` 仍然有效。只影响迭代起点。
+        # EN: warm start: hand the **previous** round's `(theta, f, g)` to the first-order solver. The
+        #     layout is unchanged between rounds (it depends only on `n_features, n_source, n_target`), so
+        #     the previous `x` stays valid. It affects the iteration start only.
+        if warm_start and hasattr(solver, "set_warm_start"):
+            solver.set_warm_start(warm_x)   # None on round 1 == no warm start
         solution = solver.solve(problem, finite)
+        master_time = float(time.perf_counter() - t0)
         theta, f, g = solution.theta, solution.source_dual, solution.target_dual
         # CN: 只用 stage 1 的点；tie_break=False 时返回点就是 stage-1 最优解。
         # EN: stage-1 point only; with tie_break=False the returned point is the stage-1 optimum.
@@ -389,9 +394,14 @@ def solve_inverse_ot_regret(
         g_pre = np.asarray(solution.target_dual_pre, dtype=np.float64)
         as_master = MasterSolution(delta=0.0, theta=theta_pre, source_dual=f_pre, target_dual=g_pre,
                                    status=solution.status)
-        scan = scan_violations(problem, as_master, excluded=finite, tol=float(tol_eff),
-                               gamma=int(gamma))
-        s_pre = max(0.0, _sigma_max(problem, theta_pre, f_pre, g_pre, all_rows, all_cols))
+        # CN: 与精确循环共用同一份后端调度（此前松弛循环只走 numpy，GPU 扫描在松弛路径上是**不可达**的）。
+        # EN: same backend dispatch as the exact loop (previously the relaxed loop used NumPy only, so a GPU
+        #     scan was unreachable on the relaxed path).
+        scan = scan_for_violations(problem, as_master, excluded=finite, tol=float(tol_eff),
+                                   gamma=int(gamma), scan_backend=scan_backend,
+                                   scan_device=str(scan_device),
+                                   scan_max_tile_bytes=int(scan_max_tile_bytes))
+        s_pre = max(0.0, maximum_slack(problem, theta_pre, f_pre, g_pre, all_rows, all_cols))
         # CN: U = R_pre + s_pre*|pi_hat|（= 修复后的 R'），这是证书的上界。
         # EN: U = R_pre + s_pre*|pi_hat| (= the repaired R'), the certified upper bound.
         r_pre = float(solution.regret_pre)
@@ -403,6 +413,10 @@ def solve_inverse_ot_regret(
         if best_theta is None or upper < best_upper:
             best_theta = np.array(theta, dtype=np.float64)     # repaired point (globally feasible)
             best_upper = float(upper)
+        if warm_start:
+            warm_x = np.concatenate([np.asarray(solution.theta, dtype=np.float64),
+                                     np.asarray(solution.source_dual, dtype=np.float64),
+                                     np.asarray(solution.target_dual, dtype=np.float64)])
         records.append(RegretIteration(
             index=index, regret=regret, lower=lower, upper=upper, gap=gap,
             support_size=int(finite.size), finite_edges=int(finite.size),
@@ -412,7 +426,9 @@ def solve_inverse_ot_regret(
             sigma_max_in_F=float(solution.sigma_max_in_F),
             sigma_max_out_F=float(solution.sigma_max_out_F),
             solver_iterations=int(solution.solver_iterations),
-            solver_status=str(solution.solver_status)))
+            solver_status=str(solution.solver_status),
+            master_time=float(master_time),
+            scan_time=float(time.perf_counter() - t0) - float(master_time)))
         # CN: **地板检测**：`s_pre * |pi_hat|` 在 F 内无法被消除（它来自求解器的精度，而非真正的违例）。
         #     若它已经不超过 `eps_r`，即视为收敛；若连续若干轮都停在同一个 level，则判为 `solver_floor`。
         # EN: **floor detection**: `s_pre * |pi_hat|` cannot be eliminated inside F (it comes from solver
@@ -443,11 +459,35 @@ def solve_inverse_ot_regret(
                 #     （`sigma >= -tau`），即保守剪枝。
                 # EN: "tight at stage 1 or stage 2"; stage 2 has not run yet, so keep edges tight at the
                 #     stage-1 point (conservative pruning).
-                slack = _sigma(problem, theta, f, g, f_rows, f_cols)
-                keep = slack >= -float(tau_prune)
-                pruned = EdgeSet.from_arrays(f_rows[keep], f_cols[keep], n_target=n)
-                finite = mandatory.union(pruned)
-        finite = finite.union(candidates)
+                # CN: `keep_by_tightness` 用的是 `slack = c - f - g`；这里原本用 `sigma >= -tau`，
+                #     两者等价（`sigma = -slack`）。策略（何时剪、剪谁）仍在本循环内。
+                # EN: `keep_by_tightness` uses `slack = c - f - g`; this site used `sigma >= -tau`, which
+                #     is the same condition (`sigma = -slack`). The policy (when and what to prune) stays here.
+                slack = slack_toward_cost(problem, theta, f, g, f_rows, f_cols)
+                candidates_block = EdgeSet.from_arrays(f_rows, f_cols, n_target=n)
+                if bool(prune_hysteresis):
+                    # CN: 与精确循环同一份迟滞逻辑：只有连续两轮都松才剪。一阶后端的对偶噪声 ~1e-4，
+                    #     单轮规则会把噪声当成"松了"并永久剪掉该保留的边——这正是 `prune=True` 掉区间的原因。
+                    # EN: same hysteresis as the exact loop: drop only when loose two rounds running. A
+                    #     first-order backend's duals carry ~1e-4 noise and a single-round rule would read noise
+                    #     as "loose" and permanently drop an edge that should stay -- which is what lost the
+                    #     bracket under `prune=True`.
+                    pruned, pruner = pruner.step(candidates_block, slack)
+                else:
+                    pruned = keep_by_tightness(candidates_block, slack,
+                                               tau_prune=float(tau_prune))
+            else:
+                pruned = EdgeSet.from_arrays(np.zeros(0, dtype=np.int64),
+                                             np.zeros(0, dtype=np.int64), n_target=n)
+            # CN: 本轮的"保留部分" = mandatory ∪ pruned；扫描到的 violating 边由 `advance_edges` 加进去。
+            # EN: this round's kept part is mandatory ∪ pruned; the scan's violators are added by
+            #     `advance_edges`.
+            finite, _merged = advance_edges(mandatory, pruned, candidates)
+        else:
+            # CN: 剪枝关闭时 `F_t` 原样保留，只并入本轮扫描到的边——与原文 `finite.union(candidates)` 一致。
+            # EN: with pruning off, `F_t` is kept as-is and only this round's violators are merged in --
+            #     identical to the original `finite.union(candidates)`.
+            finite = finite.union(candidates)
         fingerprint = _fingerprint(finite)
         if fingerprint in seen:
             # CN: F_t 重复——按约定永久关闭剪枝（该模式本就未覆盖）。

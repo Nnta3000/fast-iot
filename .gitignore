@@ -210,7 +210,14 @@ __pycache__/
 # EN: iot experiment generated outputs and transient lock
 # CN: **所有**运行结果统一在 `iot_experiments/out/`（驱动目录不再自带 out/）。
 # EN: **all** run results live in `iot_experiments/out/`; driver directories no longer carry their own.
-/iot_experiments/out/
+/iot_experiments/out/*
+# CN: `out/` 是 git-ignored，但被报告与图引用的**机器生成记录**必须能在 clone 里重现，
+#     所以它们放在 `out/records/` 的**例外**路径：只有被引用的记录进版本库，其余运行产物仍然忽略。
+# EN: `out/` is git-ignored, but machine-written records that reports and figures cite must survive a
+#     clone, so they live in the `out/records/` exception below: only cited records are committed, every
+#     other run artefact stays ignored.
+!/iot_experiments/out/records/
+!/iot_experiments/out/records/**
 /iot_experiments/benchmarks/.cpu_lock/
 /iot_experiments/benchmarks/thetas/
 /iot_experiments/*/out/

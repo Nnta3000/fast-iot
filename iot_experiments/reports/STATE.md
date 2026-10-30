@@ -45,13 +45,13 @@ Slices retained after the ≥5% body-mask rule, evaluated on the **native** grid
 | C | 1802 | 1772 | 30 |
 
 Centre B is **post-gadolinium**: nonzero MR median 53.7 vs A's 536.8, while its normalised mean is the
-*highest* of the three (0.191 vs 0.145 / 0.139). Artifacts: `iot_experiments/reports/synthrad_probe/`.
+*highest* of the three (0.191 vs 0.145 / 0.139). Artifacts: `iot_experiments/out/records/synthrad_probe/`.
 
 ### 3.2 Pair recovery, small sample (superseded, kept for provenance)
 
 15 fit / 15 eval patients, 100 slices. Learned cost beat cosine with DINOv2 in all four cells
 (0.333→0.378, 0.084→0.342, 0.324→0.396, 0.062→0.347 patient-level) but lost with pixel-PCA.
-`reports/synthrad_recovery.md`. **Small sample; superseded by 3.5.**
+`reports/current/synthrad_recovery.md`. **Small sample; superseded by 3.5.**
 
 ### 3.3 Plain-pixel baseline (NumPy only, no torch, no GPU)
 
