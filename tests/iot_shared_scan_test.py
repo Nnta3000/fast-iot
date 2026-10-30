@@ -208,8 +208,52 @@ def test_hysteresis_matches_by_identity_when_the_population_changes() -> None:
     assert set(kept.keys.tolist()) == {10, 15}, kept.keys
 
 
-def test_exact_loop_prune_default_is_off_for_exactness() -> None:
-    """CN: 精确循环的 `prune` 默认必须是 False。EN: the exact loop's `prune` default must be False."""
-    import inspect  # noqa: PLC0415
+def test_pruning_defaults_are_off_and_shared() -> None:
+    """
+    CN: 剪枝默认关闭（精确性），且两个目标函数共用**同一个** `tau_prune`——历史上松弛循环用 1e-7
+        而精确用 1e-12，差 1e5，没有任何推导。
+    EN: pruning is off by default (exactness), and both objectives share **one** `tau_prune`; historically
+        the relaxed loop used 1e-7 and the exact one 1e-12, five orders apart, with no derivation.
+    """
+    from iot.core.parameters import PruningParameters, SolverParameters, TAU_PRUNE_DEFAULT  # noqa: PLC0415
 
-    assert inspect.signature(solve_inverse_ot).parameters["prune"].default is False
+    assert PruningParameters().enabled is False
+    assert PruningParameters().tau_prune == TAU_PRUNE_DEFAULT == 1e-12
+    assert SolverParameters().pruning.tau_prune == 1e-12
+
+
+def test_objective_and_params_equal_legacy_keywords() -> None:
+    """
+    CN: 新写法（`objective=`/`params=`）与旧关键字必须给出**同一结果**，否则迁移有风险。
+    EN: the new form (`objective=`/`params=`) and the legacy keywords must give the **same result**, or the
+        migration is unsafe.
+    """
+    from iot.core.parameters import (ExactObjective, PruningParameters,  # noqa: PLC0415
+                                     ScanParameters, SolverParameters)
+
+    problem = _identifiable_problem()
+    legacy = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50, prune=False)
+    modern = solve_inverse_ot(
+        problem,
+        objective=ExactObjective(tie_break="lex", validate=True),
+        params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50,
+                                scan=ScanParameters(backend="numpy"),
+                                pruning=PruningParameters(enabled=False)))
+    assert float(legacy.delta) == float(modern.delta)
+    assert np.array_equal(np.asarray(legacy.theta), np.asarray(modern.theta))
+
+
+def test_objective_types_carry_their_own_knobs() -> None:
+    """
+    CN: 目标函数是 union：给错目标的旋钮在类型上就不存在，且坏值早失败。
+    EN: the objective is a union: a knob for the wrong objective does not exist as a type, and bad values
+        fail early.
+    """
+    from iot.core.parameters import ExactObjective, RelaxedObjective  # noqa: PLC0415
+
+    assert not hasattr(ExactObjective(), "eps_r_rel")
+    assert not hasattr(RelaxedObjective(), "tie_break")
+    with pytest.raises(ValueError):
+        ExactObjective(tie_break="lexicographic")
+    with pytest.raises(ValueError):
+        RelaxedObjective(eps_r_rel=0.0)

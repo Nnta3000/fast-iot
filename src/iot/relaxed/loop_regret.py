@@ -29,6 +29,7 @@ EN: **Constraint-generation loop for the relaxed (minimum-regret) inverse OT** -
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import time
 from dataclasses import dataclass
@@ -44,6 +45,7 @@ from ..exact.master import MasterSolution
 from ..core.scan import scan_for_violations, maximum_slack
 from ..core.edges_advance import advance_edges, keep_by_tightness, slack_toward_cost
 from ..core.pruning import HysteresisPruner
+from ..core.parameters import RelaxedObjective, SolverParameters
 from ..core.problem import InverseOTError, InverseOTProblem
 
 __all__ = [
@@ -247,25 +249,29 @@ def _fingerprint(edges: EdgeSet) -> str:
 def solve_inverse_ot_regret(
     problem: InverseOTProblem,
     *,
-    tol: float | None = None,
-    tau_prune: float = DEFAULT_TAU,
-    gamma: int = 1,
-    max_iterations: int = 200,
+    objective: RelaxedObjective | None = None,
+    params: SolverParameters | None = None,
     master: RegretMasterSolver | None = None,
-    eps_r_rel: float = 1e-6,
-    prune: bool = False,
-    prune_hysteresis: bool = True,
-    selection: SelectionMode = "central",
-    eta: float = 1e-7,
-    check_pot: bool = True,
+    # CN: ---- 兼容旧关键字（已弃用）；给了就覆盖 objective/params 的对应字段 ----
+    # EN: ---- legacy keywords (deprecated); when given they override the matching field ----
+    _flat_only: bool = False,
+    tol: float | None = None,
+    tau_prune: float | None = None,
+    gamma: int | None = None,
+    max_iterations: int | None = None,
+    eps_r_rel: float | None = None,
+    prune: bool | None = None,
+    prune_hysteresis: bool | None = None,
+    selection: SelectionMode | None = None,
+    eta: float | None = None,
+    check_pot: bool | None = None,
     initial_extra: EdgeSet | None = None,
     identity_rtol: float | None = None,
-    scan_backend: str = "numpy",
-    scan_device: str = "auto",
-    scan_max_tile_bytes: int = 1 << 26,
-    warm_start: bool = False,
+    scan_backend: str | None = None,
+    scan_device: str | None = None,
+    scan_max_tile_bytes: int | None = None,
+    warm_start: bool | None = None,
     hierarchical: "HierarchyParameters | None" = None,
-    _flat_only: bool = False,
 ) -> RegretResult:
     """
     CN: 求解 §2 的松弛逆 OT。
@@ -277,12 +283,67 @@ def solve_inverse_ot_regret(
         **uncovered** opt-in mode: an edge is kept if tight at the stage-1 or stage-2 point
         (`sigma >= -tau`); if `F_t` repeats, pruning is **disabled for the rest of the run**.
     """
-    if int(gamma) < 1:
-        raise ValueError("gamma must be >= 1")
-    if tol is not None and float(tol) < 0.0:
-        raise ValueError("tol must be nonnegative")
-    if float(tau_prune) < 0.0:
-        raise ValueError("tau_prune must be nonnegative")
+    # CN: 把两种写法解析成同一组局部变量；旧关键字优先，因此既有调用逐位不变。
+    # EN: resolve both forms into one set of locals; legacy keywords win, so existing calls are identical.
+    objective = RelaxedObjective() if objective is None else objective
+    params = SolverParameters() if params is None else params
+    if (eps_r_rel is not None or selection is not None or eta is not None or check_pot is not None
+            or initial_extra is not None or identity_rtol is not None or warm_start is not None):
+        objective = dataclasses.replace(
+            objective,
+            eps_r_rel=objective.eps_r_rel if eps_r_rel is None else float(eps_r_rel),
+            selection=objective.selection if selection is None else selection,
+            eta=objective.eta if eta is None else float(eta),
+            check_pot=objective.check_pot if check_pot is None else bool(check_pot),
+            initial_extra=objective.initial_extra if initial_extra is None else initial_extra,
+            identity_rtol=objective.identity_rtol if identity_rtol is None else float(identity_rtol),
+            warm_start=objective.warm_start if warm_start is None else bool(warm_start))
+    if tol is not None or gamma is not None or max_iterations is not None or hierarchical is not None:
+        params = dataclasses.replace(
+            params,
+            tol=params.tol if tol is None else float(tol),
+            gamma=params.gamma if gamma is None else int(gamma),
+            max_iterations=params.max_iterations if max_iterations is None else int(max_iterations),
+            hierarchical=params.hierarchical if hierarchical is None else hierarchical)
+    if scan_backend is not None or scan_device is not None or scan_max_tile_bytes is not None:
+        params = dataclasses.replace(
+            params,
+            scan=dataclasses.replace(
+                params.scan,
+                backend=params.scan.backend if scan_backend is None else str(scan_backend),
+                device=params.scan.device if scan_device is None else str(scan_device),
+                max_tile_bytes=(params.scan.max_tile_bytes if scan_max_tile_bytes is None
+                                else int(scan_max_tile_bytes))))
+    if tau_prune is not None or prune is not None or prune_hysteresis is not None:
+        params = dataclasses.replace(
+            params,
+            pruning=dataclasses.replace(
+                params.pruning,
+                enabled=params.pruning.enabled if prune is None else bool(prune),
+                hysteresis=(params.pruning.hysteresis if prune_hysteresis is None
+                            else bool(prune_hysteresis)),
+                tau_prune=params.pruning.tau_prune if tau_prune is None else float(tau_prune)))
+    eps_r_rel = float(objective.eps_r_rel)
+    selection = objective.selection
+    eta = float(objective.eta)
+    check_pot = bool(objective.check_pot)
+    initial_extra = objective.initial_extra
+    identity_rtol = objective.identity_rtol
+    warm_start = bool(objective.warm_start)
+    tol_in: float | None = params.tol if tol is None else float(tol)
+    gamma = int(params.gamma)
+    max_iterations = int(params.max_iterations)
+    hierarchical = params.hierarchical
+    scan_backend = str(params.scan.backend)
+    scan_device = str(params.scan.device)
+    scan_max_tile_bytes = int(params.scan.max_tile_bytes)
+    prune = bool(params.pruning.enabled)
+    prune_hysteresis = bool(params.pruning.hysteresis)
+    tau_prune = float(params.pruning.tau_prune)
+    # CN: 松弛循环把 `tol=None` 解释为"按代价尺度自动定"（`SolverParameters.tol=None` 即此语义）。
+    # EN: the relaxed loop reads `tol=None` as "derive from the cost scale"; `SolverParameters.tol=None`
+    #     has exactly that meaning.
+    tol = tol_in
     solver = master if master is not None else RegretMasterSolver(eta_scale=float(eta), tie_break=False)
     if identity_rtol is None:
         # CN: 一阶后端把点放在可行性内部，恒等式只能到求解精度；精确后端用浮点精度。

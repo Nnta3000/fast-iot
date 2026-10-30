@@ -10,6 +10,7 @@ EN: The edge set update is F = B ∪ T ∪ V: B is never pruned, T keeps only ed
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 
@@ -27,6 +28,7 @@ from .master import (
 from ..core.scan import scan_for_violations
 from ..core.edges_advance import advance_edges, slack_toward_cost
 from ..core.pruning import HysteresisPruner
+from ..core.parameters import ExactObjective, SolverParameters
 from ..core.problem import InverseOTError, InverseOTProblem
 from ..core.result import InverseOTResult, IterationRecord
 from ..eval.validation import is_optimal_plan
@@ -72,27 +74,26 @@ def _prune_by_slack(
 def solve_inverse_ot(
     problem: InverseOTProblem,
     *,
-    _flat_only: bool = False,
-    tol: float = 1e-9,
-    tau_prune: float = 1e-12,
-    gamma: int = 1,
-    tie_break: TieBreak = "lex",
-    max_iterations: int = 100,
+    objective: ExactObjective | None = None,
+    params: SolverParameters | None = None,
     solver: MasterSolver | None = None,
-    random_seed: int = 0,
-    validate: bool = True,
-    validate_max_elements: int = 50_000_000,
-    max_tile_elements: int = 1 << 20,
-    # CN: **剪枝默认关闭**：剪枝是启发式，只有"剪掉严格正 slack 的边"被证明端到端安全；默认保留全部边
-    #     以保持**精确性**（保留多余边永远安全，只是更大更慢）。要剪枝请显式 `prune=True`。
-    # EN: **pruning is off by default**: pruning is a heuristic, and only dropping strictly-positive-slack
-    #     edges is proved safe end to end; the default keeps every edge so the result stays **exact**
-    #     (keeping extra edges is always safe, just bigger and slower). Pass `prune=True` explicitly.
-    prune: bool = False,
-    prune_hysteresis: bool = True,
-    scan_backend: str = "numpy",
-    scan_device: str = "auto",
-    scan_max_tile_bytes: int = 64 * 1024 * 1024,
+    # CN: ---- 兼容旧关键字（已弃用）；给了它们就覆盖 `objective`/`params` 的对应字段 ----
+    # EN: ---- legacy keywords (deprecated); when given they override the matching field ---- 
+    _flat_only: bool = False,
+    tol: float | None = None,
+    tau_prune: float | None = None,
+    gamma: int | None = None,
+    tie_break: TieBreak | None = None,
+    max_iterations: int | None = None,
+    random_seed: int | None = None,
+    validate: bool | None = None,
+    validate_max_elements: int | None = None,
+    max_tile_elements: int | None = None,
+    prune: bool | None = None,
+    prune_hysteresis: bool | None = None,
+    scan_backend: str | None = None,
+    scan_device: str | None = None,
+    scan_max_tile_bytes: int | None = None,
     hierarchical: "HierarchyParameters | None" = None,
 ) -> InverseOTResult:
     """
@@ -110,14 +111,71 @@ def solve_inverse_ot(
         matmul path when a bilinear embedding exists, else `O(m n K)`), and needs **no** native
         extension. `scan_device` is forwarded ("auto"/"cpu"/"cuda").
     """
-    if int(max_iterations) < 1:
-        raise ValueError("max_iterations must be >= 1")
-    if int(gamma) < 1:
-        raise ValueError("gamma must be >= 1")
-    if float(tol) < 0.0 or float(tau_prune) < 0.0:
-        raise ValueError("tol and tau_prune must be nonnegative")
-    if str(scan_backend) not in ("numpy", "hello", "torch"):
-        raise ValueError("scan_backend must be 'numpy', 'hello' or 'torch'")
+    # CN: 旧关键字的合法性检查已在下面的解析中完成（`SolverParameters.__post_init__`）。
+    # EN: legality of the legacy keywords is checked during resolution below
+    #     (`SolverParameters.__post_init__`).
+    # CN: 把两种写法（新 `objective`/`params` 与旧关键字）**解析成同一组局部变量**，下游代码不变。
+    #     旧关键字优先，因此任何既有调用逐位不变。
+    # EN: resolve both forms (new `objective`/`params` and the legacy keywords) into one set of locals, so
+    #     nothing downstream changes. Legacy keywords win, so every existing call is bit-identical.
+    objective = ExactObjective() if objective is None else objective
+    params = SolverParameters() if params is None else params
+    if tie_break is not None or random_seed is not None or validate is not None \
+            or validate_max_elements is not None:
+        objective = dataclasses.replace(
+            objective,
+            tie_break=objective.tie_break if tie_break is None else tie_break,
+            random_seed=objective.random_seed if random_seed is None else int(random_seed),
+            validate=objective.validate if validate is None else bool(validate),
+            validate_max_elements=(objective.validate_max_elements
+                                   if validate_max_elements is None else int(validate_max_elements)))
+    if tol is not None or gamma is not None or max_iterations is not None or hierarchical is not None:
+        params = dataclasses.replace(
+            params,
+            tol=params.tol if tol is None else float(tol),
+            gamma=params.gamma if gamma is None else int(gamma),
+            max_iterations=params.max_iterations if max_iterations is None else int(max_iterations),
+            hierarchical=params.hierarchical if hierarchical is None else hierarchical)
+    if max_tile_elements is not None or scan_backend is not None or scan_device is not None \
+            or scan_max_tile_bytes is not None:
+        params = dataclasses.replace(
+            params,
+            scan=dataclasses.replace(
+                params.scan,
+                backend=params.scan.backend if scan_backend is None else str(scan_backend),
+                device=params.scan.device if scan_device is None else str(scan_device),
+                max_tile_elements=(params.scan.max_tile_elements if max_tile_elements is None
+                                   else int(max_tile_elements)),
+                max_tile_bytes=(params.scan.max_tile_bytes if scan_max_tile_bytes is None
+                                else int(scan_max_tile_bytes))))
+    if tau_prune is not None or prune is not None or prune_hysteresis is not None:
+        params = dataclasses.replace(
+            params,
+            pruning=dataclasses.replace(
+                params.pruning,
+                enabled=params.pruning.enabled if prune is None else bool(prune),
+                hysteresis=params.pruning.hysteresis if prune_hysteresis is None
+                else bool(prune_hysteresis),
+                tau_prune=params.pruning.tau_prune if tau_prune is None else float(tau_prune)))
+    # CN: 解包成下游使用的名字。EN: unpack into the names the body uses.
+    tie_break = objective.tie_break
+    random_seed = int(objective.random_seed)
+    validate = bool(objective.validate)
+    validate_max_elements = int(objective.validate_max_elements)
+    # CN: 精确循环的 `tol` 一直是数值；`params.tol=None` 时退回它历史上的默认值 1e-9。
+    # EN: the exact loop's `tol` has always been a number; `params.tol=None` falls back to its
+    #     historical default of 1e-9.
+    tol = 1e-9 if params.tol is None else float(params.tol)
+    gamma = int(params.gamma)
+    max_iterations = int(params.max_iterations)
+    hierarchical = params.hierarchical
+    scan_backend = str(params.scan.backend)
+    scan_device = str(params.scan.device)
+    max_tile_elements = int(params.scan.max_tile_elements)
+    scan_max_tile_bytes = int(params.scan.max_tile_bytes)
+    prune = bool(params.pruning.enabled)
+    prune_hysteresis = bool(params.pruning.hysteresis)
+    tau_prune = float(params.pruning.tau_prune)
     # CN: **层级入口**。`hierarchical=None`（默认）时完全走原来的扁平路径，结果逐位不变。
     #     给了参数则粗到细求解，细层仍调用**本函数**（`_flat_only=True` 防止递归）。
     # EN: **hierarchical entry**. With `hierarchical=None` (default) the original flat path runs unchanged,
