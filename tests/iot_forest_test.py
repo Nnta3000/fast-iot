@@ -31,6 +31,7 @@ from iot import (
     mandatory_edges,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 def _all_edges(problem: InverseOTProblem) -> EdgeSet:
@@ -104,12 +105,7 @@ def test_forest_representation_is_exact_on_support() -> None:
 def test_forest_drives_the_loop_to_an_optimal_theta() -> None:
     rng = np.random.default_rng(43)
     instance = make_diagonal_grounded_instance(n_source=12, n_target=12, n_features=3, rng=rng)
-    result = solve_inverse_ot(
-        instance.problem,
-        solver=SpanningForestMasterSolver(epsilon=1e-4, random_seed=0),
-        tie_break="none",
-        max_iterations=150,
-    )
+    result = solve_inverse_ot(instance.problem, solver=SpanningForestMasterSolver(epsilon=1e-4, random_seed=0), params=SolverParameters(max_iterations=150), objective=ExactObjective(tie_break="none"))
     assert result.converged
     assert result.is_optimal is True
     assert is_optimal_plan(instance.problem, result.theta).is_optimal

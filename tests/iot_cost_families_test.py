@@ -27,6 +27,7 @@ from iot import (
     make_bilinear_psd_grounded_instance,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 def _columns(kind: str, source: np.ndarray, target: np.ndarray) -> list[np.ndarray]:
@@ -76,13 +77,7 @@ def _grounded_lp_problem(kind: str, *, n: int, d: int, seed: int, signed: bool) 
 def test_lp_cost_families_are_solvable(kind: str, signed: bool, k: int) -> None:
     problem = _grounded_lp_problem(kind, n=16, d=4, seed=5, signed=signed)
     assert int(problem.n_features) == k
-    result = solve_inverse_ot(
-        problem,
-        solver=WarmStartMasterSolver(epsilon=1e-4, random_seed=0, purge=True),
-        tie_break="none",
-        max_iterations=200,
-        validate=True,
-    )
+    result = solve_inverse_ot(problem, solver=WarmStartMasterSolver(epsilon=1e-4, random_seed=0, purge=True), params=SolverParameters(max_iterations=200), objective=ExactObjective(tie_break="none", validate=True))
     assert result.converged
     assert result.is_optimal is True
     assert is_optimal_plan(problem, result.theta).is_optimal
@@ -93,9 +88,7 @@ def test_bilinear_psd_is_solvable_only_at_tiny_n() -> None:
     instance = make_bilinear_psd_grounded_instance(
         n_source=6, n_target=6, point_dimension=2, rng=rng
     )
-    result = solve_inverse_ot(
-        instance.problem, solver=SdpMasterSolver(), tie_break="lex", max_iterations=60
-    )
+    result = solve_inverse_ot(instance.problem, solver=SdpMasterSolver(), params=SolverParameters(max_iterations=60), objective=ExactObjective(tie_break="lex"))
     assert result.converged
     assert result.is_optimal is True
 
@@ -108,6 +101,4 @@ def test_bilinear_psd_lex_fails_at_n16() -> None:
         n_source=16, n_target=16, point_dimension=2, rng=rng
     )
     with pytest.raises(RuntimeError):
-        solve_inverse_ot(
-            instance.problem, solver=SdpMasterSolver(), tie_break="lex", max_iterations=60
-        )
+        solve_inverse_ot(instance.problem, solver=SdpMasterSolver(), params=SolverParameters(max_iterations=60), objective=ExactObjective(tie_break="lex"))

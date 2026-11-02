@@ -36,6 +36,7 @@ from .costs import DualFeasibility, blockwise_cost_matrix, dual_feasibility
 from .families import FamilySpec, build_family
 from .marginals import marginal_spec
 from .records import RunRecord, RunSpec, write_csv, write_json
+from iot.core.parameters import ExactObjective, PruningParameters, ScanParameters, SolverParameters
 
 EPSILON: float = 1e-4
 LP_TOL: float = 1e-9
@@ -181,21 +182,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
     trajectory: tuple[dict[str, float], ...] = ()
     theta: np.ndarray | None = None
     try:
-        result = solve_inverse_ot(
-            problem,
-            tie_break="none",
-            solver=solver,
-            max_iterations=int(spec.max_iterations),
-            random_seed=int(spec.seed),
-            tol=tol,
-            tau_prune=float(spec.tau_prune),
-            gamma=int(spec.gamma),
-            validate=False,
-            prune=bool(spec.prune),
-            prune_hysteresis=bool(spec.prune_hysteresis),
-            scan_backend=str(spec.scan_backend),
-            scan_device=str(spec.scan_device),
-        )
+        result = solve_inverse_ot(problem, solver=solver, params=SolverParameters(max_iterations=int(spec.max_iterations), tol=tol, gamma=int(spec.gamma), scan=ScanParameters(backend=str(spec.scan_backend), device=str(spec.scan_device)), pruning=PruningParameters(tau_prune=float(spec.tau_prune), enabled=bool(spec.prune), hysteresis=bool(spec.prune_hysteresis))), objective=ExactObjective(tie_break="none", random_seed=int(spec.seed), validate=False))
         iterations = int(result.n_iterations)
         converged = bool(result.converged)
         records = result.iterations

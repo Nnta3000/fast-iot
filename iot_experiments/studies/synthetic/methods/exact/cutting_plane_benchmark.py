@@ -23,6 +23,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
+from iot.core.parameters import SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -117,11 +118,7 @@ def run_exact(instance: BenchmarkInstance, *, max_iterations: int) -> MethodRow:
     """CN: 运行随仓库发布的精确约束生成配置（正则化 master，迟滞剪枝）。EN: Shipped exact config."""
     problem = instance.observed_problem()
     started = time.perf_counter()
-    result = solve_inverse_ot(
-        problem,
-        solver=RegularizedMasterSolver(epsilon=1e-4),
-        max_iterations=int(max_iterations),
-    )
+    result = solve_inverse_ot(problem, solver=RegularizedMasterSolver(epsilon=1e-4), params=SolverParameters(max_iterations=int(max_iterations)))
     wall = time.perf_counter() - started
     return MethodRow(
         n=int(instance.n_source),

@@ -25,6 +25,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -72,15 +73,7 @@ def run_master(
     instance = build_instance(n=int(n), k=int(k), seed=int(seed))
     problem = instance.observed_problem()
     started = time.perf_counter()
-    result = solve_inverse_ot(
-        problem,
-        solver=solver,
-        tie_break="none",
-        max_iterations=int(max_iterations),
-        validate=False,
-        prune=bool(prune),
-        tau_prune=float(tau_prune),
-    )
+    result = solve_inverse_ot(problem, solver=solver, params=SolverParameters(max_iterations=int(max_iterations), pruning=PruningParameters(enabled=bool(prune), tau_prune=float(tau_prune))), objective=ExactObjective(tie_break="none", validate=False))
     wall = time.perf_counter() - started
     iterations = int(result.n_iterations)
     max_support = max((record.support_size for record in result.iterations), default=0)

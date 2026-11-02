@@ -33,6 +33,8 @@ from __future__ import annotations
 import dataclasses
 from typing import Literal
 
+from iot.core.scan import ScanBackend
+
 from ..core.edges import EdgeSet
 from ..hierarchical.parameters import HierarchyParameters
 
@@ -89,7 +91,7 @@ class ScanParameters:
         - `max_tile_bytes`: bytes per tile for the GPU backends; likewise memory only.
     """
 
-    backend: str = "numpy"
+    backend: ScanBackend = "numpy"
     device: str = "auto"
     max_tile_elements: int = 1 << 20
     max_tile_bytes: int = 64 * 1024 * 1024
@@ -97,11 +99,17 @@ class ScanParameters:
     def __post_init__(self) -> None:
         """CN: 早失败。EN: fail early."""
         if str(self.backend) not in ("numpy", "hello", "torch"):
-            raise ValueError(f"scan backend must be 'numpy', 'hello' or 'torch', got {self.backend!r}")
+            raise ValueError(
+                f"scan backend must be 'numpy', 'hello' or 'torch', got {self.backend!r}"
+            )
         if int(self.max_tile_elements) < 1:
-            raise ValueError(f"max_tile_elements must be >= 1, got {self.max_tile_elements!r}")
+            raise ValueError(
+                f"max_tile_elements must be >= 1, got {self.max_tile_elements!r}"
+            )
         if int(self.max_tile_bytes) < 1:
-            raise ValueError(f"max_tile_bytes must be >= 1, got {self.max_tile_bytes!r}")
+            raise ValueError(
+                f"max_tile_bytes must be >= 1, got {self.max_tile_bytes!r}"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -173,9 +181,13 @@ class ExactObjective:
     def __post_init__(self) -> None:
         """CN: 早失败。EN: fail early."""
         if str(self.tie_break) not in ("lex", "lex_generic", "random", "none"):
-            raise ValueError(f"tie_break must be lex/lex_generic/random/none, got {self.tie_break!r}")
+            raise ValueError(
+                f"tie_break must be lex/lex_generic/random/none, got {self.tie_break!r}"
+            )
         if int(self.validate_max_elements) < 1:
-            raise ValueError(f"validate_max_elements must be >= 1, got {self.validate_max_elements!r}")
+            raise ValueError(
+                f"validate_max_elements must be >= 1, got {self.validate_max_elements!r}"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -228,11 +240,15 @@ class RelaxedObjective:
         if float(self.eps_r_rel) <= 0.0:
             raise ValueError(f"eps_r_rel must be > 0, got {self.eps_r_rel!r}")
         if str(self.selection) not in ("central", "uniform", "none"):
-            raise ValueError(f"selection must be central/uniform/none, got {self.selection!r}")
+            raise ValueError(
+                f"selection must be central/uniform/none, got {self.selection!r}"
+            )
         if float(self.eta) < 0.0:
             raise ValueError(f"eta must be >= 0, got {self.eta!r}")
         if self.identity_rtol is not None and float(self.identity_rtol) <= 0.0:
-            raise ValueError(f"identity_rtol must be > 0 when given, got {self.identity_rtol!r}")
+            raise ValueError(
+                f"identity_rtol must be > 0 when given, got {self.identity_rtol!r}"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -286,13 +302,17 @@ class EntropicObjective:
     def __post_init__(self) -> None:
         """CN: 早失败。EN: fail early."""
         if float(self.relative_epsilon) <= 0.0:
-            raise ValueError(f"relative_epsilon must be > 0, got {self.relative_epsilon!r}")
+            raise ValueError(
+                f"relative_epsilon must be > 0, got {self.relative_epsilon!r}"
+            )
         if float(self.learning_rate) <= 0.0:
             raise ValueError(f"learning_rate must be > 0, got {self.learning_rate!r}")
         if int(self.max_steps) < 1:
             raise ValueError(f"max_steps must be >= 1, got {self.max_steps!r}")
         if int(self.sinkhorn_iterations) < 1:
-            raise ValueError(f"sinkhorn_iterations must be >= 1, got {self.sinkhorn_iterations!r}")
+            raise ValueError(
+                f"sinkhorn_iterations must be >= 1, got {self.sinkhorn_iterations!r}"
+            )
 
 
 Objective = ExactObjective | RelaxedObjective | EntropicObjective
@@ -342,11 +362,20 @@ class SolverParameters:
         if int(self.gamma) < 1:
             raise ValueError(f"gamma must be >= 1, got {self.gamma!r}")
         if int(self.max_iterations) < 1:
-            raise ValueError(f"max_iterations must be >= 1, got {self.max_iterations!r}")
+            raise ValueError(
+                f"max_iterations must be >= 1, got {self.max_iterations!r}"
+            )
 
 
 __all__ = [
-    "EntropicObjective", "Objective", "ExactObjective", "PruningParameters", "RelaxedObjective",
+    "EntropicObjective",
+    "Objective",
+    "ExactObjective",
+    "PruningParameters",
+    "RelaxedObjective",
     "ScanParameters",
-    "SelectionMode", "SolverParameters", "TAU_PRUNE_DEFAULT", "TieBreak",
+    "SelectionMode",
+    "SolverParameters",
+    "TAU_PRUNE_DEFAULT",
+    "TieBreak",
 ]

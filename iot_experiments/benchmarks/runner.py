@@ -28,6 +28,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -368,19 +369,7 @@ def run_exact(instance: BenchmarkInstance, config: ExactConfig) -> RunCheckpoint
         else None
     )
     started = time.perf_counter()
-    result = solve_inverse_ot(
-        instance.observed_problem(),
-        tie_break=config.tie_break,  # type: ignore[arg-type]
-        solver=solver,
-        max_iterations=int(config.max_iterations),
-        random_seed=int(instance.seed),
-        tol=float(config.tol),
-        tau_prune=float(config.tau_prune),
-        gamma=int(config.gamma),
-        validate=bool(config.validate),
-        prune_hysteresis=bool(config.prune_hysteresis),
-        prune=True,
-    )
+    result = solve_inverse_ot(instance.observed_problem(), solver=solver, params=SolverParameters(max_iterations=int(config.max_iterations), tol=float(config.tol), gamma=int(config.gamma), pruning=PruningParameters(tau_prune=float(config.tau_prune), hysteresis=bool(config.prune_hysteresis), enabled=True)), objective=ExactObjective(tie_break=config.tie_break, random_seed=int(instance.seed), validate=bool(config.validate)))
     wall_time = float(time.perf_counter() - started)
     checkpoint = ThetaCheckpoint(
         iteration=int(result.n_iterations),

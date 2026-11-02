@@ -33,6 +33,7 @@ import numpy as np
 import ot
 import scipy.sparse as sparse
 from jaxtyping import Float
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -235,11 +236,8 @@ def main(argv: list[str] | None = None) -> int:
                                   "cos_hit_by_draw": [round(cos_by_draw[d]["cos_hit"], 4)
                                                       for d in range(3)]}
         try:
-            res = solve_inverse_ot_regret(
-                problem, tol=None, gamma=1, max_iterations=int(config.max_iterations),
-                master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
-                                          params={"time_sec_limit": float(config.solve_limit_s)}),
-                eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+            res = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
+                                          params={"time_sec_limit": float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=1, max_iterations=int(config.max_iterations), pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
             theta_loop = np.asarray(res.theta, dtype=np.float64)
             cost_loop = _quadratic_cost(x_pool, y_pool, theta_loop)
             loop_metrics = {d: _metrics(cost_loop, d) for d in range(3)}

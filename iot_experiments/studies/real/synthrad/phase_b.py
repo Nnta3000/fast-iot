@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 import scipy.sparse as sparse
 from jaxtyping import Float, Int
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -145,12 +146,10 @@ def main(argv: list[str] | None = None) -> int:
     problem = InverseOTProblem(features=DiagonalWeightFeatures(x, y),
                                theta_set=box_simplex(k, box_relative=float(config.rel)), plan=plan)
     t0 = time.perf_counter()
-    loop = solve_inverse_ot_regret(problem, tol=None, gamma=1, max_iterations=200,
-                                   master=RegretMasterSolver(backend=str(config.solver),
+    loop = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend=str(config.solver),
                                                              tie_break=False,
                                                              params={"time_sec_limit":
-                                                                     float(config.solve_limit_s)}),
-                                   eps_r_rel=1e-6, prune=False, check_pot=False)
+                                                                     float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=1, max_iterations=200, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False))
     loop_s = time.perf_counter() - t0
 
     theta_l = np.asarray(loop.theta, dtype=np.float64)

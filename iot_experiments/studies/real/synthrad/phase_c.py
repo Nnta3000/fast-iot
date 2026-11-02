@@ -26,6 +26,7 @@ from pathlib import Path
 
 import numpy as np
 import scipy.sparse as sparse
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -103,11 +104,8 @@ def main(argv: list[str] | None = None) -> int:
         rss0 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
         t_start = time.perf_counter()
         try:
-            res = solve_inverse_ot_regret(
-                problem, tol=None, gamma=1, max_iterations=200,
-                master=RegretMasterSolver(backend="cupdlpx", tie_break=False,
-                                          params={"time_sec_limit": float(config.solve_limit_s)}),
-                eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+            res = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend="cupdlpx", tie_break=False,
+                                          params={"time_sec_limit": float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=1, max_iterations=200, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
             elapsed = time.perf_counter() - t_start
             rss1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
             width = float(res.upper - res.lower)

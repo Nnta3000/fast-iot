@@ -42,6 +42,7 @@ from pathlib import Path
 import numpy as np
 import scipy.sparse as sparse
 from jaxtyping import Float, Int
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -253,11 +254,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---------- flat baseline (the best cheap one: gamma=2, warm) ----------
     t0 = time.perf_counter()
-    flat = solve_inverse_ot_regret(
-        problem, tol=None, gamma=int(config.gamma), max_iterations=200, warm_start=True,
-        master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
-                                  params={"time_sec_limit": float(config.solve_limit_s)}),
-        eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+    flat = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
+                                  params={"time_sec_limit": float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=int(config.gamma), max_iterations=200, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(warm_start=True, eps_r_rel=1e-6, check_pot=False, selection="none"))
     flat_s = time.perf_counter() - t0
     log.line(f"flat: rounds={flat.n_iterations} |F|={flat.finite_edges} {flat_s:.1f}s "
              f"L={flat.lower:.3e} U={flat.upper:.3e} stall={flat.stall_status}")
@@ -289,11 +287,8 @@ def main(argv: list[str] | None = None) -> int:
         del dense
         coarse_problem = InverseOTProblem(features=DiagonalWeightFeatures(xs, ys),
                                           theta_set=box_simplex(k, box_relative=0.25), plan=plan_c)
-        cr = solve_inverse_ot_regret(
-            coarse_problem, tol=None, gamma=1, max_iterations=200,
-            master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
-                                      params={"time_sec_limit": float(config.solve_limit_s)}),
-            eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+        cr = solve_inverse_ot_regret(coarse_problem, master=RegretMasterSolver(backend=str(config.solver), tie_break=False,
+                                      params={"time_sec_limit": float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=1, max_iterations=200, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
         coarse_s = time.perf_counter() - t_c
         log.line(f"  coarse: rounds={cr.n_iterations} |F|={cr.finite_edges} {coarse_s:.1f}s "
                  f"stall={cr.stall_status}")
@@ -317,12 +312,9 @@ def main(argv: list[str] | None = None) -> int:
         seed_s = time.perf_counter() - t_s
         # ---- fine: start from the seed ----
         t_f = time.perf_counter()
-        fin = solve_inverse_ot_regret(
-            problem, tol=None, gamma=int(config.gamma), max_iterations=200, warm_start=True,
-            initial_extra=seeded, master=RegretMasterSolver(backend=str(config.solver),
+        fin = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend=str(config.solver),
                                                             tie_break=False,
-                                                            params={"time_sec_limit": float(config.solve_limit_s)}),
-            eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+                                                            params={"time_sec_limit": float(config.solve_limit_s)}), params=SolverParameters(tol=None, gamma=int(config.gamma), max_iterations=200, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(warm_start=True, initial_extra=seeded, eps_r_rel=1e-6, check_pot=False, selection="none"))
         fine_s = time.perf_counter() - t_f
         total_s = time.perf_counter() - t_start
         theta_fin = np.asarray(fin.theta, dtype=np.float64)

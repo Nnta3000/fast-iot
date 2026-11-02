@@ -27,6 +27,7 @@ from iot.exact.master import MasterSolution
 from iot.exact.loop import solve_inverse_ot
 from iot.relaxed.loop_regret import solve_inverse_ot_regret
 from iot.relaxed.master_regret import RegretMasterSolver
+from iot.core.parameters import ExactObjective, PruningParameters, RelaxedObjective, ScanParameters, SolverParameters
 
 
 def _identifiable_problem(m: int = 12, n: int = 12, d: int = 3, seed: int = 0) -> InverseOTProblem:
@@ -74,7 +75,7 @@ def test_exact_loop_is_unchanged_by_the_shared_scan() -> None:
     EN: the exact loop's delta*, rounds and |F| match the pre-merge baseline.
     """
     problem = _identifiable_problem()
-    result = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50, prune=False)
+    result = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50, pruning=PruningParameters(enabled=False)))
     assert result.converged
     assert bool(result.is_optimal) is True
     assert float(result.delta) == pytest.approx(0.044979508448159775, rel=1e-12)
@@ -89,12 +90,8 @@ def test_relaxed_scan_backends_agree() -> None:
     problem = _identifiable_problem()
     outcomes = []
     for backend in ("numpy", "torch", "hello"):
-        result = solve_inverse_ot_regret(
-            problem, tol=None, gamma=1, max_iterations=50,
-            master=RegretMasterSolver(backend="highs", tie_break=False,
-                                      params={"time_sec_limit": 120.0}),
-            eps_r_rel=1e-6, prune=False, check_pot=False, selection="none",
-            scan_backend=backend)
+        result = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend="highs", tie_break=False,
+                                      params={"time_sec_limit": 120.0}), params=SolverParameters(tol=None, gamma=1, max_iterations=50, scan=ScanParameters(backend=backend), pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
         outcomes.append((round(float(result.lower), 12), round(float(result.upper), 12),
                          int(result.n_iterations), bool(result.converged)))
     assert len(set(outcomes)) == 1, outcomes
@@ -232,11 +229,8 @@ def test_objective_and_params_equal_legacy_keywords() -> None:
                                      ScanParameters, SolverParameters)
 
     problem = _identifiable_problem()
-    legacy = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50, prune=False)
-    modern = solve_inverse_ot(
-        problem,
-        objective=ExactObjective(tie_break="lex", validate=True),
-        params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50,
+    legacy = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50, pruning=PruningParameters(enabled=False)))
+    modern = solve_inverse_ot(problem, objective=ExactObjective(tie_break="lex", validate=True), params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50,
                                 scan=ScanParameters(backend="numpy"),
                                 pruning=PruningParameters(enabled=False)))
     assert float(legacy.delta) == float(modern.delta)

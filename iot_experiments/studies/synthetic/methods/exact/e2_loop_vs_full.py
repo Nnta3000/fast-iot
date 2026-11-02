@@ -24,6 +24,7 @@ from iot import (
     make_diagonal_grounded_instance,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 @dataclass(frozen=True)
@@ -71,7 +72,7 @@ def run_e2(*, seed: int, sizes: list[int], n_features: int, mixing_strength: flo
             rng=rng,
             mixing_strength=float(mixing_strength),
         )
-        loop = solve_inverse_ot(instance.problem, tie_break="lex", max_iterations=200)
+        loop = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=200), objective=ExactObjective(tie_break="lex"))
         full = LinearMasterSolver().solve(instance.problem, _all_edges(instance.problem), tie_break="lex")
         loop_dual = np.concatenate([loop.source_dual, loop.target_dual])
         full_dual = np.concatenate([full.source_dual, full.target_dual])

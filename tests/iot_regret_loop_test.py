@@ -22,6 +22,7 @@ from iot.core.problem import InverseOTProblem
 from iot.core.theta import LinearThetaConstraints, SimplexTheta
 from iot.relaxed.loop_regret import solve_inverse_ot_regret
 from iot.relaxed.master_regret import RegretMasterSolver
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 
 def _problem(n: int, k: int, seed: int = 0) -> InverseOTProblem:
@@ -44,9 +45,7 @@ def test_loop_does_not_converge_in_round_one_on_a_violating_instance() -> None:
     """
     problem = _problem(n=20, k=4, seed=1)
     master = RegretMasterSolver(backend="highs", tie_break=False)
-    result = solve_inverse_ot_regret(problem, prune=False, gamma=1, max_iterations=8,
-                                     selection="none", check_pot=False, master=master,
-                                     eps_r_rel=1e-2)
+    result = solve_inverse_ot_regret(problem, master=master, params=SolverParameters(gamma=1, max_iterations=8, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(selection="none", check_pot=False, eps_r_rel=1e-2))
     first = result.iterations[0]
     # CN: 第 1 轮必须看到 F 外的违例（否则说明扫的是平移后的点）。
     # EN: round 1 must see a violation outside F (otherwise the shifted point was scanned).
@@ -68,9 +67,7 @@ def test_stop_rule_uses_the_pre_shift_violation() -> None:
     """
     problem = _problem(n=16, k=3, seed=4)
     master = RegretMasterSolver(backend="highs", tie_break=False)
-    result = solve_inverse_ot_regret(problem, prune=False, gamma=1, max_iterations=6,
-                                     selection="none", check_pot=False, master=master,
-                                     eps_r_rel=1e-2)
+    result = solve_inverse_ot_regret(problem, master=master, params=SolverParameters(gamma=1, max_iterations=6, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(selection="none", check_pot=False, eps_r_rel=1e-2))
     for record in result.iterations:
         assert record.max_sigma_all >= record.sigma_max_out_F - 1e-12 or record.added == 0
         # CN: 若第 1 轮有 F 外违例，则 `max_sigma_all` 不能是 0。
@@ -162,9 +159,7 @@ def test_planted_n30_through_the_loop_is_optimal() -> None:
     planted = plant_instance(family="quadratic", n=30, point_dimension=4, seed=0)
     problem = planted.problem
     master = RegretMasterSolver(backend="highs", tie_break=False)
-    result = solve_inverse_ot_regret(problem, prune=False, gamma=1, max_iterations=10,
-                                     selection="none", check_pot=False, master=master,
-                                     eps_r_rel=1e-2)
+    result = solve_inverse_ot_regret(problem, master=master, params=SolverParameters(gamma=1, max_iterations=10, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(selection="none", check_pot=False, eps_r_rel=1e-2))
     # CN: planted 实例可精确认证。**实测** HiGHS `R' = 2.16e-14`、`R_uniform = 7.24e-2`（3e-13 相对），
     #     因此按 `R' <= 1e-10 * R_uniform` 断言。
     # EN: planted instances are exactly certifiable. **Measured** HiGHS `R' = 2.16e-14` against
@@ -195,9 +190,7 @@ def test_planted_n30_gpu_relaxed_bound() -> None:
     planted = plant_instance(family="quadratic", n=30, point_dimension=4, seed=0)
     master = RegretMasterSolver(backend="cupdlpx", tie_break=False,
                                params={"time_sec_limit": 300.0})
-    result = solve_inverse_ot_regret(planted.problem, prune=False, gamma=1, max_iterations=10,
-                                     selection="none", check_pot=False, master=master,
-                                     eps_r_rel=1e-2)
+    result = solve_inverse_ot_regret(planted.problem, master=master, params=SolverParameters(gamma=1, max_iterations=10, pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(selection="none", check_pot=False, eps_r_rel=1e-2))
     # CN: `eps_r = 1e-2 * R_uniform`，故 `R' <= 5e-4 * R_uniform` 等价于 `R' <= 5e-2 * eps_r`。
     # EN: `eps_r = 1e-2 * R_uniform`, so `R' <= 5e-4 * R_uniform` is `R' <= 5e-2 * eps_r`.
     bound = 5e-2 * float(result.eps_r)

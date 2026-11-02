@@ -49,7 +49,6 @@ if str(_REPO_ROOT) not in sys.path:
 from iot import InverseOTProblem  # noqa: E402
 from iot.core.features import DiagonalWeightFeatures  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
-from iot.core.parameters import EntropicObjective  # noqa: E402
 from iot.entropic import solve_entropic  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.records import RunLog  # noqa: E402

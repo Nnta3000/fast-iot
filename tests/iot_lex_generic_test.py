@@ -23,6 +23,7 @@ from iot import (
     mandatory_edges,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 
 def test_draw_generic_direction_is_seeded_and_sized() -> None:
@@ -85,13 +86,8 @@ def test_lex_generic_rejects_direction_of_wrong_length() -> None:
 def test_lex_generic_loop_converges_and_agrees_with_lex_in_theta() -> None:
     rng = np.random.default_rng(12)
     instance = make_diagonal_grounded_instance(n_source=12, n_target=12, n_features=3, rng=rng)
-    lex = solve_inverse_ot(
-        instance.problem, tie_break="lex", max_iterations=150, prune_hysteresis=False
-    )
-    generic = solve_inverse_ot(
-        instance.problem, tie_break="lex_generic", random_seed=0, max_iterations=150,
-        prune_hysteresis=False,
-    )
+    lex = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=150, pruning=PruningParameters(hysteresis=False)), objective=ExactObjective(tie_break="lex"))
+    generic = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=150, pruning=PruningParameters(hysteresis=False)), objective=ExactObjective(tie_break="lex_generic", random_seed=0))
     assert lex.converged and generic.converged
     assert generic.is_optimal is True
     assert abs(lex.delta - generic.delta) < 1e-9

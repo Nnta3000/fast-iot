@@ -10,6 +10,7 @@ from iot.generators.grounded import GroundedInstance
 from iot.exact.loop import solve_inverse_ot
 from iot.exact.sdp import SdpMasterSolver
 from iot.alternatives.sinkhorn_theta import fit_theta_sinkhorn
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 
 def test_shared_l0_gap_matches_direct_pot_computation() -> None:
@@ -47,7 +48,7 @@ def _assert_metrics_finite(metrics) -> None:
 
 def test_constraint_generation_certifies_on_simplex(simplex_instance: GroundedInstance) -> None:
     problem = simplex_instance.problem
-    result = solve_inverse_ot(problem, tie_break="lex", max_iterations=60)
+    result = solve_inverse_ot(problem, params=SolverParameters(max_iterations=60), objective=ExactObjective(tie_break="lex"))
     assert result.is_optimal is True
     assert problem.theta_set.contains(result.theta, tol=1e-6)
     metrics = evaluate_inverse_ot(
@@ -84,9 +85,7 @@ def test_entropic_stops_once_no_longer_improving(simplex_instance: GroundedInsta
 def test_constraint_generation_certifies_on_psd(psd_instance: GroundedInstance) -> None:
     pytest.importorskip("cvxpy")
     problem = psd_instance.problem
-    result = solve_inverse_ot(
-        problem, solver=SdpMasterSolver(), tie_break="lex", max_iterations=200, prune=False
-    )
+    result = solve_inverse_ot(problem, solver=SdpMasterSolver(), params=SolverParameters(max_iterations=200, pruning=PruningParameters(enabled=False)), objective=ExactObjective(tie_break="lex"))
     assert result.is_optimal is True
     assert problem.theta_set.contains(result.theta, tol=1e-5)
 

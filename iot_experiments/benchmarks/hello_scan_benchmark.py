@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
+from iot.core.parameters import ExactObjective, ScanParameters, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -109,14 +110,7 @@ def run_loop(*, sizes: list[int], k: int, device: str, max_iterations: int) -> l
         for backend, backend_device in (("numpy", "cpu"), ("hello", device)):
             problem = instance.observed_problem()
             started = time.perf_counter()
-            result = solve_inverse_ot(
-                problem,
-                solver=RegularizedMasterSolver(epsilon=1e-4),
-                scan_backend=backend,
-                scan_device=backend_device,
-                max_iterations=int(max_iterations),
-                validate=False,
-            )
+            result = solve_inverse_ot(problem, solver=RegularizedMasterSolver(epsilon=1e-4), params=SolverParameters(max_iterations=int(max_iterations), scan=ScanParameters(backend=backend, device=backend_device)), objective=ExactObjective(validate=False))
             wall = time.perf_counter() - started
             rows.append(
                 LoopRow(
@@ -152,10 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     # one-time import / CUDA warmup, untimed
     warm = build_instance(n=60, k=4, seed=0)
-    solve_inverse_ot(
-        warm.observed_problem(), solver=RegularizedMasterSolver(epsilon=1e-4),
-        scan_backend="hello", scan_device=str(args.device), max_iterations=3, validate=False,
-    )
+    solve_inverse_ot(warm.observed_problem(), solver=RegularizedMasterSolver(epsilon=1e-4), params=SolverParameters(max_iterations=3, scan=ScanParameters(backend="hello", device=str(args.device))), objective=ExactObjective(validate=False))
     scan_rows = run_scan_only(
         sizes=[int(v) for v in args.sizes], k=int(args.k), device=str(args.device),
         repeats=int(args.repeats),

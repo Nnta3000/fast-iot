@@ -14,6 +14,7 @@ from iot import (
     solve_inverse_ot,
 )
 from iot.generators.grounded import GroundedInstance
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 
 def _grid(m: int, n: int) -> tuple[np.ndarray, np.ndarray]:
@@ -56,13 +57,7 @@ def test_lp_master_rejects_non_linear_theta() -> None:
 def test_sdp_loop_converges_and_certifies_optimality(psd_instance: GroundedInstance) -> None:
     pytest.importorskip("cvxpy")
     instance = psd_instance
-    result = solve_inverse_ot(
-        instance.problem,
-        solver=SdpMasterSolver(),
-        tie_break="lex",
-        max_iterations=200,
-        prune=False,
-    )
+    result = solve_inverse_ot(instance.problem, solver=SdpMasterSolver(), params=SolverParameters(max_iterations=200, pruning=PruningParameters(enabled=False)), objective=ExactObjective(tie_break="lex"))
     assert result.converged
     assert result.is_optimal is True
     assert instance.problem.theta_set.contains(result.theta, tol=1e-5)

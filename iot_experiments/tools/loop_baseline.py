@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 import scipy.sparse as sparse
 from jaxtyping import Float, Int
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -90,7 +91,7 @@ def _summarise(name: str, payload: dict[str, object]) -> dict[str, object]:
 def run_exact(instance: Instance) -> dict[str, object]:
     """CN: 跑精确循环并汇总。EN: run the exact loop and summarise."""
     problem = instance.build()
-    result = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50, prune=False)
+    result = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50, pruning=PruningParameters(enabled=False)))
     theta: Float[np.ndarray, "k"] = np.asarray(result.theta, dtype=np.float64)
     return _summarise("exact", {
         "delta": float(result.delta),
@@ -113,12 +114,8 @@ def run_relaxed(instance: Instance, *, prune: bool = False, tau_prune: float = 1
         `prune=False` that code never executes and the baseline would miss it.
     """
     problem = instance.build()
-    result = solve_inverse_ot_regret(
-        problem, tol=None, gamma=1, max_iterations=50,
-        master=RegretMasterSolver(backend="highs", tie_break=False,
-                                  params={"time_sec_limit": 120.0}),
-        eps_r_rel=1e-6, prune=bool(prune), prune_hysteresis=bool(prune_hysteresis),
-        tau_prune=float(tau_prune), check_pot=False, selection="none")
+    result = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend="highs", tie_break=False,
+                                  params={"time_sec_limit": 120.0}), params=SolverParameters(tol=None, gamma=1, max_iterations=50, pruning=PruningParameters(enabled=bool(prune), hysteresis=bool(prune_hysteresis), tau_prune=float(tau_prune))), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
     theta: Float[np.ndarray, "k"] = np.asarray(result.theta, dtype=np.float64)
     tag = "relaxed"
     if prune:

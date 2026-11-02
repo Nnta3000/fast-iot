@@ -29,6 +29,7 @@ from iot import (
     mandatory_edges,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 @dataclass(frozen=True)
@@ -97,13 +98,7 @@ def run_e3(
             problem = InverseOTProblem(features=features, theta_set=theta_set, plan=sparse.csr_matrix(plan))
             mandatory, _partition = mandatory_edges(problem)
             mandatory_size = int(mandatory.size)
-            result = solve_inverse_ot(
-                problem,
-                tie_break="random",
-                max_iterations=int(max_iterations),
-                validate=(int(size) <= 200),
-                random_seed=int(seed),
-            )
+            result = solve_inverse_ot(problem, params=SolverParameters(max_iterations=int(max_iterations)), objective=ExactObjective(tie_break="random", validate=(int(size) <= 200), random_seed=int(seed)))
             supports = [record.support_size for record in result.iterations]
             final_supports.append(float(result.support_size))
             max_supports.append(float(max(supports)) if supports else 0.0)

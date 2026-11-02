@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from iot import make_diagonal_grounded_instance, optimal_theta_ranges, solve_inverse_ot
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 def test_optimal_theta_ranges_contain_theta_star_and_max_margin_theta() -> None:
@@ -13,6 +14,6 @@ def test_optimal_theta_ranges_contain_theta_star_and_max_margin_theta() -> None:
     assert theta_range.contains(instance.theta_star)
     assert bool(np.all(theta_range.lower <= theta_range.upper + 1e-12))
 
-    result = solve_inverse_ot(instance.problem, tie_break="lex", max_iterations=80)
+    result = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=80), objective=ExactObjective(tie_break="lex"))
     assert theta_range.contains(result.theta)
     assert result.is_optimal is True

@@ -43,6 +43,7 @@ from iot.core.theta import SimplexTheta
 from iot.exact.components import mandatory_edges
 from iot.exact.loop import solve_inverse_ot
 from iot.hierarchical import HierarchyParameters, build_levels
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 def _planted_problem(m: int = 40, n: int = 40, d: int = 4, seed: int = 0) -> InverseOTProblem:
@@ -74,8 +75,8 @@ def test_no_hierarchy_is_bit_identical_to_flat() -> None:
     EN: `hierarchical=None` must equal an explicit flat call exactly.
     """
     problem = _planted_problem()
-    a = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50)
-    b = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=50, hierarchical=None)
+    a = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50))
+    b = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=50, hierarchical=None))
     assert float(a.delta) == float(b.delta)
     assert np.array_equal(np.asarray(a.theta), np.asarray(b.theta))
 
@@ -111,7 +112,7 @@ def test_monotone_bounds_hold_across_levels() -> None:
     deltas: list[float] = []
     for index, level in enumerate(levels):
         target = problem if index == 0 else _coarse(problem, level)
-        result = solve_inverse_ot(target, tol=1e-9, gamma=1, max_iterations=60, validate=False)
+        result = solve_inverse_ot(target, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=60), objective=ExactObjective(validate=False))
         deltas.append(float(result.delta))
     # CN: deltas[0] 最细，deltas[-1] 最粗；沿粗化方向应不减。
     # EN: deltas[0] is finest, deltas[-1] coarsest; they must not decrease towards coarser.
@@ -138,10 +139,9 @@ def test_hierarchical_exact_matches_flat_delta() -> None:
         differ, so only delta and `is_optimal` are compared.
     """
     problem = _planted_problem()
-    flat = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=60)
-    hier = solve_inverse_ot(problem, tol=1e-9, gamma=1, max_iterations=60,
-                            hierarchical=HierarchyParameters(rho=0.25, max_levels=1, grid_budget=1,
-                                                             kappa=2, level_seed=0))
+    flat = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=60))
+    hier = solve_inverse_ot(problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=60, hierarchical=HierarchyParameters(rho=0.25, max_levels=1, grid_budget=1,
+                                                             kappa=2, level_seed=0)))
     assert hier.converged
     assert float(hier.delta) == pytest.approx(float(flat.delta), abs=1e-6), (
         f"delta differs: hier={float(hier.delta):.9f} flat={float(flat.delta):.9f}")
@@ -159,7 +159,7 @@ def test_seed_contains_the_mandatory_set() -> None:
 
     fine, coarse = levels[0], levels[1]
     coarse_problem = _coarse(problem, coarse)
-    coarse_out = solve_inverse_ot(coarse_problem, tol=1e-9, gamma=1, max_iterations=60, validate=False)
+    coarse_out = solve_inverse_ot(coarse_problem, params=SolverParameters(tol=1e-9, gamma=1, max_iterations=60), objective=ExactObjective(validate=False))
     f_full, g_full = prolong(problem, coarse, fine, np.asarray(coarse_out.theta, dtype=np.float64),
                              np.asarray(coarse_out.source_dual, dtype=np.float64),
                              np.asarray(coarse_out.target_dual, dtype=np.float64))

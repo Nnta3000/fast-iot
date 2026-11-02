@@ -12,6 +12,7 @@ import numpy as np
 
 from iot import LinearMasterSolver, solve_inverse_ot
 from iot_experiments.harness.lib.planting import PROBLEM_TYPE, plant_instance
+from iot.core.parameters import ExactObjective, PruningParameters, ScanParameters, SolverParameters
 
 
 def test_planted_plan_is_certified_and_monge() -> None:
@@ -46,10 +47,7 @@ def test_planted_loop_converges_without_pruning() -> None:
     # EN: with prune=False (safe against strict cycling) the loop converges and the verdict is optimal
     #     (CPU exact master).
     planted = plant_instance(family="quadratic", n=200, point_dimension=4, seed=0)
-    result = solve_inverse_ot(
-        planted.problem, solver=LinearMasterSolver(random_seed=0), tie_break="none",
-        max_iterations=200, scan_backend="numpy", validate=True, prune=False, prune_hysteresis=False,
-    )
+    result = solve_inverse_ot(planted.problem, solver=LinearMasterSolver(random_seed=0), params=SolverParameters(max_iterations=200, scan=ScanParameters(backend="numpy"), pruning=PruningParameters(enabled=False, hysteresis=False)), objective=ExactObjective(tie_break="none", validate=True))
     assert result.converged
     assert result.is_optimal is True
 

@@ -31,6 +31,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy import sparse
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -160,12 +161,7 @@ def run_family_method(
     validate = int(instance.n) * int(instance.n) <= VALIDATE_MAX_ELEMENTS
     if method == "exact":
         started = time.perf_counter()
-        result = solve_inverse_ot(
-            problem,
-            solver=RegularizedMasterSolver(epsilon=1e-4),
-            max_iterations=int(max_iterations),
-            validate=validate,
-        )
+        result = solve_inverse_ot(problem, solver=RegularizedMasterSolver(epsilon=1e-4), params=SolverParameters(max_iterations=int(max_iterations)), objective=ExactObjective(validate=validate))
         return _row(
             arm="families", instance=instance, method="exact",
             config="regularized-eps1e-4", unit="master rounds",
@@ -224,14 +220,7 @@ def run_family_method(
         # EN: First-order master; the shipped hysteresis pruning does not apply (see
         #     CUPDLPX_MASTER_REPORT.md), so prune=False.
         started = time.perf_counter()
-        result = solve_inverse_ot(
-            problem,
-            solver=CuPdlpxMasterSolver(),
-            tie_break="none",
-            max_iterations=int(max_iterations),
-            validate=validate,
-            prune=False,
-        )
+        result = solve_inverse_ot(problem, solver=CuPdlpxMasterSolver(), params=SolverParameters(max_iterations=int(max_iterations), pruning=PruningParameters(enabled=False)), objective=ExactObjective(tie_break="none", validate=validate))
         return _row(
             arm="families", instance=instance, method="cupdlpx",
             config="cupdlpx,prune=off", unit="master rounds",
@@ -311,11 +300,7 @@ def run_psd_arm(
                 started = time.perf_counter()
                 try:
                     if method == "exact-sdp":
-                        result = solve_inverse_ot(
-                            instance.problem, solver=SdpMasterSolver(),
-                            tie_break="none", max_iterations=int(max_iterations),
-                            validate=False,
-                        )
+                        result = solve_inverse_ot(instance.problem, solver=SdpMasterSolver(), params=SolverParameters(max_iterations=int(max_iterations)), objective=ExactObjective(tie_break="none", validate=False))
                         row = _row(
                             arm="psd", instance=instance, method="exact-sdp",
                             config="SDP tie=none", unit="master rounds",
@@ -433,10 +418,7 @@ def run_noisy_arm(
                 error: str | None = None
                 try:
                     if method == "exact":
-                        result = solve_inverse_ot(
-                            problem, solver=RegularizedMasterSolver(epsilon=1e-4),
-                            max_iterations=int(max_iterations), validate=False,
-                        )
+                        result = solve_inverse_ot(problem, solver=RegularizedMasterSolver(epsilon=1e-4), params=SolverParameters(max_iterations=int(max_iterations)), objective=ExactObjective(validate=False))
                         theta, converged, iterations, unit = result.theta, bool(result.converged), int(result.n_iterations), "master rounds"
                         config = "regularized-eps1e-4"
                     elif method == "cutting-plane":

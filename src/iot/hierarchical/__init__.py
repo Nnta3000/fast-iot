@@ -104,8 +104,7 @@ def solve_hierarchical(
 ) -> HierarchicalRun:
     """
     CN: 粗到细求解。`solve_level(problem, initial_extra)` 由调用方提供：精确循环传
-        `lambda p, e: solve_inverse_ot(p, ...)`，松弛循环传 `lambda p, e: solve_inverse_ot_regret(p,
-        initial_extra=e, ...)`。`mandatory_of` 给出该问题的必需边集 `B = S ∪ R`。
+        `lambda p, e: solve_inverse_ot(p, ...)`，松弛循环传 `lambda p, e: solve_inverse_ot_regret(p, ..., objective=RelaxedObjective(initial_extra=e))`。`mandatory_of` 给出该问题的必需边集 `B = S ∪ R`。
 
     CN: 流程：
         1. `levels = build_levels(...)`，`levels[0]` 是完整问题；
@@ -115,7 +114,7 @@ def solve_hierarchical(
 
     EN: coarse-to-fine. `solve_level(problem, initial_extra)` is supplied by the caller: the exact loop
         passes `lambda p, e: solve_inverse_ot(p, ...)`, the relaxed loop passes
-        `lambda p, e: solve_inverse_ot_regret(p, initial_extra=e, ...)`. `mandatory_of` returns that
+        `lambda p, e: solve_inverse_ot_regret(p, ..., objective=RelaxedObjective(initial_extra=e))`. `mandatory_of` returns that
         problem's mandatory set `B = S ∪ R`.
 
     Flow: build levels (`levels[0]` is the full problem); solve the coarsest densely; then refine

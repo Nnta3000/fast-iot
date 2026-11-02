@@ -32,6 +32,7 @@ from iot.core.problem import InverseOTProblem
 from iot.exact.sdp import SdpMasterSolver
 from iot.alternatives.sinkhorn_theta import fit_theta_sinkhorn
 from iot.core.theta import BilinearPSDTheta, SimplexTheta
+from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
 
 DEFAULT_REPORT = Path("iot_experiments/scratch/COMPARISON_REPORT.md")
 
@@ -150,14 +151,7 @@ def _sample(metrics, *, iterations: float, converged: bool | None, final_gradien
 
 def _run_loop(problem: InverseOTProblem, *, tie_break: str, solver, max_iterations: int):
     def call():
-        return solve_inverse_ot(
-            problem,
-            tie_break=tie_break,
-            solver=solver,
-            max_iterations=int(max_iterations),
-            validate=False,
-            prune=(solver is None),
-        )
+        return solve_inverse_ot(problem, solver=solver, params=SolverParameters(max_iterations=int(max_iterations), pruning=PruningParameters(enabled=(solver is None))), objective=ExactObjective(tie_break=tie_break, validate=False))
 
     return _measure(call)
 

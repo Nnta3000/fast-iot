@@ -12,6 +12,7 @@ from iot import (
     make_diagonal_grounded_instance,
     solve_inverse_ot,
 )
+from iot.core.parameters import ExactObjective, SolverParameters
 
 
 def _all_edges(problem: InverseOTProblem) -> EdgeSet:
@@ -24,7 +25,7 @@ def _all_edges(problem: InverseOTProblem) -> EdgeSet:
 def test_loop_converges_to_an_optimal_theta() -> None:
     rng = np.random.default_rng(5)
     instance = make_diagonal_grounded_instance(n_source=12, n_target=12, n_features=3, rng=rng)
-    result = solve_inverse_ot(instance.problem, tie_break="lex", max_iterations=60)
+    result = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=60), objective=ExactObjective(tie_break="lex"))
     assert result.converged
     assert result.is_optimal is True
     assert instance.problem.theta_set.contains(result.theta, tol=1e-6)
@@ -46,7 +47,7 @@ def test_master_without_connectors_is_unbounded() -> None:
 def test_loop_matches_full_master_and_uses_far_fewer_edges() -> None:
     rng = np.random.default_rng(7)
     instance = make_diagonal_grounded_instance(n_source=10, n_target=10, n_features=3, rng=rng)
-    loop = solve_inverse_ot(instance.problem, tie_break="lex", max_iterations=80)
+    loop = solve_inverse_ot(instance.problem, params=SolverParameters(max_iterations=80), objective=ExactObjective(tie_break="lex"))
     full = LinearMasterSolver().solve(instance.problem, _all_edges(instance.problem), tie_break="lex")
     assert abs(loop.delta - full.delta) < 1e-6
     assert loop.support_size < int(instance.problem.n_source) * int(instance.problem.n_target)
@@ -56,12 +57,7 @@ def test_loop_matches_full_master_and_uses_far_fewer_edges() -> None:
 def test_regularized_master_with_hysteresis_converges() -> None:
     rng = np.random.default_rng(9)
     instance = make_diagonal_grounded_instance(n_source=12, n_target=12, n_features=3, rng=rng)
-    result = solve_inverse_ot(
-        instance.problem,
-        solver=RegularizedMasterSolver(epsilon=1e-4, random_seed=0),
-        tie_break="none",
-        max_iterations=120,
-    )
+    result = solve_inverse_ot(instance.problem, solver=RegularizedMasterSolver(epsilon=1e-4, random_seed=0), params=SolverParameters(max_iterations=120), objective=ExactObjective(tie_break="none"))
     assert result.converged
     assert result.is_optimal is True
     assert result.final_max_violation <= 1e-9

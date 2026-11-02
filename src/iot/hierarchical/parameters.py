@@ -18,13 +18,13 @@ class HierarchyParameters:
 
         用法：
             from iot.hierarchical import HierarchyParameters
-            solve_inverse_ot(problem, hierarchical=HierarchyParameters(rho=0.25, kappa=3))
+            solve_inverse_ot(problem, params=SolverParameters(hierarchical=HierarchyParameters(rho=0.25, kappa=3)))
 
     EN: Knobs for coarse-to-fine levels. Semantics in `theory/HierarchicalIOT.typ`.
 
         Usage:
             from iot.hierarchical import HierarchyParameters
-            solve_inverse_ot(problem, hierarchical=HierarchyParameters(rho=0.25, kappa=3))
+            solve_inverse_ot(problem, params=SolverParameters(hierarchical=HierarchyParameters(rho=0.25, kappa=3)))
 
     CN: 参数含义：
         - `rho`：每层从**支撑**里抽样的边的比例（抽边而非抽点，保证每点至少连一条支撑边）。

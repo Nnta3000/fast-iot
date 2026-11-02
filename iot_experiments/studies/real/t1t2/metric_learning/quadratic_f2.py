@@ -36,6 +36,7 @@ import numpy as np
 import ot
 import scipy.sparse as sparse
 from jaxtyping import Float
+from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -112,11 +113,8 @@ def _fit_loop(x: Float[np.ndarray, "m d"], y: Float[np.ndarray, "m d"], *, rel: 
                                theta_set=box_simplex(K, box_relative=float(rel)), plan=plan)
     t0 = time.perf_counter()
     try:
-        res = solve_inverse_ot_regret(
-            problem, tol=None, gamma=1, max_iterations=int(max_iterations),
-            master=RegretMasterSolver(backend=str(solver), tie_break=False,
-                                      params={"time_sec_limit": float(solve_limit_s)}),
-            eps_r_rel=1e-6, prune=False, check_pot=False, selection="none")
+        res = solve_inverse_ot_regret(problem, master=RegretMasterSolver(backend=str(solver), tie_break=False,
+                                      params={"time_sec_limit": float(solve_limit_s)}), params=SolverParameters(tol=None, gamma=1, max_iterations=int(max_iterations), pruning=PruningParameters(enabled=False)), objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"))
         return np.asarray(res.theta, dtype=np.float64), {
             "status": "ok", "rounds": int(res.n_iterations), "F": int(res.finite_edges),
             "converged": bool(res.converged), "stall": str(res.stall_status),
