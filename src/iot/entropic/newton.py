@@ -122,7 +122,7 @@ def solve_semidual_newton(
     epsilon: float,
     g_init: Float[np.ndarray, "n"] | None = None,
     max_iterations: int = 60,
-    marginal_tolerance: float = 1e-10,
+    marginal_tolerance: float = 1e-8,
     eigenvalue_rtol: float = 1e-10,
 ) -> NewtonResult:
     """
@@ -173,6 +173,15 @@ def solve_semidual_newton(
         effective_inverse = eigenvectors @ np.diag(np.where(keep, 1.0 / np.where(keep, eigenvalues, 1.0), 0.0)) \
             @ eigenvectors.T
         step = effective_inverse @ gi
+        # CN: **信赖域**。`core` 的最大特征值随 `1/eps` 增大（`eps=5e-4` 时可达 1e3），牛顿步可以
+        #     大到离谱；实测不设限时列和误差从 4.5 冲到 59。逐步截断 `||step||_inf` 到 `max_step`。
+        # EN: **trust region**. The largest eigenvalue of `core` grows like `1/eps` (about 1e3 at
+        #     `eps=5e-4`), so a Newton step can be enormous; measured, an unlimited step drove the column
+        #     error from 4.5 to 59. Clip `||step||_inf` to `max_step`.
+        peak = float(np.abs(step).max()) if step.size else 0.0
+        max_step = 10.0 * eps
+        if peak > max_step:
+            step = step * (max_step / peak)
         g_direction = np.concatenate([[0.0], step]) if pinned else step
         merit = float(np.linalg.norm(grad))
         # CN: 接受判据是**梯度范数**下降，不是目标值下降；范数已很小则取满牛顿步。
