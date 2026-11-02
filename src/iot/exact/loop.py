@@ -15,6 +15,8 @@ import time
 
 import numpy as np
 
+from iot.exact.oracle import ViolationScan
+
 from .components import mandatory_edges
 from ..core.edges import EdgeSet
 from .master import (
@@ -29,7 +31,7 @@ from ..core.pruning import HysteresisPruner
 from ..core.parameters import ExactObjective, SolverParameters
 from ..core.problem import InverseOTProblem
 from ..core.result import InverseOTResult, IterationRecord
-from ..eval.validation import is_optimal_plan
+from ..eval.validation import OptimalityCheck, is_optimal_plan
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,7 +76,13 @@ def _prune_by_slack(
     return non_support.select_mask(slack <= float(tau_prune))
 
 
-def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | None=None, params: SolverParameters | None=None, solver: MasterSolver | None=None) -> InverseOTResult:
+def solve_inverse_ot(
+    problem: InverseOTProblem,
+    *,
+    objective: ExactObjective | None = None,
+    params: SolverParameters | None = None,
+    solver: MasterSolver | None = None,
+) -> InverseOTResult:
     """
     CN: 求解逆 OT：返回使 pi_hat 最优的 max-margin theta（约束生成）。
     EN: Solve inverse OT: return a max-margin theta making pi_hat optimal via
@@ -116,12 +124,16 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
         flat_params: SolverParameters = replace(params, hierarchical=None)
         run = solve_hierarchical(
             problem,
-            lambda sub_problem, initial: solve_inverse_ot(sub_problem, objective=objective, params=flat_params, solver=solver),
+            lambda sub_problem, initial: solve_inverse_ot(
+                sub_problem, objective=objective, params=flat_params, solver=solver
+            ),
             params.hierarchical,
             mandatory_of=lambda sub_problem: mandatory_edges(sub_problem)[0],
         )
         if not isinstance(run.fine, InverseOTResult):
-            raise RuntimeError("hierarchical fine level did not return an InverseOTResult")
+            raise RuntimeError(
+                "hierarchical fine level did not return an InverseOTResult"
+            )
         return run.fine
     if solver is not None:
         master_solver: MasterSolver = solver
@@ -131,9 +143,9 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
         #     fingerprint (proof section 6's w_r^*).
         direction = draw_generic_direction(
             random_seed=objective.random_seed,
-            n_features=int(problem.n_features),
-            n_source=int(problem.n_source),
-            n_target=int(problem.n_target),
+            n_features=problem.n_features,
+            n_source=problem.n_source,
+            n_target=problem.n_target,
         )
         _LOGGER.info(
             "lex_generic tie-break: r drawn once over (theta,f,g), seed=%d, |r|_2=%.6f, "
@@ -151,24 +163,24 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
     support = EdgeSet.from_arrays(
         *problem.support()[:2], n_target=int(problem.n_target)
     )
-    mandatory, _partition = mandatory_edges(problem)
-    edges = mandatory
+    mandatory: EdgeSet = mandatory_edges(problem)[0]
+    edges: EdgeSet = mandatory
 
     records: list[IterationRecord] = []
-    converged = False
-    started = time.perf_counter()
-    final_max_violation = 0.0
+    converged: bool = False
+    started: float = time.perf_counter()
+    final_max_violation: float = 0.0
     pruner = HysteresisPruner.fresh(tau_prune=params.pruning.tau_prune)
     master: MasterSolution | None = None
     for iteration in range(1, params.max_iterations + 1):
-        iteration_started = time.perf_counter()
-        master_started = time.perf_counter()
+        iteration_started: float = time.perf_counter()
+        master_started: float = time.perf_counter()
         master = master_solver.solve(problem, edges, tie_break=objective.tie_break)
-        master_time = time.perf_counter() - master_started
-        oracle_started = time.perf_counter()
+        master_time: float = time.perf_counter() - master_started
+        oracle_started: float = time.perf_counter()
         # CN: 后端调度已抽到 `core/scan.py`，与松弛循环共用同一份实现（语义逐字不变）。
         # EN: the backend dispatch lives in `core/scan.py` now, shared with the relaxed loop (verbatim).
-        scan = scan_for_violations(
+        scan: ViolationScan = scan_for_violations(
             problem,
             master,
             excluded=edges,
@@ -179,34 +191,34 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
             scan_max_tile_bytes=params.scan.max_tile_bytes,
             max_tile_elements=params.scan.max_tile_elements,
         )
-        oracle_time = time.perf_counter() - oracle_started
-        peak_mb = _peak_memory_mb()
-        final_max_violation = float(scan.max_violation)
+        oracle_time: float = time.perf_counter() - oracle_started
+        peak_mb: float = _peak_memory_mb()
+        final_max_violation: float = scan.max_violation
         if not scan.has_violations:
             records.append(
                 IterationRecord(
                     index=iteration,
-                    delta=float(master.delta),
-                    support_size=int(edges.size),
+                    delta=master.delta,
+                    support_size=edges.size,
                     violation_count=0,
                     added=0,
-                    max_violation=float(scan.max_violation),
-                    wall_time=float(time.perf_counter() - iteration_started),
-                    master_time=float(master_time),
-                    oracle_time=float(oracle_time),
+                    max_violation=scan.max_violation,
+                    wall_time=time.perf_counter() - iteration_started,
+                    master_time=master_time,
+                    oracle_time=oracle_time,
                     prune_time=0.0,
-                    assembly_time=float(master_time + oracle_time),
+                    assembly_time=master_time + oracle_time,
                     peak_memory_mb=peak_mb,
                 )
             )
             converged = True
             break
 
-        candidates = EdgeSet.from_arrays(
-            scan.rows, scan.cols, n_target=int(problem.n_target)
+        candidates: EdgeSet = EdgeSet.from_arrays(
+            scan.rows, scan.cols, n_target=problem.n_target
         )
-        non_support = edges.difference(support)
-        prune_started = time.perf_counter()
+        non_support: EdgeSet = edges.difference(support)
+        prune_started: float = time.perf_counter()
         if not params.pruning.enabled:
             # CN: 关闭剪枝时保留全部候选边，F 单调增长（保留多余边永远安全）。
             # EN: With pruning off, keep every candidate edge so F grows monotonically
@@ -247,16 +259,16 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
         records.append(
             IterationRecord(
                 index=iteration,
-                delta=float(master.delta),
-                support_size=int(edges.size),
-                violation_count=int(scan.violation_count),
+                delta=master.delta,
+                support_size=edges.size,
+                violation_count=scan.violation_count,
                 added=added,
-                max_violation=float(scan.max_violation),
-                wall_time=float(time.perf_counter() - iteration_started),
-                master_time=float(master_time),
-                oracle_time=float(oracle_time),
-                prune_time=float(prune_time),
-                assembly_time=float(assembly_time),
+                max_violation=scan.max_violation,
+                wall_time=time.perf_counter() - iteration_started,
+                master_time=master_time,
+                oracle_time=oracle_time,
+                prune_time=prune_time,
+                assembly_time=assembly_time,
                 peak_memory_mb=_peak_memory_mb(),
             )
         )
@@ -266,26 +278,29 @@ def solve_inverse_ot(problem: InverseOTProblem, *, objective: ExactObjective | N
     relative_gap: float | None = None
     if master is None:
         raise RuntimeError("inverse-OT loop produced no master solution")
-    total_edges = int(problem.n_source) * int(problem.n_target)
+    total_edges: int = problem.n_source * problem.n_target
     if objective.validate and total_edges <= int(objective.validate_max_elements):
-        check = is_optimal_plan(
-            problem, master.theta, tol=1e-7, max_elements=int(objective.validate_max_elements)
+        check: OptimalityCheck = is_optimal_plan(
+            problem,
+            master.theta,
+            tol=1e-7,
+            max_elements=objective.validate_max_elements,
         )
-        is_optimal = bool(check.is_optimal)
-        relative_gap = float(check.relative_gap)
+        is_optimal = check.is_optimal
+        relative_gap = check.relative_gap
     return InverseOTResult(
         theta=master.theta,
-        delta=float(master.delta),
+        delta=master.delta,
         source_dual=master.source_dual,
         target_dual=master.target_dual,
         n_iterations=len(records),
-        support_size=int(edges.size),
+        support_size=edges.size,
         iterations=tuple(records),
-        converged=bool(converged),
+        converged=converged,
         is_optimal=is_optimal,
         relative_gap=relative_gap,
-        total_wall_time=float(time.perf_counter() - started),
-        final_max_violation=float(final_max_violation),
+        total_wall_time=time.perf_counter() - started,
+        final_max_violation=final_max_violation,
     )
 
 
