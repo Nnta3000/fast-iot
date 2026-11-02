@@ -33,7 +33,8 @@ import numpy as np
 from jaxtyping import Float, Int
 
 from ..core.problem import InverseOTProblem
-from .sinkhorn import SinkhornResult, sinkhorn_plan_torch
+from .newton import solve_semidual_newton
+from .sinkhorn import SinkhornResult, _cost_std, sinkhorn_plan_torch
 
 
 @dataclasses.dataclass(frozen=True)
@@ -77,6 +78,8 @@ def fit_entropic(
     device: str = "auto",
     source_mass: Float[np.ndarray, "m"] | None = None,
     target_mass: Float[np.ndarray, "n"] | None = None,
+    inner_solver: str = "sinkhorn",
+    inner_tolerance: float = 1e-12,
 ) -> EntropicResult:
     """
     CN: 在 Θ 上最小化 `L_ε(θ)`。梯度是**观测特征矩 − 模型特征矩**；步长固定，
@@ -93,6 +96,18 @@ def fit_entropic(
         (`stall_reason="max_steps"`).
 
         `source_mass`/`target_mass` default to the plan's marginals and may be overridden.
+
+    CN: `inner_solver`：
+        - `"sinkhorn"`（默认）：torch 上的 log-domain 交替 Sinkhorn，**行为与之前完全一致**；
+        - `"newton"`：半对偶稠密牛顿（`entropic/newton.py`）。`eps` 小的时候交替 Sinkhorn
+          达不到精度（实测 `eps=0.05` 停在 5e-6），牛顿到 1e-8 以下。
+        两种都**只**在收敛时使用方案（本项目的约定：绝不用未收敛的方案）。
+
+    EN: `inner_solver`:
+        - `"sinkhorn"` (default): torch log-domain alternating Sinkhorn, **behaviour identical to before**;
+        - `"newton"`: the semi-dual dense Newton (`entropic/newton.py`). Alternating Sinkhorn misses the
+          accuracy at small epsilon (measured: stalls at 5e-6 at `eps=0.05`); Newton reaches below 1e-8.
+        Both use the plan **only** when converged (this project's rule: never use a non-converged plan).
     """
     from ..core.theta import SimplexTheta  # noqa: PLC0415 - local to keep the import graph shallow
 
@@ -123,25 +138,58 @@ def fit_entropic(
     stall_reason = "max_steps"
     cost_std = float("nan")
     loss_value = float("inf")
-    warm: tuple[np.ndarray, np.ndarray] | None = None
+    warm_g: Float[np.ndarray, "n"] | None = None
+    warm_fg: tuple[np.ndarray, np.ndarray] | None = None
+    gauss_err = float("nan")
     for step in range(1, int(max_steps) + 1):
         cost = np.asarray(problem.features.costs(theta, rows, cols), dtype=np.float64).reshape(m, n)
-        sinkhorn: SinkhornResult = sinkhorn_plan_torch(
-            cost, a, b, relative_epsilon=float(relative_epsilon),
-            max_iterations=int(sinkhorn_iterations), tolerance=float(sinkhorn_tolerance),
-            init=warm, device=str(device))
-        warm = (sinkhorn.potential_source, sinkhorn.potential_target)
-        cost_std = sinkhorn.cost_std
+        if str(inner_solver) == "newton":
+            # CN: 牛顿需要一个**绝对** eps；这里从代价尺度定一次，见 Step 1 的约定。
+            # EN: Newton needs an **absolute** epsilon; fixed once from the cost scale, per Step 1.
+            eps_absolute = float(relative_epsilon) * _cost_std(cost)
+            newton = solve_semidual_newton(cost, a, b, epsilon=eps_absolute,
+                                           g_init=warm_g, marginal_tolerance=float(inner_tolerance))
+            if not newton.converged:
+                raise RuntimeError(
+                    f"Newton inner solve did not converge (marginal error {newton.marginal_error:.2e}); "
+                    "refusing to use a non-converged plan")
+            plan = newton.plan
+            cost_std = eps_absolute / float(relative_epsilon)
+            sinkhorn_iterations_used = newton.iterations
+            gauss_err = float(newton.marginal_error)
+            warm_g = np.asarray(newton.potential_target, dtype=np.float64)
+        elif str(inner_solver) == "sinkhorn":
+            sinkhorn: SinkhornResult = sinkhorn_plan_torch(
+                cost, a, b, relative_epsilon=float(relative_epsilon),
+                max_iterations=int(sinkhorn_iterations), tolerance=float(sinkhorn_tolerance),
+                init=warm_fg, device=str(device))
+            warm_fg = (sinkhorn.potential_source, sinkhorn.potential_target)
+            plan = sinkhorn.plan
+            cost_std = sinkhorn.cost_std
+            sinkhorn_iterations_used = sinkhorn.iterations
+            gauss_err = float(sinkhorn.marginal_error)
+        else:
+            raise ValueError(f"inner_solver must be 'sinkhorn' or 'newton', got {inner_solver!r}")
         features = np.asarray(problem.features.features(rows, cols), dtype=np.float64)
-        model_moment = sinkhorn.plan.reshape(-1) @ features
+        model_moment = plan.reshape(-1) @ features
         observed_moment = phi_hat
         gradient = observed_moment - model_moment
-        loss_value = float(theta @ observed_moment - theta @ model_moment)
+        # CN: **损失必须是 `<C,pi_hat> - W_eps`，不是 `<C,pi_hat> - <C,P_eps>`**。
+        #     `W_eps = <C,P_eps> - eps*H(P_eps)` 是熵 OT 的**值**；包络定理（`dW/dtheta = E[phi]`）
+        #     只对**值**成立。用方案代价会漏掉 `eps*dH/dtheta`，实测方向导数因此差 2.4%（4.5e-2 对 1e-10）。
+        # EN: **the loss must be `<C,pi_hat> - W_eps`, NOT `<C,pi_hat> - <C,P_eps>`**.
+        #     `W_eps = <C,P_eps> - eps*H(P_eps)` is the entropic OT **value**, and the envelope theorem
+        #     (`dW/dtheta = E[phi]`) holds only for the value. Using the plan cost omits `eps*dH/dtheta`;
+        #     measured, the directional derivative was off by 2.4% (4.5e-2 against 1e-10).
+        entropy = float(-np.sum(np.where(plan > 0.0, plan * np.log(np.maximum(plan, 1e-300)), 0.0)))
+        plan_cost = float(theta @ model_moment)
+        value_eps = plan_cost - float(relative_epsilon) * cost_std * entropy
+        loss_value = float(theta @ observed_moment) - value_eps
         gradient_norm = float(np.max(np.abs(gradient)))
-        records.append(EntropicStep(index=step, regularization=sinkhorn.regularization,
+        records.append(EntropicStep(index=step, regularization=float(relative_epsilon) * cost_std,
                                     loss=loss_value, gradient_norm=gradient_norm,
-                                    sinkhorn_iterations=sinkhorn.iterations,
-                                    marginal_error=sinkhorn.marginal_error))
+                                    sinkhorn_iterations=int(sinkhorn_iterations_used),
+                                    marginal_error=float(gauss_err)))
         if gradient_norm <= float(gradient_tolerance):
             converged = True
             stall_reason = "converged"
