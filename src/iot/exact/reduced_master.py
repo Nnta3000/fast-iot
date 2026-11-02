@@ -30,7 +30,7 @@ from scipy.sparse import csr_matrix, lil_matrix
 
 from ..core.edges import EdgeSet
 from .master import MasterSolution, draw_generic_direction
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..core.theta import LinearThetaSet
 
 
@@ -98,13 +98,18 @@ def build_forest_representation(problem: InverseOTProblem) -> ForestRepresentati
                     continue
                 # CN: 边等式 node + neighbor = c_e(theta)，故 neighbor = Phi_e·theta − node。
                 # EN: node + neighbor = c_e(theta), so neighbor = Phi_e·theta − node.
-                coefficients[neighbor] = support_features[edge_index] - coefficients[node]
+                coefficients[neighbor] = (
+                    support_features[edge_index] - coefficients[node]
+                )
                 signs[neighbor] = -signs[node]
                 component[neighbor] = n_components
                 stack.append(neighbor)
         n_components += 1
     return ForestRepresentation(
-        coefficients=coefficients, signs=signs, component=component, n_components=n_components
+        coefficients=coefficients,
+        signs=signs,
+        component=component,
+        n_components=n_components,
     )
 
 
@@ -135,7 +140,7 @@ class SpanningForestMasterSolver:
     ) -> MasterSolution:
         del tie_break
         if not isinstance(problem.theta_set, LinearThetaSet):
-            raise InverseOTError(
+            raise RuntimeError(
                 "the forest-eliminated master requires a LinearThetaSet; "
                 f"got {type(problem.theta_set).__name__}"
             )
@@ -161,7 +166,9 @@ class SpanningForestMasterSolver:
             b_eq[cursor] = float(theta_constraints.b_eq[row])
             cursor += 1
         gauge_node = m  # target index 0
-        a_eq[cursor, theta_start : theta_start + k] = representation.coefficients[gauge_node]
+        a_eq[cursor, theta_start : theta_start + k] = representation.coefficients[
+            gauge_node
+        ]
         a_eq[cursor, tau_start + int(representation.component[gauge_node])] = float(
             representation.signs[gauge_node]
         )
@@ -186,7 +193,9 @@ class SpanningForestMasterSolver:
             i = int(off_rows[position])
             j = m + int(off_cols[position])
             a_ub[position, delta_col] = 1.0
-            a_ub[position, theta_start : theta_start + k] = coeff[i] + coeff[j] - off_features[position]
+            a_ub[position, theta_start : theta_start + k] = (
+                coeff[i] + coeff[j] - off_features[position]
+            )
             a_ub[position, tau_start + int(components[i])] += float(signs[i])
             a_ub[position, tau_start + int(components[j])] += float(signs[j])
 
@@ -229,12 +238,18 @@ class SpanningForestMasterSolver:
         self.lp_seconds += time.perf_counter() - started
         self.n_solves += 1
         if not result.success or result.x is None:
-            raise InverseOTError(f"forest master is infeasible or unbounded: {result.message}")
+            raise RuntimeError(
+                f"forest master is infeasible or unbounded: {result.message}"
+            )
         x = np.asarray(result.x, dtype=np.float64)
         theta = np.ascontiguousarray(x[theta_start : theta_start + k])
         tau = x[tau_start:]
-        source_dual = np.ascontiguousarray(coeff[:m] @ theta + signs[:m] * tau[components[:m]])
-        target_dual = np.ascontiguousarray(coeff[m:] @ theta + signs[m:] * tau[components[m:]])
+        source_dual = np.ascontiguousarray(
+            coeff[:m] @ theta + signs[:m] * tau[components[:m]]
+        )
+        target_dual = np.ascontiguousarray(
+            coeff[m:] @ theta + signs[m:] * tau[components[m:]]
+        )
         return MasterSolution(
             delta=float(x[delta_col]),
             theta=theta,

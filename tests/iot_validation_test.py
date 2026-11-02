@@ -7,7 +7,6 @@ from scipy import sparse
 from iot import (
     DenseFeatureTensor,
     DiagonalWeightFeatures,
-    InverseOTError,
     InverseOTProblem,
     SimplexTheta,
     dual_optimality_certificate,
@@ -64,7 +63,7 @@ def test_plan_cost_matches_explicit_matrix() -> None:
 
 def test_is_optimal_plan_rejects_theta_outside_theta_set() -> None:
     problem = _two_point_problem(np.array([[0.0, 0.5], [0.5, 0.0]]))
-    with pytest.raises(InverseOTError, match="inside the parameter set"):
+    with pytest.raises(RuntimeError, match="inside the parameter set"):
         is_optimal_plan(problem, np.array([0.0]))
 
 
@@ -96,7 +95,7 @@ def test_is_optimal_plan_raises_when_pot_hits_iteration_cap() -> None:
     instance = make_diagonal_grounded_instance(
         n_source=64, n_target=64, n_features=3, rng=rng
     )
-    with pytest.raises(InverseOTError, match="did not reach optimality"), pytest.warns(
+    with pytest.raises(RuntimeError, match="did not reach optimality"), pytest.warns(
         UserWarning, match="numItermax"
     ):
         is_optimal_plan(instance.problem, instance.theta_star, num_itermax=1)

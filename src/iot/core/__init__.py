@@ -13,7 +13,7 @@ from .features import (
     QuadraticFeatures,
     dense_cost_matrix,
 )
-from .problem import InverseOTError, InverseOTProblem
+from .problem import InverseOTProblem
 from .result import InverseOTResult, IterationRecord
 from .theta import (
     BilinearPSDTheta,
@@ -24,8 +24,20 @@ from .theta import (
 )
 
 __all__ = [
-    "BilinearPSDFeatures", "BilinearPSDTheta", "DenseFeatureTensor", "DiagonalWeightFeatures",
-    "EdgeSet", "FeatureMap", "InverseOTError", "InverseOTProblem", "InverseOTResult",
-    "IterationRecord", "LinearThetaConstraints", "LinearThetaSet", "QuadraticFeatures",
-    "SimplexTheta", "ThetaSet", "dense_cost_matrix", "edge_keys",
+    "BilinearPSDFeatures",
+    "BilinearPSDTheta",
+    "DenseFeatureTensor",
+    "DiagonalWeightFeatures",
+    "EdgeSet",
+    "FeatureMap",
+    "InverseOTProblem",
+    "InverseOTResult",
+    "IterationRecord",
+    "LinearThetaConstraints",
+    "LinearThetaSet",
+    "QuadraticFeatures",
+    "SimplexTheta",
+    "ThetaSet",
+    "dense_cost_matrix",
+    "edge_keys",
 ]

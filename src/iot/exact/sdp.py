@@ -18,7 +18,7 @@ import numpy as np
 from ..core.edges import EdgeSet
 from ..core.features import BilinearPSDFeatures
 from .master import MasterSolution, TieBreak
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..core.theta import BilinearPSDTheta
 
 
@@ -30,7 +30,7 @@ def _require_cvxpy() -> Any:
     try:
         import cvxpy as cp
     except ImportError as error:
-        raise InverseOTError(
+        raise RuntimeError(
             "SdpMasterSolver requires cvxpy; install it with `pip install cvxpy` "
             "(the optional 'psd' extra)."
         ) from error
@@ -57,12 +57,12 @@ class SdpMasterSolver:
         if tie_break not in {"lex", "none"}:
             raise ValueError("SdpMasterSolver supports tie_break 'lex' or 'none'")
         if not isinstance(problem.features, BilinearPSDFeatures):
-            raise InverseOTError("SdpMasterSolver requires BilinearPSDFeatures")
+            raise RuntimeError("SdpMasterSolver requires BilinearPSDFeatures")
         if not isinstance(problem.theta_set, BilinearPSDTheta):
-            raise InverseOTError("SdpMasterSolver requires BilinearPSDTheta")
+            raise RuntimeError("SdpMasterSolver requires BilinearPSDTheta")
         dim = int(problem.features.point_dimension)
         if int(problem.theta_set.point_dimension) != dim:
-            raise InverseOTError("feature and theta point dimensions disagree")
+            raise RuntimeError("feature and theta point dimensions disagree")
         cp = _require_cvxpy()
         source = problem.features.source_points
         target = problem.features.target_points
@@ -72,7 +72,12 @@ class SdpMasterSolver:
         source_dual = cp.Variable(m)
         target_dual = cp.Variable(n)
         delta = cp.Variable()
-        constraints = [matrix >> 0, cp.trace(matrix) == 1.0, target_dual[0] == 0.0, delta >= 0.0]
+        constraints = [
+            matrix >> 0,
+            cp.trace(matrix) == 1.0,
+            target_dual[0] == 0.0,
+            delta >= 0.0,
+        ]
         support_keys = problem.support_keys()
         in_support = np.isin(edges.keys, support_keys)
         for index in range(int(edges.size)):
@@ -127,19 +132,31 @@ class SdpMasterSolver:
                 try:
                     master.solve()
                 except Exception as retry_error:
-                    raise InverseOTError(f"{label} failed to solve: {retry_error}") from retry_error
+                    raise RuntimeError(
+                        f"{label} failed to solve: {retry_error}"
+                    ) from retry_error
             else:
-                raise InverseOTError(f"{label} failed to solve: {error}") from error
+                raise RuntimeError(f"{label} failed to solve: {error}") from error
         if master.status not in {"optimal", "optimal_inaccurate"}:
-            raise InverseOTError(f"{label} is infeasible or failed: status={master.status}")
+            raise RuntimeError(
+                f"{label} is infeasible or failed: status={master.status}"
+            )
 
     @staticmethod
-    def _extract(matrix: Any, source_dual: Any, target_dual: Any, delta: Any) -> MasterSolution:
+    def _extract(
+        matrix: Any, source_dual: Any, target_dual: Any, delta: Any
+    ) -> MasterSolution:
         return MasterSolution(
             delta=float(delta.value),
-            theta=np.ascontiguousarray(np.asarray(matrix.value, dtype=np.float64).reshape(-1)),
-            source_dual=np.ascontiguousarray(np.asarray(source_dual.value, dtype=np.float64).reshape(-1)),
-            target_dual=np.ascontiguousarray(np.asarray(target_dual.value, dtype=np.float64).reshape(-1)),
+            theta=np.ascontiguousarray(
+                np.asarray(matrix.value, dtype=np.float64).reshape(-1)
+            ),
+            source_dual=np.ascontiguousarray(
+                np.asarray(source_dual.value, dtype=np.float64).reshape(-1)
+            ),
+            target_dual=np.ascontiguousarray(
+                np.asarray(target_dual.value, dtype=np.float64).reshape(-1)
+            ),
             status="optimal",
         )
 

@@ -15,7 +15,7 @@ from scipy.optimize import linprog
 from ..core.edges import EdgeSet
 from ..core.features import dense_cost_matrix
 from ..exact.master import coordinate_extrema
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..core.theta import LinearThetaSet
 
 # CN: POT 网络单纯形的返回码 1 表示最优；3 表示达到 numItermax（见 emd_wrap.check_result）。
@@ -37,7 +37,7 @@ def _require_ot() -> Any:
     try:
         import ot
     except ImportError as error:
-        raise InverseOTError(
+        raise RuntimeError(
             "validation requires POT; install it with `pip install pot`."
         ) from error
     return ot
@@ -70,8 +70,12 @@ class ThetaRange:
     statuses: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        lower = np.ascontiguousarray(np.asarray(self.lower, dtype=np.float64).reshape(-1))
-        upper = np.ascontiguousarray(np.asarray(self.upper, dtype=np.float64).reshape(-1))
+        lower = np.ascontiguousarray(
+            np.asarray(self.lower, dtype=np.float64).reshape(-1)
+        )
+        upper = np.ascontiguousarray(
+            np.asarray(self.upper, dtype=np.float64).reshape(-1)
+        )
         if lower.size != upper.size:
             raise ValueError("lower and upper must have the same length")
         if len(self.statuses) != lower.size:
@@ -137,7 +141,7 @@ def _fixed_dual_polytope(
     m = int(problem.n_source)
     n = int(problem.n_target)
     if not isinstance(problem.theta_set, LinearThetaSet):
-        raise InverseOTError("fixed_dual_theta_ranges requires a LinearThetaSet")
+        raise RuntimeError("fixed_dual_theta_ranges requires a LinearThetaSet")
     support_rows, support_cols, _values = problem.support()
     all_rows, all_cols = _all_edges(m, n)
     source = _dual_vector(source_dual, size=m, name="source_dual")
@@ -224,7 +228,7 @@ def fixed_dual_theta_ranges(
         low, low_status = _solve_theta_lp(polytope, direction)
         high, high_status = _solve_theta_lp(polytope, -direction)
         if not np.isfinite(low) or not np.isfinite(high):
-            raise InverseOTError(
+            raise RuntimeError(
                 "fixed-dual theta region is empty or unbounded at coordinate "
                 f"{index}: min status={low_status!r}, max status={high_status!r}"
             )
@@ -281,29 +285,31 @@ def is_optimal_plan(
 
     CN: 这是判定 theta 是否使 pi_hat 最优的权威检查；绝不断言 theta == theta_star。
         `num_itermax` 透传给 POT；若 POT 未到达最优（返回码 != 1 或有警告），本函数
-        直接抛出 `InverseOTError`，避免用被迭代上限截断的「最优代价」静默误判。
+        直接抛出 `RuntimeError`，避免用被迭代上限截断的「最优代价」静默误判。
     EN: This is the authoritative check that a theta makes pi_hat optimal; never assert
         theta == theta_star. `num_itermax` is forwarded to POT; if POT does not reach
-        optimality (result code != 1 or any warning), this raises `InverseOTError` instead
+        optimality (result code != 1 or any warning), this raises `RuntimeError` instead
         of silently comparing against an iteration-capped "optimal" cost.
     """
     value = np.asarray(theta, dtype=np.float64).reshape(-1)
     if value.size != int(problem.n_features):
         raise ValueError("theta length does not match features.n_features")
     if not problem.theta_set.contains(value, tol=1e-6):
-        raise InverseOTError("theta is not (within tolerance) inside the parameter set Theta")
+        raise RuntimeError(
+            "theta is not (within tolerance) inside the parameter set Theta"
+        )
     cost = dense_cost_matrix(problem.features, value, max_elements=int(max_elements))
     source_mass = problem.resolved_source_mass
     target_mass = problem.resolved_target_mass
     if abs(float(source_mass.sum()) - float(target_mass.sum())) > 1e-8:
-        raise InverseOTError("source and target masses must have equal total mass")
+        raise RuntimeError("source and target masses must have equal total mass")
     transport, log = _require_ot().emd(
         source_mass, target_mass, cost, numItermax=int(num_itermax), log=True
     )
     result_code = int(log["result_code"])
     warning = log["warning"]
     if result_code != _POT_OPTIMAL_RESULT_CODE or warning is not None:
-        raise InverseOTError(
+        raise RuntimeError(
             "POT network simplex did not reach optimality while validating pi_hat "
             f"(result_code={result_code}, warning={warning!r}); the reference optimal cost "
             f"would be untrustworthy. Increase num_itermax (currently {int(num_itermax)})."
@@ -387,14 +393,16 @@ def dual_optimality_certificate(
     source_mass = problem.resolved_source_mass
     target_mass = problem.resolved_target_mass
     if abs(float(source_mass.sum()) - float(target_mass.sum())) > 1e-8:
-        raise InverseOTError("source and target masses must have equal total mass")
+        raise RuntimeError("source and target masses must have equal total mass")
     _transport, log = _require_ot().emd(
         source_mass, target_mass, cost, numItermax=int(num_itermax), log=True
     )
     source_dual = np.asarray(log["u"], dtype=np.float64).reshape(-1)
     target_dual = np.asarray(log["v"], dtype=np.float64).reshape(-1)
-    if source_dual.size != int(problem.n_source) or target_dual.size != int(problem.n_target):
-        raise InverseOTError("POT returned dual potentials of unexpected shape")
+    if source_dual.size != int(problem.n_source) or target_dual.size != int(
+        problem.n_target
+    ):
+        raise RuntimeError("POT returned dual potentials of unexpected shape")
     max_dual_violation = _max_dual_violation(source_dual, target_dual, cost)
     rows, cols, _values = problem.support()
     if rows.size:
@@ -426,3 +434,4 @@ __all__ = [
     "optimal_theta_ranges",
     "plan_cost",
 ]
+

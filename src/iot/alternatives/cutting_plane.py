@@ -36,7 +36,7 @@ from typing import Callable, Literal
 import numpy as np
 from scipy.optimize import linprog
 
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from .subgradient import (
     ExactPlanSolver,
     make_pot_solver,
@@ -62,8 +62,12 @@ class CuttingPlaneCut:
     theta: np.ndarray
 
     def __post_init__(self) -> None:
-        gradient = np.ascontiguousarray(np.asarray(self.gradient, dtype=np.float64).reshape(-1))
-        theta = np.ascontiguousarray(np.asarray(self.theta, dtype=np.float64).reshape(-1))
+        gradient = np.ascontiguousarray(
+            np.asarray(self.gradient, dtype=np.float64).reshape(-1)
+        )
+        theta = np.ascontiguousarray(
+            np.asarray(self.theta, dtype=np.float64).reshape(-1)
+        )
         if gradient.size < 1:
             raise ValueError("cut gradient must be non-empty")
         if theta.size != gradient.size:
@@ -141,7 +145,9 @@ class CutMasterResult:
 
     def __post_init__(self) -> None:
         object.__setattr__(
-            self, "theta", np.ascontiguousarray(np.asarray(self.theta, dtype=np.float64).reshape(-1))
+            self,
+            "theta",
+            np.ascontiguousarray(np.asarray(self.theta, dtype=np.float64).reshape(-1)),
         )
 
 
@@ -164,9 +170,15 @@ class CuttingPlaneResult:
     n_oracle_calls: int
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "theta", np.ascontiguousarray(np.asarray(self.theta, dtype=np.float64)))
         object.__setattr__(
-            self, "best_theta", np.ascontiguousarray(np.asarray(self.best_theta, dtype=np.float64))
+            self,
+            "theta",
+            np.ascontiguousarray(np.asarray(self.theta, dtype=np.float64)),
+        )
+        object.__setattr__(
+            self,
+            "best_theta",
+            np.ascontiguousarray(np.asarray(self.best_theta, dtype=np.float64)),
         )
 
 
@@ -192,7 +204,9 @@ def solve_cut_master(
         raise ValueError("mode must be 'max_margin' or 'kelley'")
     matrix = np.asarray(gradients, dtype=np.float64)
     if matrix.ndim != 2 or matrix.shape[0] < 1:
-        raise ValueError(f"gradients must be a non-empty 2D matrix; got shape={matrix.shape}")
+        raise ValueError(
+            f"gradients must be a non-empty 2D matrix; got shape={matrix.shape}"
+        )
     if not np.all(np.isfinite(matrix)):
         raise ValueError("gradients must be finite")
     # CN: g = 0 的割是恒真半空间（0·theta <= 0），不携带信息；丢弃它，否则会错误地把 margin 压成 0。
@@ -201,7 +215,7 @@ def solve_cut_master(
     norms = np.linalg.norm(matrix, axis=1)
     informative = norms > float(norm_floor)
     if not bool(np.any(informative)):
-        raise InverseOTError("cut bank has no informative (nonzero) cuts")
+        raise RuntimeError("cut bank has no informative (nonzero) cuts")
     matrix = matrix[informative]
     if bool(normalize_cuts):
         matrix = matrix / norms[informative, None]
@@ -229,7 +243,9 @@ def solve_cut_master(
     b_ub = np.zeros(n_cuts, dtype=np.float64)
 
     n_eq = int(constraints.a_eq.shape[0])
-    a_eq = np.hstack([np.asarray(constraints.a_eq, dtype=np.float64), np.zeros((n_eq, 1))])
+    a_eq = np.hstack(
+        [np.asarray(constraints.a_eq, dtype=np.float64), np.zeros((n_eq, 1))]
+    )
     bounds: list[tuple[float, float]] = [
         *constraints.bounds(),
         (float(margin_bounds[0]), float(margin_bounds[1])),
@@ -244,9 +260,7 @@ def solve_cut_master(
         method="highs",
     )
     if not result.success or result.x is None:
-        raise InverseOTError(
-            f"cutting-plane master failed ({mode}): {result.message}"
-        )
+        raise RuntimeError(f"cutting-plane master failed ({mode}): {result.message}")
     raw = float(result.x[dimension])
     if mode == "max_margin":
         margin = raw
@@ -262,7 +276,9 @@ def solve_cut_master(
     )
 
 
-def _initial_theta(problem: InverseOTProblem, initial_theta: np.ndarray | None) -> np.ndarray:
+def _initial_theta(
+    problem: InverseOTProblem, initial_theta: np.ndarray | None
+) -> np.ndarray:
     """CN: 初始查询点：默认单纯形均匀点，否则使用调用方提供的 theta。EN: Initial query point."""
     dimension = int(problem.n_features)
     if initial_theta is None:
@@ -299,12 +315,14 @@ def solve_cutting_plane(
     """
     settings = CuttingPlaneConfig() if config is None else config
     if not isinstance(problem.theta_set, LinearThetaSet):
-        raise InverseOTError(
+        raise RuntimeError(
             "the cutting-plane LP master requires a LinearThetaSet; "
             f"got {type(problem.theta_set).__name__}. Pair a non-linear Theta with a "
             "dedicated master."
         )
-    solver: ExactPlanSolver = make_pot_solver(problem) if exact_plan_solver is None else exact_plan_solver
+    solver: ExactPlanSolver = (
+        make_pot_solver(problem) if exact_plan_solver is None else exact_plan_solver
+    )
     theta = _initial_theta(problem, initial_theta)
     observed = observed_feature_moment(problem)
 

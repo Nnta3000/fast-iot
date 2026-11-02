@@ -18,7 +18,6 @@ from iot import (
     BilinearPSDTheta,
     CuttingPlaneConfig,
     DiagonalWeightFeatures,
-    InverseOTError,
     InverseOTProblem,
     SimplexTheta,
     dense_cost_matrix,
@@ -149,7 +148,7 @@ def test_zero_gradient_cuts_are_ignored() -> None:
     gradients = np.vstack([np.full(4, -1.0), np.zeros(4), np.full(4, -2.0)])
     master = solve_cut_master(gradients, theta_set=SimplexTheta(4), mode="max_margin")
     assert master.margin > 0.0
-    with pytest.raises(InverseOTError):
+    with pytest.raises(RuntimeError):
         solve_cut_master(np.zeros((3, 4)), theta_set=SimplexTheta(4), mode="max_margin")
 
 
@@ -197,7 +196,7 @@ def test_rejects_non_linear_theta() -> None:
     theta_set = BilinearPSDTheta(2)
     plan = sparse.csr_matrix(np.full((6, 6), 1.0 / 36.0))
     problem = InverseOTProblem(features=features, theta_set=theta_set, plan=plan)
-    with pytest.raises(InverseOTError):
+    with pytest.raises(RuntimeError):
         solve_cutting_plane(problem)
 
 

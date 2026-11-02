@@ -18,7 +18,6 @@ from scipy import sparse
 
 from iot import (
     DenseFeatureTensor,
-    InverseOTError,
     InverseOTProblem,
     SdpMasterSolver,
     SimplexTheta,
@@ -108,7 +107,7 @@ def test_bilinear_psd_lex_fails_at_n16() -> None:
     instance = make_bilinear_psd_grounded_instance(
         n_source=16, n_target=16, point_dimension=2, rng=rng
     )
-    with pytest.raises(InverseOTError):
+    with pytest.raises(RuntimeError):
         solve_inverse_ot(
             instance.problem, solver=SdpMasterSolver(), tie_break="lex", max_iterations=60
         )

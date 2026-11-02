@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..core.edges import EdgeSet, edge_keys
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 
 
 class _UnionFind:
@@ -57,7 +57,9 @@ class ComponentPartition:
     component_targets: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        labels = np.ascontiguousarray(np.asarray(self.labels, dtype=np.int64).reshape(-1))
+        labels = np.ascontiguousarray(
+            np.asarray(self.labels, dtype=np.int64).reshape(-1)
+        )
         if labels.size < 1:
             raise ValueError("labels must be non-empty")
         if len(self.component_sources) != int(self.n_components):
@@ -79,7 +81,9 @@ def support_components(problem: InverseOTProblem) -> ComponentPartition:
     for row, col in zip(rows.tolist(), cols.tolist(), strict=True):
         union_find.union(int(row), n_source + int(col))
 
-    roots = np.asarray([union_find.find(node) for node in range(n_source + n_target)], dtype=np.int64)
+    roots = np.asarray(
+        [union_find.find(node) for node in range(n_source + n_target)], dtype=np.int64
+    )
     unique_roots, labels = np.unique(roots, return_inverse=True)
     n_components = int(unique_roots.size)
 
@@ -93,8 +97,12 @@ def support_components(problem: InverseOTProblem) -> ComponentPartition:
         component = int(labels[n_source + target])
         if component_targets[component] < 0:
             component_targets[component] = target
-    if any(value < 0 for value in component_sources) or any(value < 0 for value in component_targets):
-        raise InverseOTError("every support component must contain at least one source and one target")
+    if any(value < 0 for value in component_sources) or any(
+        value < 0 for value in component_targets
+    ):
+        raise RuntimeError(
+            "every support component must contain at least one source and one target"
+        )
     return ComponentPartition(
         labels=labels,
         n_components=n_components,
@@ -111,18 +119,22 @@ def _first_edge_outside(problem: InverseOTProblem, support: EdgeSet) -> tuple[in
     n_target = int(problem.n_target)
     columns = np.arange(n_target, dtype=np.int64)
     for row in range(int(problem.n_source)):
-        candidate_keys = edge_keys(np.full(n_target, row, dtype=np.int64), columns, n_target=n_target)
+        candidate_keys = edge_keys(
+            np.full(n_target, row, dtype=np.int64), columns, n_target=n_target
+        )
         missing = ~support.contains(candidate_keys)
         if bool(missing.any()):
             col = int(columns[int(np.argmax(missing))])
             return row, col
-    raise InverseOTError(
+    raise RuntimeError(
         "support S is the full edge set, so the master problem is unbounded; "
         "the constraint-generation guarantee does not apply here"
     )
 
 
-def connector_edges(problem: InverseOTProblem, partition: ComponentPartition) -> EdgeSet:
+def connector_edges(
+    problem: InverseOTProblem, partition: ComponentPartition
+) -> EdgeSet:
     """
     CN: 构造连接边集合 R：p >= 2 时连接分量环，p = 1 时取任一条 S 外边。
     EN: Build the connector set R: link components in a cycle when p >= 2, or take one
@@ -130,7 +142,9 @@ def connector_edges(problem: InverseOTProblem, partition: ComponentPartition) ->
     """
     n_target = int(problem.n_target)
     if int(partition.n_components) == 1:
-        row, col = _first_edge_outside(problem, EdgeSet.from_arrays(*problem.support()[:2], n_target=n_target))
+        row, col = _first_edge_outside(
+            problem, EdgeSet.from_arrays(*problem.support()[:2], n_target=n_target)
+        )
         return EdgeSet.from_arrays(np.array([row]), np.array([col]), n_target=n_target)
     rows = []
     cols = []
@@ -138,7 +152,11 @@ def connector_edges(problem: InverseOTProblem, partition: ComponentPartition) ->
     for index in range(p):
         rows.append(partition.component_sources[index])
         cols.append(partition.component_targets[(index + 1) % p])
-    return EdgeSet.from_arrays(np.asarray(rows, dtype=np.int64), np.asarray(cols, dtype=np.int64), n_target=n_target)
+    return EdgeSet.from_arrays(
+        np.asarray(rows, dtype=np.int64),
+        np.asarray(cols, dtype=np.int64),
+        n_target=n_target,
+    )
 
 
 def mandatory_edges(problem: InverseOTProblem) -> tuple[EdgeSet, ComponentPartition]:
@@ -147,7 +165,9 @@ def mandatory_edges(problem: InverseOTProblem) -> tuple[EdgeSet, ComponentPartit
     EN: Return B = S ∪ R and the component partition; B is never pruned in the loop.
     """
     support_rows, support_cols, _values = problem.support()
-    support = EdgeSet.from_arrays(support_rows, support_cols, n_target=int(problem.n_target))
+    support = EdgeSet.from_arrays(
+        support_rows, support_cols, n_target=int(problem.n_target)
+    )
     partition = support_components(problem)
     connectors = connector_edges(problem, partition)
     return support.union(connectors), partition

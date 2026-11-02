@@ -30,11 +30,11 @@ EN:
 CN: 环境说明：`pycupdlpx` 是 `hello_ot` 的 native CUDA 扩展，只有按
     `scripts/create_hello_ot_env.sh` / `scripts/build_native_wheel.sh` 的
     torch 2.7.1+cu118 + nvcc 11.8 组合构建后才可 import；缺失时 `solve` 抛
-    `InverseOTError` 并给出安装提示。
+    `RuntimeError` 并给出安装提示。
 EN: Environment note: `pycupdlpx` is HELLO-OT's native CUDA extension and is importable only
     after building with the torch 2.7.1+cu118 + nvcc 11.8 stack documented in
     `scripts/create_hello_ot_env.sh` / `scripts/build_native_wheel.sh`; when it is missing,
-    `solve` raises `InverseOTError` with an install hint.
+    `solve` raises `RuntimeError` with an install hint.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ from ..exact.master import (
     build_master_system,
     draw_generic_direction,
 )
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..alternatives.sinkhorn_theta import project_theta
 from ..core.theta import SimplexTheta
 
@@ -81,7 +81,7 @@ def _load_pycupdlpx() -> Any:
 
         return pycupdlpx
     except ImportError as error:
-        raise InverseOTError(
+        raise RuntimeError(
             "CuPDLPx (pycupdlpx) is not available. It is HELLO-OT's native CUDA extension; "
             "build it with the documented stack (`bash scripts/create_hello_ot_env.sh`, then "
             "`HELLO_OT_BUILD_NATIVE=1 python -m pip install -e .`) or the local CUDA-12/13 "
@@ -117,8 +117,11 @@ class CuPdlpxLp:
 
 
 def build_cupdlpx_lp(
-    problem: InverseOTProblem, edges: EdgeSet, *,
-    epsilon: float = 0.0, generic_direction: np.ndarray | None = None,
+    problem: InverseOTProblem,
+    edges: EdgeSet,
+    *,
+    epsilon: float = 0.0,
+    generic_direction: np.ndarray | None = None,
 ) -> CuPdlpxLp:
     """
     CN: 由既有 `build_master_system` 构造 CuPDLPx 形式的同一 master LP（等式行在前）。
@@ -149,13 +152,17 @@ def build_cupdlpx_lp(
         scale = float(np.abs(direction).max()) or 1.0
         c[int(layout.theta_start) :] += -float(epsilon) * (direction / scale)
     a_csc = sparse.csc_matrix(sparse.vstack([system.a_eq, system.a_ub], format="csc"))
-    rhs = np.ascontiguousarray(np.concatenate([system.b_eq, system.b_ub]), dtype=np.float64)
+    rhs = np.ascontiguousarray(
+        np.concatenate([system.b_eq, system.b_ub]), dtype=np.float64
+    )
     n_eqs = int(system.b_eq.size)
     lb = np.array(
-        [-np.inf if lo is None else float(lo) for lo, _ in system.bounds], dtype=np.float64
+        [-np.inf if lo is None else float(lo) for lo, _ in system.bounds],
+        dtype=np.float64,
     )
     ub = np.array(
-        [np.inf if hi is None else float(hi) for _, hi in system.bounds], dtype=np.float64
+        [np.inf if hi is None else float(hi) for _, hi in system.bounds],
+        dtype=np.float64,
     )
     return CuPdlpxLp(
         a_csc=a_csc, c=c, rhs=rhs, lb=lb, ub=ub, n_eqs=n_eqs, layout=layout
@@ -197,7 +204,7 @@ class CuPdlpxMasterSolver:
         tie_break: TieBreak = "none",
     ) -> MasterSolution:
         if str(tie_break) not in {"none", "regularized"}:
-            raise InverseOTError(
+            raise RuntimeError(
                 "CuPdlpxMasterSolver supports tie_break='none' or 'regularized' only; CuPDLPx has no "
                 "lexicographic re-solve (no exact delta-optimal face)."
             )
@@ -205,7 +212,7 @@ class CuPdlpxMasterSolver:
         epsilon = float(self.epsilon)
         if str(tie_break) == "regularized":
             if epsilon <= 0.0:
-                raise InverseOTError("tie_break='regularized' requires epsilon > 0")
+                raise RuntimeError("tie_break='regularized' requires epsilon > 0")
             if self.generic_direction is None:
                 direction = draw_generic_direction(
                     random_seed=int(self.random_seed),
@@ -214,11 +221,15 @@ class CuPdlpxMasterSolver:
                     n_target=int(problem.n_target),
                 )
             else:
-                direction = np.asarray(self.generic_direction, dtype=np.float64).reshape(-1)
+                direction = np.asarray(
+                    self.generic_direction, dtype=np.float64
+                ).reshape(-1)
         else:
             epsilon = 0.0
         pycupdlpx = _load_pycupdlpx()
-        lp = build_cupdlpx_lp(problem, edges, epsilon=epsilon, generic_direction=direction)
+        lp = build_cupdlpx_lp(
+            problem, edges, epsilon=epsilon, generic_direction=direction
+        )
         solver = pycupdlpx.cupdlpx()
         solver.loadData(
             A=lp.a_csc,
@@ -231,7 +242,7 @@ class CuPdlpxMasterSolver:
         out = solver.solve(self.params)
         primal = out.get("x") if isinstance(out, dict) else None
         if primal is None:
-            raise InverseOTError(
+            raise RuntimeError(
                 "CuPDLPx returned no primal solution "
                 f"(termination_reason={out.get('termination_reason') if isinstance(out, dict) else 'n/a'})"
             )
@@ -242,14 +253,14 @@ class CuPdlpxMasterSolver:
         #     non-deterministic inf/garbage).
         x = np.array(primal, dtype=np.float64, copy=True).reshape(-1)
         if x.size != lp.n_variables:
-            raise InverseOTError(
+            raise RuntimeError(
                 f"CuPDLPx primal has length {x.size}, expected {lp.n_variables}"
             )
         if not np.all(np.isfinite(x)):
             reason = out.get("termination_reason") if isinstance(out, dict) else "n/a"
             rel_primal = out.get("rel_primal_res") if isinstance(out, dict) else None
             rel_gap = out.get("rel_obj_gap") if isinstance(out, dict) else None
-            raise InverseOTError(
+            raise RuntimeError(
                 "CuPDLPx returned a non-finite primal solution "
                 f"(termination_reason={reason}, rel_primal_res={rel_primal}, rel_obj_gap={rel_gap})"
             )

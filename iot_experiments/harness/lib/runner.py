@@ -21,7 +21,6 @@ from scipy import sparse
 
 from iot import (
     CuPdlpxMasterSolver,
-    InverseOTError,
     InverseOTProblem,
     RegularizedMasterSolver,
     SdpMasterSolver,
@@ -117,7 +116,7 @@ def run_spec(spec: RunSpec) -> RunRecord:
         )
     else:
         if int(spec.m) * int(spec.n) > POT_MAX_ELEMENTS:
-            raise InverseOTError(
+            raise RuntimeError(
                 f"POT reference path needs m*n <= {POT_MAX_ELEMENTS}; use plan_backend='hello' "
                 "(linear memory) for larger sizes."
             )
@@ -231,9 +230,9 @@ def run_spec(spec: RunSpec) -> RunRecord:
                 )
                 is_optimal = bool(check.is_optimal)
                 relative_gap = float(check.relative_gap)
-            except InverseOTError as exc:
+            except RuntimeError as exc:
                 error = f"validate failed: {exc}"
-    except InverseOTError as exc:
+    except RuntimeError as exc:
         outcome = "infeasible"
         error = str(exc)
     solve_seconds = float(time.perf_counter() - solve_started)

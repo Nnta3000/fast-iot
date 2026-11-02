@@ -39,7 +39,6 @@ if str(_REPO_ROOT) not in sys.path:
 from iot import (  # noqa: E402
     CuPdlpxMasterSolver,
     CuttingPlaneConfig,
-    InverseOTError,
     InverseOTProblem,
     RegularizedMasterSolver,
     SdpMasterSolver,
@@ -269,7 +268,7 @@ def run_families_arm(
                             subgradient_rule=str(subgradient_rule),
                             entropic_outer=int(entropic_outer),
                         )
-                    except InverseOTError as error:
+                    except RuntimeError as error:
                         row = _row(
                             arm="families", instance=instance, method=method,
                             config="error", unit="-", converged=False, iterations=0,
@@ -377,7 +376,7 @@ def run_psd_arm(
                         )
                     else:
                         raise ValueError(f"unknown PSD method {method!r}")
-                except (InverseOTError, ValueError) as error:
+                except (RuntimeError, ValueError) as error:
                     row = _row(
                         arm="psd", instance=instance, method=method, config="error",
                         unit="-", converged=False, iterations=0, wall=0.0,
@@ -472,7 +471,7 @@ def run_noisy_arm(
                         error = "no certificate"
                     else:
                         raise ValueError(f"unknown noisy method {method!r}")
-                except InverseOTError as exc:
+                except RuntimeError as exc:
                     error = str(exc)
                 wall = time.perf_counter() - started
                 row = _row(

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..core.problem import InverseOTError
-
 
 def require_torch() -> Any:
     """
@@ -22,7 +20,7 @@ def require_torch() -> Any:
     try:
         import torch  # noqa: PLC0415 - lazy by design
     except ImportError as error:  # pragma: no cover - environment dependent
-        raise InverseOTError(
+        raise RuntimeError(
             "the torch scan requires `torch`; install it (`pip install torch`) or use "
             "scan_backend='numpy'."
         ) from error
@@ -34,7 +32,7 @@ def torch_available() -> bool:
     try:
         require_torch()
         return True
-    except InverseOTError:
+    except RuntimeError:
         return False
 
 
@@ -58,7 +56,7 @@ def resolve_torch_device(value: str) -> Any:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device(requested)
     if device.type == "cuda" and not torch.cuda.is_available():
-        raise InverseOTError("torch_device='cuda' requested but CUDA is not available")
+        raise RuntimeError("torch_device='cuda' requested but CUDA is not available")
     if device.type not in {"cpu", "cuda"}:
         raise ValueError("torch_device must resolve to CPU or CUDA")
     return device
@@ -66,7 +64,10 @@ def resolve_torch_device(value: str) -> Any:
 
 def describe_backend(device: str = "auto") -> dict[str, object]:
     """CN: 描述 torch 后端（用于 `env` 自检）。EN: Describe the torch backend (for the `env` self-check)."""
-    info: dict[str, object] = {"torch_available": torch_available(), "cuda_available": cuda_available()}
+    info: dict[str, object] = {
+        "torch_available": torch_available(),
+        "cuda_available": cuda_available(),
+    }
     if info["torch_available"]:
         torch = require_torch()
         info["torch_version"] = str(torch.__version__)
@@ -76,4 +77,10 @@ def describe_backend(device: str = "auto") -> dict[str, object]:
     return info
 
 
-__all__ = ["require_torch", "torch_available", "cuda_available", "resolve_torch_device", "describe_backend"]
+__all__ = [
+    "require_torch",
+    "torch_available",
+    "cuda_available",
+    "resolve_torch_device",
+    "describe_backend",
+]

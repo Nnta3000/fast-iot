@@ -32,7 +32,6 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot import (  # noqa: E402
     CuPdlpxMasterSolver,
-    InverseOTError,
     RegularizedMasterSolver,
     is_optimal_plan,
     solve_inverse_ot,
@@ -149,7 +148,7 @@ def _cupdlpx_arms(args: argparse.Namespace, n: int, seed: int) -> list[MasterRow
                     tau_prune=float(args.tau_prune),
                 )
             )
-        except InverseOTError as error:
+        except RuntimeError as error:
             print(f"[cupdlpx] n={n} seed={seed} {label}: {error}", file=sys.stderr)
             print(
                 "[cupdlpx] build the native extension first; "
@@ -192,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
             if not args.skip_cupdlpx:
                 try:
                     rows.extend(_cupdlpx_arms(args, n, seed))
-                except InverseOTError:
+                except RuntimeError:
                     return 2
     header = (
         f"{'master':>18} {'n':>5} {'K':>3} {'seed':>4} {'conv':>5} {'delta':>11} "

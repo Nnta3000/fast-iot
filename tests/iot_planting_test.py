@@ -64,7 +64,6 @@ def test_planted_pruning_cycles_with_the_first_order_master_contract() -> None:
     #     hysteresis cycle. We cannot reproduce the GPU here, so we assert the *contract*:
     #     CuPdlpxMasterSolver rejects any tie_break != "none", and prune=none is cupdlpx's usable setting.
     from iot import CuPdlpxMasterSolver
-    from iot.core.problem import InverseOTError
     from iot.exact.components import mandatory_edges
 
     planted = plant_instance(family="diagonal", n=60, point_dimension=4, seed=0)
@@ -74,7 +73,7 @@ def test_planted_pruning_cycles_with_the_first_order_master_contract() -> None:
     try:
         solver.solve(planted.problem, edges, tie_break="lex_generic")
     except Exception as error:  # noqa: BLE001 - the exact type depends on the optional native ext
-        assert "tie_break" in str(error) or isinstance(error, (InverseOTError, RuntimeError))
+        assert "tie_break" in str(error) or isinstance(error, (RuntimeError, RuntimeError))
     else:  # pragma: no cover - only if the native ext is unavailable and solve() would fail differently
         raise AssertionError("cupdlpx unexpectedly accepted tie_break='lex_generic'")
 

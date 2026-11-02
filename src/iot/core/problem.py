@@ -14,13 +14,6 @@ from .features import FeatureMap
 from .theta import ThetaSet
 
 
-class InverseOTError(RuntimeError):
-    """
-    CN: 逆 OT 求解或验证失败。
-    EN: Inverse-OT solve or validation failure.
-    """
-
-
 def _vector(value: np.ndarray, *, size: int, name: str) -> np.ndarray:
     array = np.asarray(value, dtype=np.float64).reshape(-1)
     if array.size != int(size):
@@ -63,7 +56,9 @@ class InverseOTProblem:
         plan = sparse.csr_matrix(self.plan, dtype=np.float64)
         expected = (int(self.features.n_source), int(self.features.n_target))
         if plan.shape != expected:
-            raise ValueError(f"plan shape {plan.shape} does not match features shape {expected}")
+            raise ValueError(
+                f"plan shape {plan.shape} does not match features shape {expected}"
+            )
         if plan.nnz < 1:
             raise ValueError("plan must contain at least one positive entry")
         if plan.data.size and np.any(plan.data < 0.0):
@@ -73,20 +68,28 @@ class InverseOTProblem:
         col_sums = np.asarray(plan.sum(axis=0), dtype=np.float64).reshape(-1)
         if np.any(row_sums <= 0.0) or np.any(col_sums <= 0.0):
             raise ValueError("every row and column of plan must have positive mass")
-        if abs(float(row_sums.sum()) - float(col_sums.sum())) > 1e-8 * max(1.0, float(row_sums.sum())):
+        if abs(float(row_sums.sum()) - float(col_sums.sum())) > 1e-8 * max(
+            1.0, float(row_sums.sum())
+        ):
             raise ValueError("plan source and target total masses differ")
 
         provided_source = (
-            row_sums if self.source_mass is None
+            row_sums
+            if self.source_mass is None
             else _vector(self.source_mass, size=expected[0], name="source_mass")
         )
         provided_target = (
-            col_sums if self.target_mass is None
+            col_sums
+            if self.target_mass is None
             else _vector(self.target_mass, size=expected[1], name="target_mass")
         )
-        if self.source_mass is not None and not np.allclose(provided_source, row_sums, atol=1e-8, rtol=1e-8):
+        if self.source_mass is not None and not np.allclose(
+            provided_source, row_sums, atol=1e-8, rtol=1e-8
+        ):
             raise ValueError("source_mass must equal the row marginals of plan")
-        if self.target_mass is not None and not np.allclose(provided_target, col_sums, atol=1e-8, rtol=1e-8):
+        if self.target_mass is not None and not np.allclose(
+            provided_target, col_sums, atol=1e-8, rtol=1e-8
+        ):
             raise ValueError("target_mass must equal the column marginals of plan")
 
         coo = plan.tocoo(copy=False)
@@ -99,8 +102,12 @@ class InverseOTProblem:
         object.__setattr__(self, "support_rows", np.ascontiguousarray(rows[order]))
         object.__setattr__(self, "support_cols", np.ascontiguousarray(cols[order]))
         object.__setattr__(self, "support_values", np.ascontiguousarray(values[order]))
-        object.__setattr__(self, "resolved_source_mass", np.ascontiguousarray(provided_source))
-        object.__setattr__(self, "resolved_target_mass", np.ascontiguousarray(provided_target))
+        object.__setattr__(
+            self, "resolved_source_mass", np.ascontiguousarray(provided_source)
+        )
+        object.__setattr__(
+            self, "resolved_target_mass", np.ascontiguousarray(provided_target)
+        )
 
     @property
     def n_source(self) -> int:
@@ -134,6 +141,6 @@ class InverseOTProblem:
 
 
 __all__ = [
-    "InverseOTError",
+    "RuntimeError",
     "InverseOTProblem",
 ]

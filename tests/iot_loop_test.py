@@ -5,7 +5,6 @@ import pytest
 
 from iot import (
     EdgeSet,
-    InverseOTError,
     InverseOTProblem,
     LinearMasterSolver,
     RegularizedMasterSolver,
@@ -40,7 +39,7 @@ def test_master_without_connectors_is_unbounded() -> None:
     support_only = EdgeSet.from_arrays(rows, cols, n_target=int(instance.problem.n_target))
     # CN: 只用 S 时 delta 无上界；连接边 R 是防止这一点所必需的。
     # EN: With only S, delta is unbounded; the connector set R is what prevents this.
-    with pytest.raises(InverseOTError, match="infeasible or unbounded"):
+    with pytest.raises(RuntimeError, match="infeasible or unbounded"):
         LinearMasterSolver().solve(instance.problem, support_only, tie_break="lex")
 
 

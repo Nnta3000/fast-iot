@@ -41,7 +41,7 @@ from ..core.edges import EdgeSet
 from ..core.features import DiagonalWeightFeatures, FeatureMap
 from ..exact.master import MasterSolution
 from ..exact.oracle import ViolationScan
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 
 
 def fast_scan_supported(features: FeatureMap) -> bool:
@@ -57,7 +57,7 @@ def _load_torch_scan() -> Any:
     try:
         from hello_ot.kernels.torch_scan import bidirectional_violation_scan
     except ImportError as error:  # pragma: no cover - environment dependent
-        raise InverseOTError(
+        raise RuntimeError(
             "the fast oracle scan requires `hello_ot` (and torch); install HELLO-OT or use "
             "scan_backend='numpy'."
         ) from error
@@ -88,8 +88,13 @@ def scan_violations_fast(
         from .generic_scan import scan_violations_torch
 
         return scan_violations_torch(
-            problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma),
-            device=str(device), max_tile_bytes=int(max_tile_bytes),
+            problem,
+            master,
+            excluded=excluded,
+            tol=float(tol),
+            gamma=int(gamma),
+            device=str(device),
+            max_tile_bytes=int(max_tile_bytes),
         )
     if int(gamma) < 1:
         raise ValueError("gamma must be >= 1")
@@ -117,8 +122,16 @@ def scan_violations_fast(
     support_rows, support_cols, _support_values = problem.support()
     support_rows = np.asarray(support_rows, dtype=np.int64).reshape(-1)
     support_cols = np.asarray(support_cols, dtype=np.int64).reshape(-1)
-    sup_row = int(np.max(np.bincount(support_rows, minlength=n_source))) if support_rows.size else 0
-    sup_col = int(np.max(np.bincount(support_cols, minlength=n_target))) if support_cols.size else 0
+    sup_row = (
+        int(np.max(np.bincount(support_rows, minlength=n_source)))
+        if support_rows.size
+        else 0
+    )
+    sup_col = (
+        int(np.max(np.bincount(support_cols, minlength=n_target)))
+        if support_cols.size
+        else 0
+    )
     topk = int(gamma) + max(sup_row, sup_col)
 
     scan = bidirectional_violation_scan(
@@ -150,8 +163,13 @@ def scan_violations_fast(
         from .generic_scan import scan_violations_torch
 
         return scan_violations_torch(
-            problem, master, excluded=excluded, tol=float(tol), gamma=int(gamma),
-            device=str(device), max_tile_bytes=int(max_tile_bytes),
+            problem,
+            master,
+            excluded=excluded,
+            tol=float(tol),
+            gamma=int(gamma),
+            device=str(device),
+            max_tile_bytes=int(max_tile_bytes),
         )
 
     costs = features.costs(theta, rows, cols)

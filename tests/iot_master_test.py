@@ -7,7 +7,6 @@ from scipy import sparse
 from iot import (
     DiagonalWeightFeatures,
     EdgeSet,
-    InverseOTError,
     InverseOTProblem,
     LinearMasterSolver,
     SimplexTheta,
@@ -63,7 +62,7 @@ def test_lemma_1_full_edge_master_certifies_optimality() -> None:
 def test_infeasible_observation_raises() -> None:
     problem = _bad_plan_problem()
     all_edges = _all_edges(problem)
-    with pytest.raises(InverseOTError, match="infeasible or unbounded"):
+    with pytest.raises(RuntimeError, match="infeasible or unbounded"):
         SOLVER.solve(problem, all_edges, tie_break="lex")
 
 

@@ -7,7 +7,6 @@ from scipy import sparse
 from iot import (
     DenseFeatureTensor,
     DiagonalWeightFeatures,
-    InverseOTError,
     InverseOTProblem,
     SimplexTheta,
     connector_edges,
@@ -64,5 +63,5 @@ def test_full_support_is_rejected() -> None:
     features = DenseFeatureTensor(np.ones((2, 2, 2)))
     plan = sparse.csr_matrix(np.full((2, 2), 0.25))
     problem = InverseOTProblem(features=features, theta_set=SimplexTheta(2), plan=plan)
-    with pytest.raises(InverseOTError, match="full edge set"):
+    with pytest.raises(RuntimeError, match="full edge set"):
         mandatory_edges(problem)

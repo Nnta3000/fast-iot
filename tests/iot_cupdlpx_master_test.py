@@ -16,7 +16,6 @@ from scipy.optimize import linprog
 
 from iot import (
     CuPdlpxMasterSolver,
-    InverseOTError,
     LinearMasterSolver,
     build_cupdlpx_lp,
     make_diagonal_grounded_instance,
@@ -90,7 +89,7 @@ def test_cupdlpx_lp_has_the_same_optimum_as_the_highs_master() -> None:
 def test_cupdlpx_master_rejects_lex_tie_break() -> None:
     instance = _instance()
     edges, _partition = mandatory_edges(instance.problem)
-    with pytest.raises(InverseOTError):
+    with pytest.raises(RuntimeError):
         CuPdlpxMasterSolver().solve(instance.problem, edges, tie_break="lex")
 
 
@@ -99,7 +98,7 @@ def test_cupdlpx_master_raises_without_the_extension() -> None:
         pytest.skip("pycupdlpx is available; the missing-extension path does not apply")
     instance = _instance()
     edges, _partition = mandatory_edges(instance.problem)
-    with pytest.raises(InverseOTError, match="CuPDLPx"):
+    with pytest.raises(RuntimeError, match="CuPDLPx"):
         CuPdlpxMasterSolver().solve(instance.problem, edges, tie_break="none")
 
 

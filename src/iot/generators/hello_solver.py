@@ -19,7 +19,7 @@ import numpy as np
 from scipy import sparse
 
 from ..core.features import DiagonalWeightFeatures, FeatureMap
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..alternatives.subgradient import ExactPlanSolver
 
 
@@ -41,7 +41,7 @@ def make_hello_solver(
         sqrt(theta) and call HELLO-OT's squared-Euclidean OT. θ coordinates are clipped to >= 0.
     """
     if not hello_solver_supported(problem.features):
-        raise InverseOTError(
+        raise RuntimeError(
             "make_hello_solver supports DiagonalWeightFeatures (weighted squared Euclidean) "
             f"only; got {type(problem.features).__name__}. Use make_pot_solver for other families."
         )
@@ -56,10 +56,14 @@ def make_hello_solver(
         import hello_ot
         from hello_ot.config import SolverOptions
 
-        root = np.sqrt(np.clip(np.asarray(theta, dtype=np.float64).reshape(-1), 0.0, None))
+        root = np.sqrt(
+            np.clip(np.asarray(theta, dtype=np.float64).reshape(-1), 0.0, None)
+        )
         scaled_source = np.ascontiguousarray(source * root[None, :], dtype=np.float32)
         scaled_target = np.ascontiguousarray(target * root[None, :], dtype=np.float32)
-        options = SolverOptions(backend="torch", torch_device=str(device), verbose="off")
+        options = SolverOptions(
+            backend="torch", torch_device=str(device), verbose="off"
+        )
         result = hello_ot.solve(
             scaled_source,
             scaled_target,

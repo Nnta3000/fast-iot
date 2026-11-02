@@ -28,7 +28,7 @@ from iot.alternatives.entropic import fit_psd_moment_entropic
 from iot.eval.evaluation import evaluate_inverse_ot
 from iot.core.features import BilinearPSDFeatures, DiagonalWeightFeatures, dense_cost_matrix
 from iot.exact.loop import solve_inverse_ot
-from iot.core.problem import InverseOTError, InverseOTProblem
+from iot.core.problem import InverseOTProblem
 from iot.exact.sdp import SdpMasterSolver
 from iot.alternatives.sinkhorn_theta import fit_theta_sinkhorn
 from iot.core.theta import BilinearPSDTheta, SimplexTheta
@@ -292,7 +292,7 @@ def run_comparison_b(*, sizes, seeds, point_dimension, num_outer, sinkhorn_itera
                         _sample(metrics, iterations=result.n_iterations, converged=result.converged,
                                 final_gradient_norm=None, final_epsilon=None)
                     )
-                except InverseOTError:
+                except RuntimeError:
                     buckets[name].append(None)
             for rule, name in (("adam", "sinkhorn-theta-adam"), ("plain", "sinkhorn-theta-plain")):
                 try:

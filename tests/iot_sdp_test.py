@@ -6,7 +6,6 @@ import pytest
 from iot import (
     BilinearPSDFeatures,
     BilinearPSDTheta,
-    InverseOTError,
     LinearMasterSolver,
     SdpMasterSolver,
     is_optimal_plan,
@@ -50,7 +49,7 @@ def test_lp_master_rejects_non_linear_theta() -> None:
         n_source=6, n_target=6, point_dimension=2, rng=rng
     )
     mandatory, _ = mandatory_edges(instance.problem)
-    with pytest.raises(InverseOTError, match="LinearThetaSet"):
+    with pytest.raises(RuntimeError, match="LinearThetaSet"):
         LinearMasterSolver().solve(instance.problem, mandatory, tie_break="lex")
 
 

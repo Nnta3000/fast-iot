@@ -29,7 +29,7 @@ from ..core.scan import scan_for_violations
 from ..core.edges_advance import advance_edges, slack_toward_cost
 from ..core.pruning import HysteresisPruner
 from ..core.parameters import ExactObjective, SolverParameters
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..core.result import InverseOTResult, IterationRecord
 from ..eval.validation import is_optimal_plan
 
@@ -67,7 +67,12 @@ def _prune_by_slack(
     if non_support.size == 0:
         return non_support
     costs = problem.features.costs(master_theta, non_support.rows, non_support.cols)
-    slack = costs - source_dual[non_support.rows] - target_dual[non_support.cols] - float(delta)
+    slack = (
+        costs
+        - source_dual[non_support.rows]
+        - target_dual[non_support.cols]
+        - float(delta)
+    )
     return non_support.select_mask(slack <= float(tau_prune))
 
 
@@ -78,7 +83,7 @@ def solve_inverse_ot(
     params: SolverParameters | None = None,
     solver: MasterSolver | None = None,
     # CN: ---- 兼容旧关键字（已弃用）；给了它们就覆盖 `objective`/`params` 的对应字段 ----
-    # EN: ---- legacy keywords (deprecated); when given they override the matching field ---- 
+    # EN: ---- legacy keywords (deprecated); when given they override the matching field ----
     _flat_only: bool = False,
     tol: float | None = None,
     tau_prune: float | None = None,
@@ -120,43 +125,80 @@ def solve_inverse_ot(
     #     nothing downstream changes. Legacy keywords win, so every existing call is bit-identical.
     objective = ExactObjective() if objective is None else objective
     params = SolverParameters() if params is None else params
-    if tie_break is not None or random_seed is not None or validate is not None \
-            or validate_max_elements is not None:
+    if (
+        tie_break is not None
+        or random_seed is not None
+        or validate is not None
+        or validate_max_elements is not None
+    ):
         objective = dataclasses.replace(
             objective,
             tie_break=objective.tie_break if tie_break is None else tie_break,
-            random_seed=objective.random_seed if random_seed is None else int(random_seed),
+            random_seed=objective.random_seed
+            if random_seed is None
+            else int(random_seed),
             validate=objective.validate if validate is None else bool(validate),
-            validate_max_elements=(objective.validate_max_elements
-                                   if validate_max_elements is None else int(validate_max_elements)))
-    if tol is not None or gamma is not None or max_iterations is not None or hierarchical is not None:
+            validate_max_elements=(
+                objective.validate_max_elements
+                if validate_max_elements is None
+                else int(validate_max_elements)
+            ),
+        )
+    if (
+        tol is not None
+        or gamma is not None
+        or max_iterations is not None
+        or hierarchical is not None
+    ):
         params = dataclasses.replace(
             params,
             tol=params.tol if tol is None else float(tol),
             gamma=params.gamma if gamma is None else int(gamma),
-            max_iterations=params.max_iterations if max_iterations is None else int(max_iterations),
-            hierarchical=params.hierarchical if hierarchical is None else hierarchical)
-    if max_tile_elements is not None or scan_backend is not None or scan_device is not None \
-            or scan_max_tile_bytes is not None:
+            max_iterations=params.max_iterations
+            if max_iterations is None
+            else int(max_iterations),
+            hierarchical=params.hierarchical if hierarchical is None else hierarchical,
+        )
+    if (
+        max_tile_elements is not None
+        or scan_backend is not None
+        or scan_device is not None
+        or scan_max_tile_bytes is not None
+    ):
         params = dataclasses.replace(
             params,
             scan=dataclasses.replace(
                 params.scan,
-                backend=params.scan.backend if scan_backend is None else str(scan_backend),
+                backend=params.scan.backend
+                if scan_backend is None
+                else str(scan_backend),
                 device=params.scan.device if scan_device is None else str(scan_device),
-                max_tile_elements=(params.scan.max_tile_elements if max_tile_elements is None
-                                   else int(max_tile_elements)),
-                max_tile_bytes=(params.scan.max_tile_bytes if scan_max_tile_bytes is None
-                                else int(scan_max_tile_bytes))))
+                max_tile_elements=(
+                    params.scan.max_tile_elements
+                    if max_tile_elements is None
+                    else int(max_tile_elements)
+                ),
+                max_tile_bytes=(
+                    params.scan.max_tile_bytes
+                    if scan_max_tile_bytes is None
+                    else int(scan_max_tile_bytes)
+                ),
+            ),
+        )
     if tau_prune is not None or prune is not None or prune_hysteresis is not None:
         params = dataclasses.replace(
             params,
             pruning=dataclasses.replace(
                 params.pruning,
                 enabled=params.pruning.enabled if prune is None else bool(prune),
-                hysteresis=params.pruning.hysteresis if prune_hysteresis is None
+                hysteresis=params.pruning.hysteresis
+                if prune_hysteresis is None
                 else bool(prune_hysteresis),
-                tau_prune=params.pruning.tau_prune if tau_prune is None else float(tau_prune)))
+                tau_prune=params.pruning.tau_prune
+                if tau_prune is None
+                else float(tau_prune),
+            ),
+        )
     # CN: 解包成下游使用的名字。EN: unpack into the names the body uses.
     tie_break = objective.tie_break
     random_seed = int(objective.random_seed)
@@ -187,18 +229,33 @@ def solve_inverse_ot(
         run = solve_hierarchical(
             problem,
             lambda p, initial: solve_inverse_ot(
-                p, tol=tol, tau_prune=tau_prune, gamma=gamma, tie_break=tie_break,
-                max_iterations=max_iterations, solver=solver, random_seed=random_seed,
-                validate=validate, validate_max_elements=validate_max_elements,
-                max_tile_elements=max_tile_elements, prune=prune,
-                prune_hysteresis=prune_hysteresis, scan_backend=scan_backend,
-                scan_device=scan_device, scan_max_tile_bytes=scan_max_tile_bytes,
-                hierarchical=None, _flat_only=True),
+                p,
+                tol=tol,
+                tau_prune=tau_prune,
+                gamma=gamma,
+                tie_break=tie_break,
+                max_iterations=max_iterations,
+                solver=solver,
+                random_seed=random_seed,
+                validate=validate,
+                validate_max_elements=validate_max_elements,
+                max_tile_elements=max_tile_elements,
+                prune=prune,
+                prune_hysteresis=prune_hysteresis,
+                scan_backend=scan_backend,
+                scan_device=scan_device,
+                scan_max_tile_bytes=scan_max_tile_bytes,
+                hierarchical=None,
+                _flat_only=True,
+            ),
             hierarchical,
-            mandatory_of=lambda p: mandatory_edges(p)[0])
+            mandatory_of=lambda p: mandatory_edges(p)[0],
+        )
         result = run.fine
         if not isinstance(result, InverseOTResult):
-            raise InverseOTError("hierarchical fine level did not return an InverseOTResult")
+            raise RuntimeError(
+                "hierarchical fine level did not return an InverseOTResult"
+            )
         return result
     if solver is not None:
         master_solver: MasterSolver = solver
@@ -225,7 +282,9 @@ def solve_inverse_ot(
         )
     else:
         master_solver = LinearMasterSolver(random_seed=int(random_seed))
-    support = EdgeSet.from_arrays(*problem.support()[:2], n_target=int(problem.n_target))
+    support = EdgeSet.from_arrays(
+        *problem.support()[:2], n_target=int(problem.n_target)
+    )
     mandatory, _partition = mandatory_edges(problem)
     edges = mandatory
 
@@ -277,7 +336,9 @@ def solve_inverse_ot(
             converged = True
             break
 
-        candidates = EdgeSet.from_arrays(scan.rows, scan.cols, n_target=int(problem.n_target))
+        candidates = EdgeSet.from_arrays(
+            scan.rows, scan.cols, n_target=int(problem.n_target)
+        )
         non_support = edges.difference(support)
         prune_started = time.perf_counter()
         if not bool(prune):
@@ -290,9 +351,15 @@ def solve_inverse_ot(
             #     slack 由共用函数计算（`c - f - g - delta`，与原来的内联式子逐字等价）。
             # EN: hysteresis now lives in `core/pruning.HysteresisPruner`, shared with the relaxed loop.
             #     slack comes from the shared helper (`c - f - g - delta`, verbatim the old inline form).
-            slack = slack_toward_cost(problem, master.theta, master.source_dual,
-                                      master.target_dual, non_support.rows, non_support.cols,
-                                      delta=float(master.delta))
+            slack = slack_toward_cost(
+                problem,
+                master.theta,
+                master.source_dual,
+                master.target_dual,
+                non_support.rows,
+                non_support.cols,
+                delta=float(master.delta),
+            )
             pruned, pruner = pruner.step(non_support, slack)
         else:
             pruned = _prune_by_slack(
@@ -332,10 +399,12 @@ def solve_inverse_ot(
     is_optimal: bool | None = None
     relative_gap: float | None = None
     if master is None:
-        raise InverseOTError("inverse-OT loop produced no master solution")
+        raise RuntimeError("inverse-OT loop produced no master solution")
     total_edges = int(problem.n_source) * int(problem.n_target)
     if bool(validate) and total_edges <= int(validate_max_elements):
-        check = is_optimal_plan(problem, master.theta, tol=1e-7, max_elements=int(validate_max_elements))
+        check = is_optimal_plan(
+            problem, master.theta, tol=1e-7, max_elements=int(validate_max_elements)
+        )
         is_optimal = bool(check.is_optimal)
         relative_gap = float(check.relative_gap)
     return InverseOTResult(

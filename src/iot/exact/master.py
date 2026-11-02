@@ -19,7 +19,7 @@ from scipy.optimize import linprog
 from scipy.sparse import csr_matrix, vstack
 
 from ..core.edges import EdgeSet
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..backends.lp_common import assemble_lp
 
 # CN: "lex_generic" 是 spec/证明第 6 节的两步 tie-break：先最大化 delta，再在
@@ -111,13 +111,22 @@ def build_master_system(problem: InverseOTProblem, edges: EdgeSet) -> _MasterSys
     EN: Build the max-margin master through the shared assembler `backends.lp_common.assemble_lp`:
         S edges are equalities, other edges carry delta, objective `max delta` (`c[delta] = -1`).
     """
-    layout = _variable_layout(int(problem.n_source), int(problem.n_target), int(problem.n_features))
+    layout = _variable_layout(
+        int(problem.n_source), int(problem.n_target), int(problem.n_features)
+    )
     objective = np.zeros(int(layout.size), dtype=np.float64)
     objective[int(layout.delta)] = -1.0
-    shared = assemble_lp(problem, edges, has_delta=True, objective=objective,
-                         support_as_equalities=True)
-    return _MasterSystem(a_ub=shared.a_ub, b_ub=shared.b_ub, a_eq=shared.a_eq, b_eq=shared.b_eq,
-                         bounds=list(zip(shared.lb.tolist(), shared.ub.tolist())), layout=layout)
+    shared = assemble_lp(
+        problem, edges, has_delta=True, objective=objective, support_as_equalities=True
+    )
+    return _MasterSystem(
+        a_ub=shared.a_ub,
+        b_ub=shared.b_ub,
+        a_eq=shared.a_eq,
+        b_eq=shared.b_eq,
+        bounds=list(zip(shared.lb.tolist(), shared.ub.tolist())),
+        layout=layout,
+    )
 
 
 def _solve_system(
@@ -155,7 +164,11 @@ def _solve_system(
     )
     if not result.success or result.x is None:
         return None, None, str(result.message)
-    return np.asarray(result.x, dtype=np.float64), float(result.fun), str(result.message)
+    return (
+        np.asarray(result.x, dtype=np.float64),
+        float(result.fun),
+        str(result.message),
+    )
 
 
 def _unit_row(size: int, index: int, value: float = 1.0) -> np.ndarray:
@@ -164,11 +177,15 @@ def _unit_row(size: int, index: int, value: float = 1.0) -> np.ndarray:
     return row
 
 
-def _extract(solution: np.ndarray, layout: _VariableLayout, status: str) -> MasterSolution:
+def _extract(
+    solution: np.ndarray, layout: _VariableLayout, status: str
+) -> MasterSolution:
     return MasterSolution(
         delta=float(solution[layout.delta]),
         theta=np.ascontiguousarray(solution[layout.theta_start : layout.source_start]),
-        source_dual=np.ascontiguousarray(solution[layout.source_start : layout.target_start]),
+        source_dual=np.ascontiguousarray(
+            solution[layout.source_start : layout.target_start]
+        ),
         target_dual=np.ascontiguousarray(solution[layout.target_start :]),
         status=status,
     )
@@ -230,7 +247,7 @@ def coordinate_extrema(
             system, _unit_row(system.layout.size, variable, -1.0), bounds=bounds
         )
         if low is None or high is None:
-            raise InverseOTError(
+            raise RuntimeError(
                 f"theta coordinate {index} range failed: min={low_status!r}, max={high_status!r}"
             )
         lower[index] = float(low[variable])
@@ -271,11 +288,11 @@ def canonical_potentials(
     match_target = np.full(n_target, -1, dtype=np.int64)
     for row, col in zip(support_rows.tolist(), support_cols.tolist(), strict=True):
         if match_source[int(row)] != -1 or match_target[int(col)] != -1:
-            raise InverseOTError("canonical potentials require S to be a matching")
+            raise RuntimeError("canonical potentials require S to be a matching")
         match_source[int(row)] = int(col)
         match_target[int(col)] = int(row)
     if np.any(match_source < 0) or np.any(match_target < 0):
-        raise InverseOTError(
+        raise RuntimeError(
             "canonical potentials require S to be a permutation of the sources and targets"
         )
     reference = np.asarray(reference_source_dual, dtype=np.float64).reshape(-1)
@@ -298,7 +315,9 @@ def canonical_potentials(
 
     adjacency: list[list[tuple[int, float]]] = [[] for _ in range(n_source)]
     for position in range(off_rows.size):
-        adjacency[int(owner[position])].append((int(off_rows[position]), float(slack[position])))
+        adjacency[int(owner[position])].append(
+            (int(off_rows[position]), float(slack[position]))
+        )
 
     root = int(match_target[0])
     distance = np.full(n_source, np.inf, dtype=np.float64)
@@ -314,7 +333,9 @@ def canonical_potentials(
                 distance[neighbour] = candidate
                 heapq.heappush(heap, (candidate, neighbour))
     if not np.all(np.isfinite(distance)):
-        raise InverseOTError("canonical potentials: an off-support component is unreachable")
+        raise RuntimeError(
+            "canonical potentials: an off-support component is unreachable"
+        )
 
     offset = cost_of_source[root] - reference[root]
     source_dual = np.ascontiguousarray(reference + offset + distance, dtype=np.float64)
@@ -407,7 +428,7 @@ class LinearMasterSolver:
         objective = _unit_row(layout.size, layout.delta, -1.0)
         solution, value, status = _solve_system(system, objective)
         if solution is None or value is None:
-            raise InverseOTError(f"master problem is infeasible or unbounded: {status}")
+            raise RuntimeError(f"master problem is infeasible or unbounded: {status}")
         delta_star = -float(value)
         if tie_break == "none":
             return _extract(solution, layout, status)
@@ -415,14 +436,18 @@ class LinearMasterSolver:
         extra_eq = [_unit_row(layout.size, layout.delta)]
         extra_eq_rhs = [delta_star]
         if tie_break == "lex":
-            order = list(range(layout.theta_start, layout.target_start + int(problem.n_target)))
+            order = list(
+                range(layout.theta_start, layout.target_start + int(problem.n_target))
+            )
             for variable in order:
                 direction = _unit_row(layout.size, variable, -1.0)
                 chosen, chosen_value, chosen_status = _solve_system(
                     system, direction, extra_eq=extra_eq, extra_eq_rhs=extra_eq_rhs
                 )
                 if chosen is None or chosen_value is None:
-                    raise InverseOTError(f"lexicographic master step failed: {chosen_status}")
+                    raise RuntimeError(
+                        f"lexicographic master step failed: {chosen_status}"
+                    )
                 extra_eq.append(_unit_row(layout.size, variable))
                 extra_eq_rhs.append(float(chosen[variable]))
                 solution = chosen
@@ -436,7 +461,9 @@ class LinearMasterSolver:
                     n_target=int(problem.n_target),
                 )
             else:
-                provided = np.asarray(self.generic_direction, dtype=np.float64).reshape(-1)
+                provided = np.asarray(self.generic_direction, dtype=np.float64).reshape(
+                    -1
+                )
                 expected = layout.size - layout.theta_start
                 if provided.size != expected:
                     raise ValueError(
@@ -451,12 +478,14 @@ class LinearMasterSolver:
                 extra_eq_rhs=extra_eq_rhs,
             )
             if chosen is None or chosen_value is None:
-                raise InverseOTError(f"lex_generic master step failed: {chosen_status}")
+                raise RuntimeError(f"lex_generic master step failed: {chosen_status}")
             solution = chosen
         else:
             rng = np.random.default_rng(int(self.random_seed))
             direction = np.zeros(layout.size, dtype=np.float64)
-            direction[layout.theta_start :] = rng.standard_normal(layout.size - layout.theta_start)
+            direction[layout.theta_start :] = rng.standard_normal(
+                layout.size - layout.theta_start
+            )
             if not np.any(direction):
                 direction[layout.delta] = 0.0
                 direction[layout.theta_start] = 1.0
@@ -467,7 +496,7 @@ class LinearMasterSolver:
                 extra_eq_rhs=extra_eq_rhs,
             )
             if chosen is None or chosen_value is None:
-                raise InverseOTError(f"randomized master step failed: {chosen_status}")
+                raise RuntimeError(f"randomized master step failed: {chosen_status}")
             solution = chosen
         return _extract(solution, layout, status)
 
@@ -499,18 +528,26 @@ class RegularizedMasterSolver:
         layout = system.layout
         rng = np.random.default_rng(int(self.random_seed))
         direction = np.zeros(layout.size, dtype=np.float64)
-        direction[layout.theta_start :] = rng.standard_normal(layout.size - layout.theta_start)
+        direction[layout.theta_start :] = rng.standard_normal(
+            layout.size - layout.theta_start
+        )
         scale = float(np.abs(direction).max()) or 1.0
         objective = np.zeros(layout.size, dtype=np.float64)
         objective[layout.delta] = -1.0
         objective += -float(self.epsilon) * (direction / scale)
         solution, value, status = _solve_system(system, objective)
         if solution is None or value is None:
-            raise InverseOTError(f"regularized master is infeasible or unbounded: {status}")
+            raise RuntimeError(
+                f"regularized master is infeasible or unbounded: {status}"
+            )
         return MasterSolution(
             delta=float(solution[layout.delta]),
-            theta=np.ascontiguousarray(solution[layout.theta_start : layout.source_start]),
-            source_dual=np.ascontiguousarray(solution[layout.source_start : layout.target_start]),
+            theta=np.ascontiguousarray(
+                solution[layout.theta_start : layout.source_start]
+            ),
+            source_dual=np.ascontiguousarray(
+                solution[layout.source_start : layout.target_start]
+            ),
             target_dual=np.ascontiguousarray(solution[layout.target_start :]),
             status=status,
         )
@@ -586,7 +623,11 @@ class WarmStartMasterSolver:
         support_keys = problem.support_keys()
         in_support = np.isin(edges.keys, support_keys)
         nonsupport_keys = edges.keys[~in_support]
-        signature = (int(problem.n_source), int(problem.n_target), int(problem.n_features))
+        signature = (
+            int(problem.n_source),
+            int(problem.n_target),
+            int(problem.n_features),
+        )
         if self._highs is None or self._signature != signature:
             self._build(highspy, problem, edges, in_support, nonsupport_keys, signature)
         else:
@@ -605,8 +646,8 @@ class WarmStartMasterSolver:
                 highspy.HighsModelStatus.kUnbounded,
                 highspy.HighsModelStatus.kUnboundedOrInfeasible,
             ):
-                raise InverseOTError(f"master problem is infeasible or unbounded: {name}")
-            raise InverseOTError(f"warm-start master failed: {name}")
+                raise RuntimeError(f"master problem is infeasible or unbounded: {name}")
+            raise RuntimeError(f"warm-start master failed: {name}")
         solution = np.asarray(self._highs.getSolution().col_value, dtype=np.float64)
         return _extract(solution, self._layout, "optimal")
 
@@ -619,7 +660,9 @@ class WarmStartMasterSolver:
         """
         return len(self._key_row)
 
-    def _objective(self, layout: _VariableLayout, problem: InverseOTProblem) -> np.ndarray:
+    def _objective(
+        self, layout: _VariableLayout, problem: InverseOTProblem
+    ) -> np.ndarray:
         objective = np.zeros(layout.size, dtype=np.float64)
         objective[layout.delta] = -1.0
         if self.epsilon:
@@ -633,7 +676,9 @@ class WarmStartMasterSolver:
             objective[layout.theta_start :] -= self.epsilon * (direction / scale)
         return objective
 
-    def _build(self, highspy, problem, edges, in_support, nonsupport_keys, signature) -> None:
+    def _build(
+        self, highspy, problem, edges, in_support, nonsupport_keys, signature
+    ) -> None:
         system = build_master_system(problem, edges)
         layout = system.layout
         self._layout = layout
@@ -650,16 +695,25 @@ class WarmStartMasterSolver:
             [np.inf if hi is None else float(hi) for _, hi in bounds], dtype=np.float64
         )
         model.addCols(
-            layout.size, self._objective(layout, problem), lower, upper, 0,
+            layout.size,
+            self._objective(layout, problem),
+            lower,
+            upper,
+            0,
             np.zeros(layout.size + 1, dtype=np.int32),
-            np.zeros(0, dtype=np.int32), np.zeros(0, dtype=np.float64),
+            np.zeros(0, dtype=np.int32),
+            np.zeros(0, dtype=np.float64),
         )
         a_eq = system.a_eq.tocsr()
         a_eq_shape = cast("tuple[int, int]", a_eq.shape)
         if a_eq_shape[0]:
             model.addRows(
-                a_eq_shape[0], system.b_eq, system.b_eq, int(a_eq.nnz),
-                a_eq.indptr.astype(np.int32), a_eq.indices.astype(np.int32),
+                a_eq_shape[0],
+                system.b_eq,
+                system.b_eq,
+                int(a_eq.nnz),
+                a_eq.indptr.astype(np.int32),
+                a_eq.indices.astype(np.int32),
                 a_eq.data.astype(np.float64),
             )
         self._eq_count = int(a_eq_shape[0])
@@ -667,8 +721,12 @@ class WarmStartMasterSolver:
         rows = int(cast("tuple[int, int]", a_ub.shape)[0])
         if rows:
             model.addRows(
-                rows, np.full(rows, -np.inf), np.zeros(rows), int(a_ub.nnz),
-                a_ub.indptr.astype(np.int32), a_ub.indices.astype(np.int32),
+                rows,
+                np.full(rows, -np.inf),
+                np.zeros(rows),
+                int(a_ub.nnz),
+                a_ub.indptr.astype(np.int32),
+                a_ub.indices.astype(np.int32),
                 a_ub.data.astype(np.float64),
             )
         self._key_row = {
@@ -684,12 +742,16 @@ class WarmStartMasterSolver:
         if self.purge:
             removed = [key for key in self._key_row if key not in target]
             if removed:
-                old_rows = np.array(sorted(self._key_row[key] for key in removed), dtype=np.int32)
+                old_rows = np.array(
+                    sorted(self._key_row[key] for key in removed), dtype=np.int32
+                )
                 self._highs.deleteRows(int(old_rows.size), old_rows)
                 retained: dict[int, int] = {}
                 for key, row in self._key_row.items():
                     if key in target:
-                        retained[key] = row - int(np.searchsorted(old_rows, row, side="left"))
+                        retained[key] = row - int(
+                            np.searchsorted(old_rows, row, side="left")
+                        )
                 self._key_row = retained
             for key in sorted(target - set(self._key_row)):
                 self._add_row(problem, key)
@@ -715,7 +777,9 @@ class WarmStartMasterSolver:
         )[0]
         indices = np.concatenate(
             [
-                np.array([layout.delta, layout.source_start + row, layout.target_start + col]),
+                np.array(
+                    [layout.delta, layout.source_start + row, layout.target_start + col]
+                ),
                 np.arange(layout.theta_start, layout.source_start, dtype=np.int64),
             ]
         ).astype(np.int32)

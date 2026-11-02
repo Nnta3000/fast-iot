@@ -34,7 +34,7 @@ import numpy as np
 from scipy import sparse
 
 from ..core.edges import EdgeSet
-from ..core.problem import InverseOTError, InverseOTProblem
+from ..core.problem import InverseOTProblem
 from ..core.theta import LinearThetaSet, SimplexTheta
 
 __all__ = [
@@ -108,17 +108,29 @@ class LpSystem:
         """CN: 取出 (theta, f, g)。EN: split into (theta, f, g)."""
         lay = self.layout
         k, m = int(lay.n_features), int(lay.n_source)
-        return (np.ascontiguousarray(x[lay.theta_start:lay.theta_start + k], dtype=np.float64),
-                np.ascontiguousarray(x[lay.source_start:lay.source_start + m], dtype=np.float64),
-                np.ascontiguousarray(x[lay.target_start:], dtype=np.float64))
+        return (
+            np.ascontiguousarray(
+                x[lay.theta_start : lay.theta_start + k], dtype=np.float64
+            ),
+            np.ascontiguousarray(
+                x[lay.source_start : lay.source_start + m], dtype=np.float64
+            ),
+            np.ascontiguousarray(x[lay.target_start :], dtype=np.float64),
+        )
 
     def delta_of(self, x: np.ndarray) -> float:
         """CN: delta 值（无 delta 列时为 0）。EN: delta value (0 when there is no delta column)."""
         return float(x[int(self.layout.delta)]) if self.layout.has_delta else 0.0
 
 
-def _edge_block(features: np.ndarray, rows: np.ndarray, cols: np.ndarray,
-                layout: LpLayout, *, with_delta: bool) -> sparse.csr_matrix:
+def _edge_block(
+    features: np.ndarray,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    layout: LpLayout,
+    *,
+    with_delta: bool,
+) -> sparse.csr_matrix:
     """
     CN: 一组边的约束行：`theta` 上 `-phi_e`，`f_i` 上 `+1`，`g_j` 上 `+1`；可选 `delta` 上 `+1`。
         返回形状 `(n_edges, layout.size)`。
@@ -153,20 +165,24 @@ def assemble_lp(
         linear equalities and `g_0 = 0` are appended.
     """
     if edges.size < 1:
-        raise InverseOTError("master requires a non-empty edge set")
+        raise RuntimeError("master requires a non-empty edge set")
     if not isinstance(problem.theta_set, LinearThetaSet):
-        raise InverseOTError(
+        raise RuntimeError(
             "the LP master requires a LinearThetaSet; "
-            f"got {type(problem.theta_set).__name__}. Pair a non-linear Theta with a dedicated master.")
+            f"got {type(problem.theta_set).__name__}. Pair a non-linear Theta with a dedicated master."
+        )
     k, m, n = int(problem.n_features), int(problem.n_source), int(problem.n_target)
     layout = LpLayout(has_delta=bool(has_delta), n_features=k, n_source=m, n_target=n)
     if np.asarray(objective).size != layout.size:
-        raise InverseOTError(
-            f"objective has {np.asarray(objective).size} entries, layout has {layout.size}")
+        raise RuntimeError(
+            f"objective has {np.asarray(objective).size} entries, layout has {layout.size}"
+        )
 
     features = problem.features.features(edges.rows, edges.cols)
     if features.shape != (edges.size, k):
-        raise InverseOTError("features() returned an unexpected number of feature columns")
+        raise RuntimeError(
+            "features() returned an unexpected number of feature columns"
+        )
     in_support = np.isin(edges.keys, problem.support_keys())
 
     if support_as_equalities:
@@ -177,24 +193,42 @@ def assemble_lp(
 
     a_eq_parts: list[sparse.csr_matrix] = []
     if np.any(eq_mask):
-        a_eq_parts.append(_edge_block(features[eq_mask], edges.rows[eq_mask], edges.cols[eq_mask],
-                                      layout, with_delta=False))
+        a_eq_parts.append(
+            _edge_block(
+                features[eq_mask],
+                edges.rows[eq_mask],
+                edges.cols[eq_mask],
+                layout,
+                with_delta=False,
+            )
+        )
     theta_constraints = problem.theta_set.linear_constraints()
     theta_block = np.asarray(theta_constraints.a_eq, dtype=np.float64)
     extra = np.zeros((theta_block.shape[0] + 1, layout.size), dtype=np.float64)
-    extra[:theta_block.shape[0], layout.theta_start:layout.theta_start + k] = theta_block
+    extra[: theta_block.shape[0], layout.theta_start : layout.theta_start + k] = (
+        theta_block
+    )
     extra[theta_block.shape[0], layout.target_start] = 1.0
     a_eq_parts.append(sparse.csr_matrix(extra))
     a_eq = sparse.vstack(a_eq_parts, format="csr")
-    b_eq = np.concatenate([np.zeros(int(np.count_nonzero(eq_mask))),
-                           np.asarray(theta_constraints.b_eq, dtype=np.float64),
-                           np.zeros(1, dtype=np.float64)])
+    b_eq = np.concatenate(
+        [
+            np.zeros(int(np.count_nonzero(eq_mask))),
+            np.asarray(theta_constraints.b_eq, dtype=np.float64),
+            np.zeros(1, dtype=np.float64),
+        ]
+    )
 
     if np.any(ub_mask):
         # CN: delta 只出现在非 S 边（S 边在 max-margin 里不加 delta）。
         # EN: delta appears only on non-S edges (S edges carry no delta in the max-margin form).
-        a_ub = _edge_block(features[ub_mask], edges.rows[ub_mask], edges.cols[ub_mask],
-                           layout, with_delta=bool(has_delta))
+        a_ub = _edge_block(
+            features[ub_mask],
+            edges.rows[ub_mask],
+            edges.cols[ub_mask],
+            layout,
+            with_delta=bool(has_delta),
+        )
     else:
         a_ub = sparse.csr_matrix((0, layout.size), dtype=np.float64)
     b_ub = np.zeros(int(a_ub.shape[0]), dtype=np.float64)
@@ -210,8 +244,16 @@ def assemble_lp(
             lb[layout.theta_start + index] = lower
         if np.isfinite(upper):
             ub[layout.theta_start + index] = upper
-    return LpSystem(a_eq=a_eq, b_eq=b_eq, a_ub=a_ub, b_ub=b_ub,
-                    c=np.asarray(objective, dtype=np.float64), lb=lb, ub=ub, layout=layout)
+    return LpSystem(
+        a_eq=a_eq,
+        b_eq=b_eq,
+        a_ub=a_ub,
+        b_ub=b_ub,
+        c=np.asarray(objective, dtype=np.float64),
+        lb=lb,
+        ub=ub,
+        layout=layout,
+    )
 
 
 def cupdlpx_available() -> bool:
@@ -219,7 +261,7 @@ def cupdlpx_available() -> bool:
     try:
         _require_pycupdlpx()
         return True
-    except InverseOTError:
+    except RuntimeError:
         return False
 
 
@@ -240,7 +282,7 @@ def _require_pycupdlpx() -> Any:
 
         return pycupdlpx
     except ImportError as error:
-        raise InverseOTError(
+        raise RuntimeError(
             "CuPDLPx (pycupdlpx) is not available. Build it with the documented stack "
             "(`bash scripts/create_hello_ot_env.sh`, then `HELLO_OT_BUILD_NATIVE=1 python -m pip "
             "install -e .`) or the local CUDA-12/13 helper. `backend='highs'` remains available."
@@ -302,10 +344,17 @@ def repair_point(
              `R >= -rtol*scale`.
     """
     k, m = int(layout.n_features), int(layout.n_source)
-    theta = np.array(x[layout.theta_start:layout.theta_start + k], dtype=np.float64, copy=True)
-    f = np.array(x[layout.source_start:layout.source_start + m], dtype=np.float64, copy=True)
-    g = np.array(x[layout.target_start:layout.target_start + int(layout.n_target)],
-                 dtype=np.float64, copy=True)
+    theta = np.array(
+        x[layout.theta_start : layout.theta_start + k], dtype=np.float64, copy=True
+    )
+    f = np.array(
+        x[layout.source_start : layout.source_start + m], dtype=np.float64, copy=True
+    )
+    g = np.array(
+        x[layout.target_start : layout.target_start + int(layout.n_target)],
+        dtype=np.float64,
+        copy=True,
+    )
 
     # CN: 投到**实际的** Theta 上，而不只是单纯形：盒∩单纯形的情形单纯形投影会越界。
     # EN: project onto the **actual** Theta, not just the simplex: for box ∩ simplex a raw simplex
@@ -314,7 +363,9 @@ def repair_point(
     f += float(g[0])
     g -= float(g[0])
 
-    cost_all = np.asarray(problem.features.costs(theta, all_rows, all_cols), dtype=np.float64)
+    cost_all = np.asarray(
+        problem.features.costs(theta, all_rows, all_cols), dtype=np.float64
+    )
     sigma_all = f[all_rows] + g[all_cols] - cost_all
     s = max(0.0, float(sigma_all.max()))
     # CN: 在平移前保存"投影 + 规范修复"后的点与其 R —— 调用方必须**扫描这个点**，
@@ -325,7 +376,10 @@ def repair_point(
     theta_pre = np.array(theta, dtype=np.float64, copy=True)
     f_pre = np.array(f, dtype=np.float64, copy=True)
     g_pre = np.array(g, dtype=np.float64, copy=True)
-    regret_pre = float(np.asarray(objective, dtype=np.float64) @ np.concatenate([theta_pre, f_pre, g_pre]))
+    regret_pre = float(
+        np.asarray(objective, dtype=np.float64)
+        @ np.concatenate([theta_pre, f_pre, g_pre])
+    )
     f -= s
 
     w = np.concatenate([theta, f, g])
@@ -335,27 +389,44 @@ def repair_point(
     b_g = float(np.asarray(problem.resolved_target_mass, dtype=np.float64) @ g)
     scale = max(1.0, abs(phi_bar), abs(a_f), abs(b_g))
 
-    cost_s = np.asarray(problem.features.costs(theta, support_rows, support_cols), dtype=np.float64)
+    cost_s = np.asarray(
+        problem.features.costs(theta, support_rows, support_cols), dtype=np.float64
+    )
     sig_s = f[support_rows] + g[support_cols] - cost_s
-    identity = regret + float(np.dot(np.asarray(support_values, dtype=np.float64), sig_s))
+    identity = regret + float(
+        np.dot(np.asarray(support_values, dtype=np.float64), sig_s)
+    )
     if abs(identity) > float(identity_rtol) * scale:
-        raise InverseOTError(
+        raise RuntimeError(
             f"identity violated on the repaired array: R={regret!r}, -sum(pi*sigma)="
             f"{-float(np.dot(np.asarray(support_values, dtype=np.float64), sig_s))!r}, "
-            f"rel={abs(identity) / scale:.2e}, tol={identity_rtol:.1e}x{scale:.2e}")
+            f"rel={abs(identity) / scale:.2e}, tol={identity_rtol:.1e}x{scale:.2e}"
+        )
     if regret < -float(identity_rtol) * scale:
-        raise InverseOTError(
+        raise RuntimeError(
             f"repaired regret is negative beyond tolerance: R={regret!r}, "
-            f"tol={identity_rtol:.1e}x{scale:.2e}")
+            f"tol={identity_rtol:.1e}x{scale:.2e}"
+        )
     if abs(float(theta.sum()) - 1.0) > 1e-9:
-        raise InverseOTError(f"repaired theta does not sum to 1: {float(theta.sum())!r}")
+        raise RuntimeError(f"repaired theta does not sum to 1: {float(theta.sum())!r}")
     if float(theta.min()) < -1e-12:
-        raise InverseOTError(f"repaired theta has a negative entry: {float(theta.min())!r}")
+        raise RuntimeError(
+            f"repaired theta has a negative entry: {float(theta.min())!r}"
+        )
     if abs(float(g[0])) > 1e-12:
-        raise InverseOTError(f"gauge not fixed: g_0={float(g[0])!r}")
-    return RepairedPoint(theta=theta, source_dual=f, target_dual=g, regret=regret,
-                         sigma_max_raw=s, scale=scale, theta_pre=theta_pre,
-                         source_dual_pre=f_pre, target_dual_pre=g_pre, regret_pre=regret_pre)
+        raise RuntimeError(f"gauge not fixed: g_0={float(g[0])!r}")
+    return RepairedPoint(
+        theta=theta,
+        source_dual=f,
+        target_dual=g,
+        regret=regret,
+        sigma_max_raw=s,
+        scale=scale,
+        theta_pre=theta_pre,
+        source_dual_pre=f_pre,
+        target_dual_pre=g_pre,
+        regret_pre=regret_pre,
+    )
 
 
 @dataclass(frozen=True)
@@ -377,18 +448,33 @@ class LpResult:
 #     `rel_obj_gap` as the defaults. Unknown keys therefore raise, so "tuned" parameters cannot silently
 #     do nothing. This build stops at its default relative tolerance (~1e-4; measured rel_obj_gap 5.8e-5)
 #     with the iteration count pinned at 200.
-CUPDLPX_KNOWN_PARAMS: frozenset[str] = frozenset({
-    "eps_feas", "eps_opt", "eps_infeas_detect", "iter_limit", "time_sec_limit",
-    "eps_feasible_absolute_primal", "eps_feasible_absolute_dual",
-    "eps_feasible_relative_primal", "eps_feasible_relative_dual",
-    "eps_optimal_absolute", "eps_optimal_relative",
-    "dual_nnz_abs_tol", "power_tolerance", "power_max_iterations",
-})
+CUPDLPX_KNOWN_PARAMS: frozenset[str] = frozenset(
+    {
+        "eps_feas",
+        "eps_opt",
+        "eps_infeas_detect",
+        "iter_limit",
+        "time_sec_limit",
+        "eps_feasible_absolute_primal",
+        "eps_feasible_absolute_dual",
+        "eps_feasible_relative_primal",
+        "eps_feasible_relative_dual",
+        "eps_optimal_absolute",
+        "eps_optimal_relative",
+        "dual_nnz_abs_tol",
+        "power_tolerance",
+        "power_max_iterations",
+    }
+)
 
 
-def solve_lp_cupdlpx(system: LpSystem, *, params: dict[str, Any] | None = None,
-                     project: InverseOTProblem | None = None,
-                     init_solution: np.ndarray | None = None) -> LpResult:
+def solve_lp_cupdlpx(
+    system: LpSystem,
+    *,
+    params: dict[str, Any] | None = None,
+    project: InverseOTProblem | None = None,
+    init_solution: np.ndarray | None = None,
+) -> LpResult:
     """
     CN: 用 CuPDLPx 解 `LpSystem`（等式行在前）。**两个 master 共用**。一阶求解只近似满足 Theta，
         因此给出 `project` 时把 theta 投回集合。
@@ -397,42 +483,61 @@ def solve_lp_cupdlpx(system: LpSystem, *, params: dict[str, Any] | None = None,
     """
     unknown = set(dict(params or {})) - CUPDLPX_KNOWN_PARAMS
     if unknown:
-        raise InverseOTError(
-            f"unknown CuPDLPx parameter(s) {sorted(unknown)}; known: {sorted(CUPDLPX_KNOWN_PARAMS)}")
+        raise RuntimeError(
+            f"unknown CuPDLPx parameter(s) {sorted(unknown)}; known: {sorted(CUPDLPX_KNOWN_PARAMS)}"
+        )
     pycupdlpx = _require_pycupdlpx()
     a = sparse.vstack([system.a_eq, system.a_ub], format="csc")
     rhs = np.concatenate([system.b_eq, system.b_ub])
     solver = pycupdlpx.cupdlpx()
-    solver.loadData(A=a, c=system.c, rhs=rhs, lb=system.lb, ub=system.ub,
-                    nEqs=int(system.a_eq.shape[0]))
+    solver.loadData(
+        A=a,
+        c=system.c,
+        rhs=rhs,
+        lb=system.lb,
+        ub=system.ub,
+        nEqs=int(system.a_eq.shape[0]),
+    )
     if init_solution is not None:
         warm = np.asarray(init_solution, dtype=np.float64).reshape(-1)
         if warm.size != system.size:
-            raise InverseOTError(
-                f"init_solution has length {warm.size}, expected {system.size}; the layout changed")
+            raise RuntimeError(
+                f"init_solution has length {warm.size}, expected {system.size}; the layout changed"
+            )
         # CN: 绑定要求 (x0, y0)；只给原始变量起点，对偶传 None（由求解器自选）。
         # EN: the binding needs (x0, y0); supply the primal start only and pass None for the dual.
         solver.setInitSol(warm, None)
     out = solver.solve(dict(params or {}))
     primal = out.get("x") if isinstance(out, dict) else None
     if primal is None:
-        raise InverseOTError(f"CuPDLPx returned no primal (out={out!r})")
+        raise RuntimeError(f"CuPDLPx returned no primal (out={out!r})")
     # CN: binding 的 out["x"] 是零拷贝视图，必须立刻复制。
     # EN: the binding's out["x"] is a zero-copy view; copy immediately.
     x = np.array(primal, dtype=np.float64, copy=True).reshape(-1)
     if x.size != system.size:
-        raise InverseOTError(f"CuPDLPx primal has length {x.size}, expected {system.size}")
+        raise RuntimeError(
+            f"CuPDLPx primal has length {x.size}, expected {system.size}"
+        )
     if not np.all(np.isfinite(x)):
         reason = out.get("termination_reason") if isinstance(out, dict) else "n/a"
-        raise InverseOTError(f"CuPDLPx returned a non-finite primal (termination_reason={reason})")
+        raise RuntimeError(
+            f"CuPDLPx returned a non-finite primal (termination_reason={reason})"
+        )
     if project is not None and isinstance(project.theta_set, SimplexTheta):
         lay = system.layout
         sl = slice(lay.theta_start, lay.theta_start + int(lay.n_features))
         x[sl] = project_theta_if_simplex(x[sl], project.theta_set)
-    status = str(out["termination_reason"]) if isinstance(out, dict) and out.get(
-        "termination_reason") is not None else "optimal"
-    return LpResult(x=x, status=status, backend="cupdlpx",
-                    info=dict(out) if isinstance(out, dict) else {})
+    status = (
+        str(out["termination_reason"])
+        if isinstance(out, dict) and out.get("termination_reason") is not None
+        else "optimal"
+    )
+    return LpResult(
+        x=x,
+        status=status,
+        backend="cupdlpx",
+        info=dict(out) if isinstance(out, dict) else {},
+    )
 
 
 def solve_lp_highs(system: LpSystem) -> LpResult:
@@ -442,15 +547,20 @@ def solve_lp_highs(system: LpSystem) -> LpResult:
     """
     from scipy.optimize import linprog
 
-    res = linprog(system.c,
-                  A_ub=system.a_ub if system.a_ub.shape[0] else None,
-                  b_ub=system.b_ub if system.a_ub.shape[0] else None,
-                  A_eq=system.a_eq if system.a_eq.shape[0] else None,
-                  b_eq=system.b_eq if system.a_eq.shape[0] else None,
-                  bounds=list(zip(system.lb.tolist(), system.ub.tolist())), method="highs")
+    res = linprog(
+        system.c,
+        A_ub=system.a_ub if system.a_ub.shape[0] else None,
+        b_ub=system.b_ub if system.a_ub.shape[0] else None,
+        A_eq=system.a_eq if system.a_eq.shape[0] else None,
+        b_eq=system.b_eq if system.a_eq.shape[0] else None,
+        bounds=list(zip(system.lb.tolist(), system.ub.tolist())),
+        method="highs",
+    )
     if not res.success or res.x is None:
-        raise InverseOTError(f"HiGHS LP is not optimal: {res.message!r}")
-    return LpResult(x=np.asarray(res.x, dtype=np.float64), status=str(res.message), backend="highs")
+        raise RuntimeError(f"HiGHS LP is not optimal: {res.message!r}")
+    return LpResult(
+        x=np.asarray(res.x, dtype=np.float64), status=str(res.message), backend="highs"
+    )
 
 
 def project_theta_if_simplex(theta: np.ndarray, theta_set: Any) -> np.ndarray:
