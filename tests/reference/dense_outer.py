@@ -38,7 +38,7 @@ from jaxtyping import Float, Int
 
 from iot.core.problem import InverseOTProblem
 from .dense_newton import solve_semidual_newton
-from iot.core.parameters import cost_std as _cost_std
+from iot.core.theta import frank_wolfe_gap
 
 MAX_OUTER_ITERATIONS: int = 500
 FRANK_WOLFE_RTOL: float = 1e-4
@@ -148,37 +148,6 @@ def _inner_plan(problem: InverseOTProblem, cost: Float[np.ndarray, "m n"], epsil
             np.asarray(solved.potential_target, dtype=np.float64),
             np.asarray(solved.potential_source, dtype=np.float64),
             np.asarray(solved.potential_target, dtype=np.float64))
-
-
-def frank_wolfe_gap(problem: InverseOTProblem, theta: Float[np.ndarray, "k"],
-                    gradient: Float[np.ndarray, "k"]) -> float:
-    """
-    CN: `gap = max_{s∈Θ} <grad, θ − s>`，用 Θ **自己的**线性约束做一次小 LP。
-        由凸性 `L(θ) − L* <= gap`，所以这个量**直接**界定最优性间隙，且与尺度无关。
-    EN: `gap = max_{s in Theta} <grad, theta - s>`, one small LP over Theta's **own** linear constraints. By
-        convexity `L(theta) - L* <= gap`, so it bounds the optimality gap **directly** and is scale-free.
-    """
-    from scipy.optimize import linprog  # noqa: PLC0415
-
-    constraints = problem.theta_set.linear_constraints()
-    lower = np.asarray(constraints.lower, dtype=np.float64)
-    upper = np.asarray(constraints.upper, dtype=np.float64)
-    bounds = [(None if not np.isfinite(lo) else float(lo), None if not np.isfinite(hi) else float(hi))
-              for lo, hi in zip(lower, upper)]
-    a_eq = np.asarray(constraints.a_eq, dtype=np.float64)
-    b_eq = np.asarray(constraints.b_eq, dtype=np.float64)
-    # maximise <grad, theta> - <grad, s>  <=>  minimise <grad, s>
-    result = linprog(np.asarray(gradient, dtype=np.float64), A_eq=a_eq, b_eq=b_eq, bounds=bounds,
-                     method="highs")
-    if not result.success or result.x is None:
-        raise RuntimeError(f"Frank-Wolfe LP failed: {result.message}")
-    # CN: gap 在数学上非负（θ∈Θ，所以 `s = θ` 是可行点）。实测小 ε 下 LP 会给出略微**偏低**的最小值
-    #     （HiGHS 自身的容差，量级 1e-9），于是差值为负。截断到 0，并在结果里保留未截断的量以便审计。
-    # EN: the gap is non-negative mathematically (theta is in Theta, so `s = theta` is feasible). Measured at
-    #     small epsilon the LP returns a min slightly **too low** (HiGHS's own tolerance, order 1e-9), which
-    #     makes the difference negative. Clip at 0; the raw value is kept in the record for auditing.
-    raw = float(np.asarray(gradient) @ np.asarray(theta)) - float(result.fun)
-    return max(0.0, raw)
 
 
 def fit_entropic_converged(

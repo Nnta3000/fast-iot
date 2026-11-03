@@ -32,6 +32,14 @@ class ViolationScan:
     violation_count: int
     max_violation: float
     scanned_edges: int
+    # CN: 仅当调用方给出 `mass_epsilon` 时才有意义：非 `F` 边上**逐点**的超出质量
+    #     `sum_{j ∉ F(row i)} exp(sigma_ij / eps)`（行）与列方向同理。`-inf` 表示"未计算"，
+    #     因此所有既有调用逐位不变。
+    # EN: meaningful only when the caller passes `mass_epsilon`: **per-node** excess mass on the edges
+    #     outside `F`, `sum_{j not in F(row i)} exp(sigma_ij / eps)` for rows and likewise for columns.
+    #     `-inf` means "not computed", so every existing caller is bit-identical.
+    excess_mass_rows: np.ndarray | None = None
+    excess_mass_cols: np.ndarray | None = None
 
     @property
     def has_violations(self) -> bool:
@@ -66,6 +74,7 @@ def scan_violations(
     tol: float,
     gamma: int = 1,
     max_tile_elements: int = 1 << 20,
+    mass_epsilon: float | None = None,
 ) -> ViolationScan:
     """
     CN: 扫描所有不在 `excluded` 中的边，返回满足 sigma + delta > tol 的候选。
@@ -86,6 +95,14 @@ def scan_violations(
     col_values = np.full((n_target, int(gamma)), -np.inf, dtype=np.float64)
     col_indices = np.full((n_target, int(gamma)), -1, dtype=np.int64)
 
+    # CN: 逐点超出质量（只有 `mass_epsilon` 给出时才累加）。用 log-sum-exp 累加，避免下溢。
+    # EN: per-node excess mass (accumulated only when `mass_epsilon` is given), in log space to avoid
+    #     underflow.
+    log_mass_rows = np.full(n_source, -np.inf, dtype=np.float64)
+    log_mass_cols = np.full(n_target, -np.inf, dtype=np.float64)
+    mass_eps = None if mass_epsilon is None else float(mass_epsilon)
+    if mass_eps is not None and mass_eps <= 0.0:
+        raise ValueError(f"mass_epsilon must be > 0 when given, got {mass_epsilon!r}")
     violation_count = 0
     max_violation = -np.inf
     scanned = 0
@@ -105,7 +122,21 @@ def scan_violations(
             sigma = source_dual[grid_rows] + target_dual[grid_cols] - costs
             keys = grid_rows * n_target + grid_cols
             inside = excluded.contains(keys)
+            # CN: 先在 F 上置 -inf，再做质量累加；否则 F 内的边会被算进超出质量。
+            # EN: set -inf on F **before** accumulating mass; otherwise F edges are counted as excess.
             sigma = np.where(inside, -np.inf, sigma)
+            if mass_eps is not None:
+                # CN: 只用**非 F** 边；`sigma` 已在 F 上置 -inf，所以直接取 exp(sigma/eps)。
+                # EN: only edges **outside F**; `sigma` is already -inf on F, so take exp(sigma/eps) directly.
+                # CN: `sigma` 在 F 上已是 -inf，因此 `exp` 自然给 0，无需再掩码。
+                # EN: `sigma` is already -inf on F, so `exp` yields 0 naturally; no extra mask needed.
+                expo = np.exp(sigma / mass_eps)
+                row_block = expo.reshape(rows.size, cols.size).sum(axis=1)
+                col_block = expo.reshape(rows.size, cols.size).sum(axis=0)
+                log_mass_rows[row_start:row_stop] = np.logaddexp(
+                    log_mass_rows[row_start:row_stop], np.log(np.maximum(row_block, 1e-300)))
+                log_mass_cols[col_start:col_stop] = np.logaddexp(
+                    log_mass_cols[col_start:col_stop], np.log(np.maximum(col_block, 1e-300)))
             scanned += int(keys.size - int(np.count_nonzero(inside)))
 
             filtered = sigma + delta
@@ -158,6 +189,8 @@ def scan_violations(
         violation_count=int(violation_count),
         max_violation=(-np.inf if max_violation == -np.inf else float(max_violation)),
         scanned_edges=int(scanned),
+        excess_mass_rows=None if mass_eps is None else np.exp(log_mass_rows),
+        excess_mass_cols=None if mass_eps is None else np.exp(log_mass_cols),
     )
 
 

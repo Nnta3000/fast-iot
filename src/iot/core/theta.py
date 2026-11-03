@@ -183,10 +183,45 @@ class BilinearPSDTheta:
         return abs(float(np.trace(matrix)) - 1.0) <= float(tol)
 
 
+def frank_wolfe_gap(theta_set: LinearThetaSet, theta: np.ndarray, gradient: np.ndarray) -> float:
+    """
+    CN: `gap = max_{s∈Θ} <grad, θ − s>`，用 Θ **自己的**线性约束解一次小 LP。
+        由凸性 `f(θ) − f* <= gap`，所以它**直接**界定最优性间隙，且与尺度无关——不像
+        `‖θ − Proj(θ−∇f)‖` 那样需要一个绝对值阈值。
+
+        CN: 数学上非负（`s = θ` 是可行点）。小容差下 LP 会给出略**偏低**的最小值（HiGHS 自身容差，
+            ~1e-9），差值因此可能为负；截断到 0。
+    EN: `gap = max_{s in Theta} <grad, theta - s>`, one small LP over Theta's **own** linear constraints. By
+        convexity `f(theta) - f* <= gap`, so it bounds the optimality gap **directly** and is scale-free --
+        unlike `||theta - Proj(theta - grad f)||`, which needs an absolute threshold.
+
+        Mathematically non-negative (`s = theta` is feasible). At loose tolerance the LP returns a min
+        slightly **too low** (HiGHS's own tolerance, ~1e-9), so the difference can be negative; clip at 0.
+    """
+    from scipy.optimize import linprog  # noqa: PLC0415
+
+    constraints = theta_set.linear_constraints()
+    lower = np.asarray(constraints.lower, dtype=np.float64)
+    upper = np.asarray(constraints.upper, dtype=np.float64)
+    bounds = [(None if not np.isfinite(lo) else float(lo), None if not np.isfinite(hi) else float(hi))
+              for lo, hi in zip(lower, upper)]
+    a_eq = np.asarray(constraints.a_eq, dtype=np.float64)
+    b_eq = np.asarray(constraints.b_eq, dtype=np.float64)
+    # maximise <grad, theta> - <grad, s>  <=>  minimise <grad, s>
+    result = linprog(np.asarray(gradient, dtype=np.float64), A_eq=a_eq, b_eq=b_eq, bounds=bounds,
+                     method="highs")
+    if not result.success or result.x is None:
+        raise RuntimeError(f"Frank-Wolfe LP failed: {result.message}")
+    raw = float(np.asarray(gradient, dtype=np.float64) @ np.asarray(theta, dtype=np.float64)) \
+        - float(result.fun)
+    return max(0.0, raw)
+
+
 __all__ = [
     "BilinearPSDTheta",
     "LinearThetaConstraints",
     "LinearThetaSet",
     "SimplexTheta",
+    "frank_wolfe_gap",
     "ThetaSet",
 ]
