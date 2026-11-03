@@ -79,8 +79,8 @@ def _prune_by_slack(
 def solve_inverse_ot(
     problem: InverseOTProblem,
     *,
-    objective: ExactObjective | None = None,
-    params: SolverParameters | None = None,
+    objective: ExactObjective = ExactObjective(),
+    params: SolverParameters = SolverParameters(),
     solver: MasterSolver | None = None,
 ) -> InverseOTResult:
     """
@@ -98,17 +98,14 @@ def solve_inverse_ot(
         matmul path when a bilinear embedding exists, else `O(m n K)`), and needs **no** native
         extension. `scan_device` is forwarded ("auto"/"cpu"/"cuda").
     """
-    # CN: 两个参数对象都已冻结，直接使用；不再解包成一组**遮蔽**同名的局部变量
-    #     （那会让类型检查看不出真实来源，也会在层级 lambda 里重复传 17 个标量）。
-    # EN: both parameter objects are frozen, so use them directly; no unpacking into a set of shadowing
-    #     locals (which hid their provenance from the type checker and forced the hierarchy lambda to
-    #     re-pass 17 scalars).
-    objective: ExactObjective = ExactObjective() if objective is None else objective
+    # CN: 两个参数对象都已冻结，直接使用；不解包成遮蔽同名的局部变量。
+    # EN: both parameter objects are frozen, so use them directly; no shadowing unpacking.
+    objective = ExactObjective() if objective is None else objective
+    params = SolverParameters() if params is None else params
     # CN: 精确循环的 `tol` 一向是数值；`params.tol=None` 退回它历史上的默认值 1e-9。
     # EN: the exact loop's `tol` has always been a number; `params.tol=None` falls back to its historical
     #     default of 1e-9.
-    tol_value: float = 1e-9 if params.tol is None else params.tol
-    params: SolverParameters = SolverParameters() if params is None else params
+    tol_value: float = 1e-9 if params.tol is None else float(params.tol)
     # CN: **层级入口**。`hierarchical=None`（默认）走扁平路径，结果逐位不变。
     #     给了参数则粗到细求解；每一层仍调用**本函数**，并显式传入把 `hierarchical` 置空的参数副本，
     #     因此不需要私有的递归开关。`replace` 对冻结 dataclass 返回**新对象**，不存在数据共享。

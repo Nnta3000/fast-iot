@@ -52,9 +52,12 @@ class LevelOutcome(Protocol):
         `beartype` checks dataclass fields at runtime.
     """
 
-    theta: np.ndarray
-    source_dual: np.ndarray
-    target_dual: np.ndarray
+    @property
+    def theta(self) -> np.ndarray: ...
+    @property
+    def source_dual(self) -> np.ndarray: ...
+    @property
+    def target_dual(self) -> np.ndarray: ...
 
 
 @dataclasses.dataclass(frozen=True)
@@ -90,9 +93,14 @@ def _coarse_problem(problem: InverseOTProblem, level: Level) -> InverseOTProblem
     target = np.asarray(features.target_points, dtype=np.float64)[level.cols]
     dense = np.asarray(problem.plan.todense(), dtype=np.float64)
     restricted = np.ascontiguousarray(dense[np.ix_(level.rows, level.cols)])
-    coarse_features = type(features)(np.ascontiguousarray(source), np.ascontiguousarray(target))
-    return InverseOTProblem(features=coarse_features, theta_set=problem.theta_set,
-                            plan=sparse.csr_matrix(restricted))
+    coarse_features = type(features)(
+        np.ascontiguousarray(source), np.ascontiguousarray(target)
+    )
+    return InverseOTProblem(
+        features=coarse_features,
+        theta_set=problem.theta_set,
+        plan=sparse.csr_matrix(restricted),
+    )
 
 
 def solve_hierarchical(
@@ -120,15 +128,22 @@ def solve_hierarchical(
     Flow: build levels (`levels[0]` is the full problem); solve the coarsest densely; then refine
     `prolong -> seed -> solve from F0` at each finer level; return the finest solution.
     """
-    levels = build_levels(problem, rho=float(parameters.rho), max_levels=int(parameters.max_levels),
-                          grid_budget=int(parameters.grid_budget), seed=int(parameters.level_seed))
+    levels = build_levels(
+        problem,
+        rho=float(parameters.rho),
+        max_levels=int(parameters.max_levels),
+        grid_budget=int(parameters.grid_budget),
+        seed=int(parameters.level_seed),
+    )
     outcomes: list[LevelOutcome] = []
     seed_records: list[SeedRecord] = []
 
     # CN: 最粗层：全边（`None` 表示不额外给起点）。网格小，扫描代价可接受。
     # EN: coarsest level: all edges (`None` = no extra start). The grid is small, so scanning is fine.
     coarsest = levels[-1]
-    coarse_problem = problem if coarsest is levels[0] else _coarse_problem(problem, coarsest)
+    coarse_problem = (
+        problem if coarsest is levels[0] else _coarse_problem(problem, coarsest)
+    )
     outcomes.append(solve_level(coarse_problem, None))
 
     for index in range(len(levels) - 2, -1, -1):
@@ -136,22 +151,41 @@ def solve_hierarchical(
         fine = levels[index]
         fine_problem = problem if fine is levels[0] else _coarse_problem(problem, fine)
         coarse_out = outcomes[-1]
-        f_full, g_full = prolong(fine_problem, coarse, fine,
-                                 np.asarray(coarse_out.theta, dtype=np.float64),
-                                 np.asarray(coarse_out.source_dual, dtype=np.float64),
-                                 np.asarray(coarse_out.target_dual, dtype=np.float64))
+        f_full, g_full = prolong(
+            fine_problem,
+            coarse,
+            fine,
+            np.asarray(coarse_out.theta, dtype=np.float64),
+            np.asarray(coarse_out.source_dual, dtype=np.float64),
+            np.asarray(coarse_out.target_dual, dtype=np.float64),
+        )
         mandatory = mandatory_of(fine_problem)
-        f0, stats = seed(fine_problem, fine, mandatory, theta=np.asarray(coarse_out.theta, dtype=np.float64),
-                         source_dual=np.asarray(f_full, dtype=np.float64),
-                         target_dual=np.asarray(g_full, dtype=np.float64),
-                         kappa=int(parameters.kappa), carry_keys=None,
-                         n_target=int(fine_problem.n_target))
-        seed_records.append(SeedRecord(level=index, coarse_grid=f"{coarse.n_source}x{coarse.n_target}",
-                                       n_mandatory=stats["n_mandatory"], n_row_col=stats["n_row_col"],
-                                       n_carry=stats["n_carry"], f0_size=int(f0.size)))
+        f0, stats = seed(
+            fine_problem,
+            fine,
+            mandatory,
+            theta=np.asarray(coarse_out.theta, dtype=np.float64),
+            source_dual=np.asarray(f_full, dtype=np.float64),
+            target_dual=np.asarray(g_full, dtype=np.float64),
+            kappa=int(parameters.kappa),
+            carry_keys=None,
+            n_target=int(fine_problem.n_target),
+        )
+        seed_records.append(
+            SeedRecord(
+                level=index,
+                coarse_grid=f"{coarse.n_source}x{coarse.n_target}",
+                n_mandatory=stats["n_mandatory"],
+                n_row_col=stats["n_row_col"],
+                n_carry=stats["n_carry"],
+                f0_size=int(f0.size),
+            )
+        )
         outcomes.append(solve_level(fine_problem, f0))
 
-    return HierarchicalRun(fine=outcomes[-1], n_levels=len(levels), seeds=tuple(seed_records))
+    return HierarchicalRun(
+        fine=outcomes[-1], n_levels=len(levels), seeds=tuple(seed_records)
+    )
 
 
 __all__ = ["HierarchicalRun", "LevelOutcome", "SeedRecord", "solve_hierarchical"]

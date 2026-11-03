@@ -348,7 +348,7 @@ class SolverParameters:
           to before the hierarchy existed.
     """
 
-    tol: float | None = None
+    tol: float = 1e-9
     gamma: int = 1
     max_iterations: int = 100
     scan: ScanParameters = dataclasses.field(default_factory=ScanParameters)
