@@ -55,7 +55,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot.core.features import DiagonalWeightFeatures  # noqa: E402
-from iot.entropic.sinkhorn import _cost_std  # noqa: E402
+from iot.core.parameters import cost_std as _cost_std  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.datasets import reduce_features, stream_features  # noqa: E402
 from iot_experiments.harness.records import RunLog  # noqa: E402

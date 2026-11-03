@@ -128,8 +128,20 @@ def solve_semidual_newton(
     """
     CN: 阻尼牛顿，用**梯度范数**作 merit function，用**边缘误差**作停止判据。
         规范：固定 `g[0]`（把梯度与 Hessian 的第 0 行/列去掉，解完再回填 0）。
+
+        CN: **适用范围**：信赖域上限是 `10*eps`，是按本流水线的代价尺度（DINOv2 平方距离，std≈3.6e-3，
+            `range/eps ≈ 40`）调的。在**未缩放**的随机代价上（std≈1.1，`range/eps ≈ 680`）实测
+            **不收敛**（边缘误差 ~1.5），所以它不是通用的熵 OT 求解器，只对窄尺度的代价有效。
+            换代价族时要重新验证 `max_step`。
+
     EN: damped Newton with the **gradient norm** as the merit function and the **marginal error** as the
         stopping test. The gauge is fixed by pinning `g[0]` (drop its row/column, then leave it at 0).
+
+        **Scope**: the trust region is capped at `10*eps`, tuned for this pipeline's cost scale (DINOv2 squared
+        distances, std ~3.6e-3, `range/eps ~ 40`). On an **unscaled** random cost (std ~1.1,
+        `range/eps ~ 680`) it was measured **not to converge** (marginal error ~1.5), so it is not a
+        general-purpose entropic solver -- only valid for narrow-scale costs. Re-validate `max_step` before
+        using another cost family.
     """
     m, n = int(cost.shape[0]), int(cost.shape[1])
     a = np.asarray(source_mass, dtype=np.float64).reshape(-1)
