@@ -40,7 +40,30 @@ Success = converged AND objective at the common optimum (tolerance `1e-6·|Ψ|`)
 | 300 | 0.25 | 2/2 | 0/2 | **2/2** | 50,100 |
 | 300 | 0.10 | 2/2 | 2/2 | 2/2 | 50,100 |
 
-**Totals: SLSQP 23/24 converged, 24/24 at the optimum. Newton-CG 13/24 converged, 16/24 at the optimum.**
+**Totals: SLSQP 23/24 optimiser-flag success, 24/24 at the optimum. Newton-CG 13/24 success, 16/24 at
+the optimum.**
+
+### The three measures are different, and the table above conflates the first two
+
+| measure | definition | SLSQP | Newton-CG |
+|---|---|---|---|
+| optimiser success | SciPy `status == 0` (Newton-CG: its own KKT verdict) | 23/24 | 13/24 |
+| at the common optimum | objective within `1e-6·|Ψ|` of the best found | **24/24** | 16/24 |
+| KKT feasibility, strict (θ ≤ 1e-6, marginal ≤ 1e-5) | certificate-grade | **8/24** | **18/24** |
+| KKT feasibility, loose (θ ≤ 1e-5, marginal ≤ 1e-5) | reporting-grade | 19/24 | 18/24 |
+
+The single failed *flag* is `n=300, rel_eps=0.5, start=theta_star`: `Positive directional derivative for
+linesearch` after 45 iterations — and the run still produced `Ψ = 904.5814540076074`, **the optimum**,
+with target marginal `5.9e-6` and θ KKT `3.8e-5`. It reached the right answer and then failed to convince
+SLSQP it had.
+
+**This also qualifies the "SLSQP is more reliable" reading.** By flag, yes (23/24 vs 13/24), but five
+of those 23 flags are followed by a θ KKT residual above **1e-5** — SLSQP declares success while its
+multipliers are not yet tight. By KKT accuracy Newton-CG is clearly better: median θ violation
+**1.1e-9** versus SLSQP's **3.7e-6**, and 14/24 runs below 1e-8 versus **0/24** for SLSQP. Its
+`1e-6` strict feasibility is 18/24 against SLSQP's 8/24. The one honest reading: **SLSQP is more
+reliable at finding the optimum, Newton-CG is far more accurate once it does, and SLSQP's success flag
+overstates its KKT quality.** Neither is currently certificate-grade at 1e-6 everywhere.
 
 Where both reach the optimum they agree to **4.5e-12** relative — the two algorithms solve the same
 mathematical problem.
