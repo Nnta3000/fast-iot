@@ -217,3 +217,59 @@ def test_solve_from_several_starts_agrees() -> None:
         assert run.col_marginal_error < 1e-5
         values.append(float(run.psi))
     assert float(np.ptp(values)) < 1e-8
+
+
+def test_reference_evaluate_handles_a_ragged_edge_subset() -> None:
+    """
+    EN: **regression for a real defect.** `evaluate` used to compute the row log-sum-exp by reshaping to
+        `(n_source, n_target)`, which is only valid on a rectangular grid. On a restricted edge set with
+        ragged rows it silently mixed rows. This test builds such a set and checks the reference against
+        an explicitly written per-row loop.
+
+    CN: **真实缺陷的回归测试。** 旧实现用 reshape 计算逐行 log-sum-exp，只在矩形网格上成立；稀疏 `F`
+        上会悄悄混行。本测试构造不等长的边集，与显式的逐行循环对照。
+    """
+    from iot.entropic.joint_reference import ReducedProblem, evaluate
+
+    planted, problem_obj, reduced = _problem(point_dimension=4, n=12)
+    rng = np.random.default_rng(0)
+    # EN: keep a random, RAGGED subset: for each source row keep 1..N of its edges at random, so rows have
+    #     different lengths but none is empty (an empty row makes `Psi` undefined by design).
+    # CN: 每行随机保留 1..N 条边，行长度不等但没有空行。
+    all_rows = np.asarray(reduced.rows)
+    all_cols = np.asarray(reduced.cols)
+    keep = np.zeros(all_rows.size, dtype=bool)
+    for row in np.unique(all_rows):
+        indices = np.flatnonzero(all_rows == row)
+        count = max(1, int(rng.integers(1, indices.size + 1)))
+        keep[rng.choice(indices, size=count, replace=False)] = True
+    rows = all_rows[keep]
+    cols = all_cols[keep]
+    features = np.asarray(reduced.cost_features)[keep]
+    ragged = ReducedProblem(features, rows, cols, reduced.source_mass, reduced.target_mass,
+                            reduced.phi_bar, reduced.epsilon)
+    sizes = np.bincount(rows, minlength=int(reduced.source_mass.size))
+    assert sizes.max() != sizes.min(), "the subset must be ragged for this test to mean anything"
+
+    theta = np.full(int(reduced.phi_bar.size), 1.0 / int(reduced.phi_bar.size))
+    g = 0.1 * rng.normal(size=int(reduced.target_mass.size))
+    psi, grad_theta, grad_g, plan = evaluate(ragged, theta, g)
+
+    # EN: explicit reference: per-row loop, no grouping tricks.
+    # CN: 显式参考实现：逐行循环。
+    cost = features @ theta
+    z = (g[cols] - cost) / reduced.epsilon
+    reference_lse = np.array([np.log(np.sum(np.exp(z[rows == r]))) for r in range(rows.max() + 1)])
+    reference_plan = reduced.source_mass[rows] * np.exp(z - reference_lse[rows])
+    expected = (float(theta @ reduced.phi_bar) - float(reduced.target_mass @ g)
+                + reduced.epsilon * float(np.sum(reduced.source_mass
+                                                 * (1.0 - np.log(reduced.source_mass)
+                                                    + reference_lse))))
+    assert psi == pytest.approx(expected, rel=0, abs=1e-10)
+    assert float(np.max(np.abs(plan - reference_plan))) < 1e-12
+    # EN: rows still sum to `a_i` exactly on a ragged set.
+    # CN: 不等长边集上行和仍精确等于 `a_i`。
+    from iot.entropic.joint_reference import marginals
+
+    row_error, _col_error = marginals(ragged, plan)
+    assert row_error < 1e-12

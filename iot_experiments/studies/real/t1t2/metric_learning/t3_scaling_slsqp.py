@@ -163,15 +163,22 @@ def _run_size(n: int, point_dimension: int, rel_eps: float, max_iterations: int,
     g = np.zeros(j, dtype=np.float64)
     # EN: time ONE objective and ONE gradient evaluation at the starting iterate.
     # CN: 在起点处各测一次目标与梯度求值。
-    repeats = 3
+    # EN: time the SINGLE call the optimiser actually makes (`evaluate` returns value AND gradient), and,
+    #     separately, a sweep over the edge set to report a per-edge number.
+    #     Timing `[0]` and `[1]` separately and adding them double-counted, which is how the first
+    #     version produced a per-edge figure larger than the whole evaluation.
+    # CN: 计时优化器**实际**的单次调用（值+梯度一次返回），并单独给出一次边集遍历的时间。
+    repeats = 5
     started = time.perf_counter()
     for _ in range(repeats):
-        _psi = evaluate(reduced, theta, g)[0]
-    objective_seconds = (time.perf_counter() - started) / repeats
+        _psi, _gt, _gg, _plan = evaluate(reduced, theta, g)
+    evaluate_once_seconds = (time.perf_counter() - started) / repeats
     started = time.perf_counter()
     for _ in range(repeats):
-        _gt = evaluate(reduced, theta, g)[1]
-    gradient_seconds = (time.perf_counter() - started) / repeats
+        np.add.reduce(reduced.cost_features, axis=1)
+    edge_sweep_seconds = (time.perf_counter() - started) / repeats
+    objective_seconds = evaluate_once_seconds
+    gradient_seconds = float("nan")
     import iot.entropic.joint_reference as _regexp  # noqa: PLC0415
     evaluator_calls = {"n": 0}
     _original_evaluate = _regexp.evaluate
@@ -209,16 +216,22 @@ def _run_size(n: int, point_dimension: int, rel_eps: float, max_iterations: int,
         "epsilon": float(epsilon), "cost_std": float(scale),
         "psi": float(run.psi), "psi_recomputed": float(_psi_ref),
         "build_seconds": round(build_seconds, 4),
+        "evaluate_once_seconds": round(evaluate_once_seconds, 8),
+        "edge_sweep_seconds": round(edge_sweep_seconds, 8),
         "objective_eval_seconds": round(objective_seconds, 8),
-        "gradient_eval_seconds": round(gradient_seconds, 8),
         "optimiser_seconds": round(optimiser_seconds, 4),
         "peak_rss_mb": round(_peak_rss_mb(), 1),
         "iterations": int(run.iterations),
         "objective_evaluations": int(evaluator_calls["n"]),
+        # EN: `evaluate()` returns value and gradient TOGETHER from one pass, so the per-call cost is
+        #     the cost of `evaluate`, not the sum of two separate calls. Early versions of this driver
+        #     added them and produced a negative "other" bucket.
+        # CN: `evaluate()` 一次返回值与梯度，单次成本就是 `evaluate` 的成本，不是两次调用之和。
+        "estimated_evaluation_seconds": round(float(evaluator_calls["n"]) * evaluate_once_seconds, 4),
         "estimated_objective_seconds": round(float(evaluator_calls["n"]) * objective_seconds, 4),
         "estimated_gradient_seconds": round(float(evaluator_calls["n"]) * gradient_seconds, 4),
         "other_seconds": round(float(optimiser_seconds)
-                               - float(evaluator_calls["n"]) * (objective_seconds + gradient_seconds), 4),
+                               - float(evaluator_calls["n"]) * evaluate_once_seconds, 4),
         "row_marginal_error": float(row_error), "col_marginal_error": float(col_error),
         "theta_kkt_violation": float(kkt_violation),
         "g_stationarity": float(np.max(np.abs(grad_g[1:]))),
@@ -294,8 +307,9 @@ def main(argv: list[str] | None = None) -> int:
             if record.get("ok"):
                 log.line(f"    vars={record['dense_variables']:>5} edges={record['edges']:>8} "
                          f"opt={record['optimiser_seconds']:>8.3f}s "
-                         f"obj={record['objective_eval_seconds']*1e3:>8.3f}ms "
-                         f"grad={record['gradient_eval_seconds']*1e3:>8.3f}ms "
+                         f"eval={record['evaluate_once_seconds']*1e3:>8.3f}ms "
+                         f"sweep={record['edge_sweep_seconds']*1e3:>8.3f}ms "
+                         f""
                          f"rss={record['peak_rss_mb']:>6.0f}MB it={record['iterations']:>4} "
                          f"col={record['col_marginal_error']:.1e} kkt={record['theta_kkt_violation']:.1e} "
                          f"conv={record['converged']}")

@@ -52,7 +52,6 @@ import dataclasses
 
 import numpy as np
 from jaxtyping import Float, Int
-from scipy.special import logsumexp
 
 
 @dataclasses.dataclass(frozen=True)
@@ -86,6 +85,42 @@ class ReducedProblem:
             raise ValueError("zero source mass is not supported by this reference")
 
 
+def segmented_logsumexp(values: Float[np.ndarray, "edges"], group: Int[np.ndarray, "edges"],
+                        n_groups: int) -> Float[np.ndarray, "groups"]:
+    """
+    EN: per-group log-sum-exp for a RAGGED grouping (each group may have a different number of edges).
+
+        The full grid is rectangular, so reshaping to `(n_source, n_target)` works there; a restricted
+        edge set `F` is not, and reshaping would silently mix rows. This implementation is deliberately
+        independent of `scipy.special.logsumexp`'s reshape path: it groups with `np.maximum.at` /
+        `np.add.at` and raises on any group with no edges, because an empty source row cannot carry
+        `a_i` and `Psi` would be undefined rather than merely wrong.
+
+        The max-shift is what makes it stable: `log sum exp(z) = m + log sum exp(z - m)`.
+
+    CN: 支持**不等长分组**的逐组 log-sum-exp。全网格是矩形、reshape 可行；受限 `F` 不是，reshape 会悄悄
+        混行。本实现独立于 scipy 的 reshape 路径，并对空分组抛错（空源行无法承载 `a_i`，`Psi` 无定义）。
+    """
+    values = np.asarray(values, dtype=np.float64).reshape(-1)
+    group = np.asarray(group, dtype=np.int64).reshape(-1)
+    size = int(n_groups)
+    if values.size != group.size:
+        raise ValueError("values and group must have the same length")
+    if np.any(group < 0) or np.any(group >= size):
+        raise ValueError("group indices out of range")
+    peak = np.full(size, -np.inf, dtype=np.float64)
+    np.maximum.at(peak, group, values)
+    empty = ~np.isfinite(peak)
+    if bool(np.any(empty)):
+        # EN: a row with no edges has no `f_i`; the objective is undefined, so refuse.
+        # CN: 空行没有 `f_i`，目标无定义，直接拒绝。
+        raise ValueError(f"groups with no edges: {np.flatnonzero(empty).tolist()[:8]}")
+    shifted = np.exp(values - peak[group])
+    total = np.zeros(size, dtype=np.float64)
+    np.add.at(total, group, shifted)
+    return peak + np.log(total)
+
+
 def evaluate(problem: ReducedProblem, theta: Float[np.ndarray, "k"], g: Float[np.ndarray, "n"]
              ) -> tuple[float, Float[np.ndarray, "k"], Float[np.ndarray, "n"], Float[np.ndarray, "edges"]]:
     """
@@ -98,10 +133,11 @@ def evaluate(problem: ReducedProblem, theta: Float[np.ndarray, "k"], g: Float[np
     eps = float(problem.epsilon)
     cost = np.asarray(problem.cost_features @ np.asarray(theta, dtype=np.float64), dtype=np.float64)
     z = (np.asarray(g, dtype=np.float64)[problem.cols] - cost) / eps
-    # EN: per-row log-sum-exp via a sort-free scipy routine; `-inf` never appears because every row has
-    #     at least one edge on the full grid.
-    # CN: 逐行 log-sum-exp；全网格下每行至少一条边，不会出现 -inf。
-    row_lse = np.asarray(logsumexp(z.reshape(problem.source_mass.size, -1), axis=1), dtype=np.float64)
+    # EN: per-row log-sum-exp with a RAGGED grouping. The earlier version reshaped to
+    #     `(n_source, n_target)`, which is only valid on a rectangular full grid; on a restricted edge set
+    #     it silently mixes rows. `segmented_logsumexp` handles ragged groups and rejects empty rows.
+    # CN: 用**不等长**分组；旧的 reshape 版本只在矩形全网格上成立，稀疏 `F` 上会悄悄混行。
+    row_lse = segmented_logsumexp(z, problem.rows, problem.source_mass.size)
     row_lse_edges = row_lse[problem.rows]
     plan = np.asarray(problem.source_mass, dtype=np.float64)[problem.rows] * np.exp(z - row_lse_edges)
     colsum = np.bincount(problem.cols, weights=plan, minlength=problem.target_mass.size)
@@ -346,4 +382,4 @@ def face_enumeration(problem: ReducedProblem, *, theta_start: Float[np.ndarray, 
 
 
 __all__ = ["ReducedProblem", "ReferenceRun", "evaluate", "face_enumeration", "marginals",
-           "simplex_kkt", "solve", "solve_on_face"]
+           "segmented_logsumexp", "simplex_kkt", "solve", "solve_on_face"]
