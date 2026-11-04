@@ -140,6 +140,7 @@ class JointMasterResult:
     psi: float
     gradient_norm: float
     kkt_active_multipliers: Float[np.ndarray, "k"]
+    kkt_residual: float
     active_mask: Bool[np.ndarray, "k"]
     converged: bool
     newton_steps: int
@@ -197,7 +198,7 @@ def _evaluate(data: _Problem, theta: Float[np.ndarray, "k"], g: Float[np.ndarray
 
 
 def _cg(hessian: object, rhs_free: Float[np.ndarray, "free"], *, max_iterations: int,
-        tolerance: float) -> tuple[Float[np.ndarray, "free"], int, float]:
+        tolerance: float) -> tuple[Float[np.ndarray, "free"], int, int, float]:
     """
     EN: CG on the free block. Returns `(solution, iterations, lambda_min_estimate)`.
 
@@ -210,14 +211,19 @@ def _cg(hessian: object, rhs_free: Float[np.ndarray, "free"], *, max_iterations:
     residual = np.asarray(rhs_free, dtype=np.float64).copy()
     direction = residual.copy()
     rr = float(residual @ residual)
+    # EN: relative stopping rule. `joint_hvp` scales like 1/eps (~33 here), so an absolute tolerance
+    #     near machine precision is unreachable and CG would exhaust `max_iterations` every call.
+    # CN: 相对停止准则；HVP 量级为 1/eps，绝对容差在机器精度附近不可达。
     tol_sq = (float(tolerance) ** 2) * max(rr, 1e-300)
     used = 0
     if rr == 0.0:
-        return solution, 0, float("inf")
+        return solution, 0, 0, float("inf")
     alphas: list[float] = []
     betas: list[float] = []
+    products = 0
     for _ in range(int(max_iterations)):
         product = np.asarray(hessian(direction), dtype=np.float64)  # type: ignore[operator]
+        products += 1
         denom = float(direction @ product)
         if denom <= 0.0:
             break
@@ -247,13 +253,40 @@ def _cg(hessian: object, rhs_free: Float[np.ndarray, "free"], *, max_iterations:
             tridiagonal[index + 1, index] = value
         eigs = np.linalg.eigvalsh(tridiagonal)
         lambda_min = float(eigs[0]) if eigs.size else float("nan")
-    return solution, used, lambda_min
+    return solution, used, products, lambda_min
+
+
+def theta_hessian(data: _Problem, theta: Float[np.ndarray, "k"], g: Float[np.ndarray, "n"]
+                  ) -> Float[np.ndarray, "k k"]:
+    """
+    EN: **nested** Hessian of `inf_g Psi` with respect to theta, at fixed `g`.
+
+        With `f` eliminated, `d^2 Psi / d theta^2 = (1/eps) sum_e pi_e phi_e phi_e^T`.
+
+        **Correction to an earlier note in this module.** I previously wrote that this matrix has
+        eigenvalue pair (387.78, 7.31e-3) along `phi_0 - phi_1`, ratio 5e4, and that the joint theta block
+        differs by three orders of magnitude. Measured on the Gate B stall point, the two agree:
+        nested `18.00` vs joint `16.66` along `(1,-1)/sqrt 2`, a ratio of `1.1`. The earlier claim is
+        withdrawn; the nested and joint theta blocks are close, and the ill-conditioning I described was
+        not present at the point in question. This function is kept because the nested profile is the
+        right object for judging a theta move, and because the two matrices are still not identical.
+    CN: **嵌套**意义下的 θ Hessian（固定 g）。**更正**：先前"与联合 θ 块相差 5e4 倍"的说法已撤回；
+        实测两者相近（18.00 对 16.66，比值 1.1）。
+    """
+    eps = float(data.epsilon)
+    cost = np.asarray(data.cost_features @ np.asarray(theta, dtype=np.float64), dtype=np.float64)
+    row_lse = _segment_lse((np.asarray(g, dtype=np.float64)[data.cols] - cost) / eps, data.rows,
+                           data.n_source)
+    f = eps * (np.log(data.source_mass) - row_lse)
+    plan = np.exp((f[data.rows] + np.asarray(g, dtype=np.float64)[data.cols] - cost) / eps)
+    weighted = data.cost_features * plan[:, None]
+    return np.asarray(weighted.T @ data.cost_features, dtype=np.float64) / eps
 
 
 def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
                        constraints: LinearThetaConstraints, max_newton: int = 200,
                        cg_iterations: int = 400, gradient_tolerance: float = 1e-9,
-                       cg_tolerance: float = 1e-11,
+                       cg_tolerance: float = 1e-8,
                        active_tolerance: float = 1e-12) -> JointMasterResult:
     """
     EN: Newton-CG on `(theta, g)` for `min Psi_F`, with a PRIMAL ACTIVE SET on the linear constraints.
@@ -352,7 +385,11 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
             non_pivot = unpinned[unpinned != pivot]
         theta_mask = np.zeros(n_theta, dtype=bool)
         theta_mask[non_pivot] = True
-        grad_free = np.concatenate([grad_theta[non_pivot], grad_g[1:] - float(grad_g[0])])
+        # EN: audit fix -- the g block is `d/dg_j = colsum_j - b_j` for `j >= 1` ONLY. Coordinate 0
+        #     is fixed by the gauge, not a variable and not a reference, so `grad_g[0]` must not be
+        #     subtracted here. (An earlier version did, which corrupted every g step.)
+        # CN: g 块只取 `j>=1` 的列残差；`grad_g[0]` 不是参照，不得减去。
+        grad_free = np.concatenate([grad_theta[non_pivot], grad_g[1:]])
         # EN: reduced gradient on (theta_nonpivot, g_free). Because the pivot absorbs the equality,
         #     d_pivot = -(A_nonpivot . d_theta)/a_pivot, so the chain rule adds
         #     -(a_nonpivot_i / a_pivot) * grad_theta[pivot] to each free theta component.
@@ -364,45 +401,62 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         free_norm = float(np.linalg.norm(grad_red))
         trace.append((float(_step), float(value), free_norm))
 
-        # EN: KKT on the active set, using the THETA block only. A coordinate pinned at 0 is optimal
-        #     exactly when its theta gradient is >= 0: increasing theta_k from 0 raises Psi to first
-        #     order. There is no cross-block correction here by design (see the docstring).
-        # CN: 主动集 KKT 只用 θ 块。被压在 0 的坐标最优当且仅当其 θ 梯度 >= 0：把 θ_k 从 0 抬起会
-        #     一阶增大 Psi。按设计不做跨块修正（见模块文档）。
-        corrected_theta_grad = np.asarray(grad_theta, dtype=np.float64)
+        # EN: ---------------------------------------------------------------------------------------
+        #     MULTIPLIER CONVENTION, written out so the sign cannot flip again.
+        #
+        #     On the simplex the KKT system is
+        #         grad_k(theta) = lambda + mu_k,   mu_k >= 0,   theta_k >= 0,   mu_k * theta_k = 0,
+        #     which is what differentiating `Psi - lambda*(sum theta - 1) - sum_k mu_k*theta_k` gives.
+        #       - For a coordinate with theta_k > 0: mu_k = 0, so grad_k = lambda; every free coordinate
+        #         shares ONE value.
+        #       - For a coordinate with theta_k = 0: it can rise only if mass is taken from somewhere.
+        #         Taking it from a POSITIVE coordinate p changes Psi to first order by
+        #         (grad_k - grad_p). So the release criterion is `grad_k - lambda < 0`, with `lambda` the
+        #         common value on the positive set, and `mu_k = grad_k - lambda >= 0` is the optimality
+        #         requirement. `grad_k` ALONE is not the multiplier: the `-lambda` term is the cost of
+        #         pulling mass off the positive coordinates, and dropping it flips the sign whenever
+        #         lambda is large -- which is exactly how the earlier version went wrong.
+        #
+        #     When every coordinate is pinned the free set is empty and `lambda` comes from the gradient
+        #     mean (a common shift is absorbed there); that only happens at a vertex.
+        # -------------------------------------------------------------------------------------------
+        # CN: 乘子约定：`grad_k = lambda + mu_k`，`mu_k >= 0`。正坐标共享同一 `lambda`；
+        #     被压为 0 的坐标的**释放判据是 `grad_k - lambda < 0`**。单看 `grad_k` 在 λ 很大时符号会反。
         scale_ref = max(1.0, float(np.max(np.abs(np.asarray(grad_theta, dtype=np.float64)))))
         pinned = np.flatnonzero(active)
-        kkt_ok = bool(pinned.size == 0 or np.all(corrected_theta_grad[pinned] >= -active_tolerance
-                                                 * scale_ref))
+        free_theta = np.flatnonzero(~active & ~equality_pinned)
+        theta_grad_full = np.asarray(grad_theta, dtype=np.float64)
+        lam = float(np.mean(theta_grad_full[free_theta])) if free_theta.size \
+            else float(np.mean(theta_grad_full))
         multipliers = np.zeros(n_theta, dtype=np.float64)
-        multipliers[pinned] = corrected_theta_grad[pinned]
-        if free_norm <= float(gradient_tolerance) and kkt_ok:
+        multipliers[pinned] = theta_grad_full[pinned] - lam
+        kkt_violation = float(min(0.0, float(np.min(multipliers[pinned])))) if pinned.size else 0.0
+        kkt_ok = kkt_violation >= -active_tolerance * scale_ref
+        kkt_residual = float(max(0.0, -kkt_violation))
+
+        # EN: **convergence is judged on the nested theta profile.** The joint reduced gradient can be
+        #     small along directions where `g` absorbs the movement (the g block is unconstrained), so a
+        #     small value of it is NOT evidence that theta is optimal -- measured: the custom solver's
+        #     stall point has a 12.9 norm free gradient yet sits where the nested profile is rising.
+        #     The honest test is: on the free theta coordinates, is `inf_g Psi` stationary, i.e. is
+        #     `grad_theta` constant across them?
+        # CN: 收敛判据用**嵌套 θ 剖面**：联合约化梯度可以因 g 吸收而很小，并不说明 θ 最优。
+        free_theta_now = np.flatnonzero(~active & ~equality_pinned)
+        if free_theta_now.size >= 2:
+            spread = float(np.max(theta_grad_full[free_theta_now])
+                           - np.min(theta_grad_full[free_theta_now]))
+        else:
+            spread = 0.0
+        if spread <= float(gradient_tolerance) and kkt_ok and frozen_theta is False:
             converged = True
-            reason = "gradient"
+            reason = "nested_theta_stationary"
             break
-        if kkt_ok and pinned.size and not frozen_theta and free_norm <= max(
-                float(gradient_tolerance) * 10.0, 1.0):
-            # EN: **the stalled-point test.** A small free-block gradient with no release is NOT optimal
-            #     unless every released direction actually increases `Psi`. At a pinned coordinate `i`
-            #     whose multiplier looks positive, releasing it means adding mass there and removing it
-            #     from the pivot: the true first-order change is `grad_i - grad_pivot`, not `grad_i`.
-            #     Comparing `grad_i` alone to zero is exactly the sign error that left the earlier
-            #     version sitting at theta=(0.49, 0.51, 0, 0) with theta_2 = 0 while the true optimum is
-            #     theta_2 = 0.022. Release the coordinate with the most negative `grad_i - grad_pivot`.
-            # CN: **停滞点判据。** 自由块梯度很小且无释放，只有在每个"释放方向"都真的增大 Psi 时才最优。
-            #     释放坐标 i 是把质量从枢轴移到 i，一阶变化是 `grad_i - grad_pivot`，不是 `grad_i`。
-            #     单看 `grad_i` 的符号正是之前停在 theta_2=0 的原因。
-            deltas = corrected_theta_grad[pinned] - corrected_theta_grad[pivot]
-            worst_position = int(np.argmin(deltas))
-            if float(deltas[worst_position]) < -1e-12:
-                active[int(pinned[worst_position])] = False
-                reason = "released_stalled_point"
-                continue
-        if free_norm <= float(gradient_tolerance) and not kkt_ok:
-            # EN: a pinned coordinate has a negative multiplier -> it must be released, not kept.
-            # CN: 被固定坐标的乘子为负 -> 必须释放，而不是保留。
-            worst = int(pinned[np.argmin(corrected_theta_grad[pinned])])
-            active[worst] = False
+        # EN: release UNCONDITIONALLY on a negative multiplier. It is deliberately NOT gated on the
+        #     overall convergence flag: the earlier branch required `kkt_ok`, which is false exactly when
+        #     a release is needed, so the branch was unreachable in the only case it existed for.
+        # CN: 乘子为负就释放，**不受整体收敛标志门控**（之前的分支因此不可达）。
+        if pinned.size and not kkt_ok and not frozen_theta:
+            active[int(pinned[int(np.argmin(multipliers[pinned]))])] = False
             reason = "released_negative_multiplier"
             continue
 
@@ -422,13 +476,13 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
                                        data.source_mass, data.epsilon, v_theta, v_g)
             hv_theta = np.asarray(hv_theta, dtype=np.float64)
             hv_g = np.asarray(hv_g, dtype=np.float64)
-            cross = 0.0 if frozen_theta else (float(a_eq[0][non_pivot].sum())
-                                               / float(a_eq[0][pivot])) * hv_theta[pivot]
-            out = np.concatenate([hv_theta[non_pivot], hv_g[1:] - float(hv_g[0]) - cross])
+            out = np.concatenate([hv_theta[non_pivot], hv_g[1:]])
             return out
 
-        step, used, lambda_min = _cg(hessian, grad_red, max_iterations=int(cg_iterations),
-                                     tolerance=float(cg_tolerance))
+        step, used, products, lambda_min = _cg(hessian, grad_red,
+                                              max_iterations=int(cg_iterations),
+                                              tolerance=float(cg_tolerance))
+        hvps += products
         total_cg += used
         if np.isfinite(lambda_min):
             lambda_min_seen = lambda_min if not np.isfinite(lambda_min_seen) else \
@@ -543,7 +597,8 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         theta=theta_out, source_dual=final_state.f, target_dual=g_out,
         plan_on_f=final_state.plan, psi=final_state.objective,
         gradient_norm=final_norm,
-        kkt_active_multipliers=multipliers, active_mask=active, converged=bool(converged),
+        kkt_active_multipliers=multipliers, kkt_residual=float(kkt_residual),
+        active_mask=active, converged=bool(converged),
         newton_steps=steps, cg_iterations=total_cg, hessian_vector_products=hvps,
         line_search_failures=failures, condition_estimate=lambda_min_seen,
         stop_reason=reason, newton_trace=tuple(trace), seconds=time.perf_counter() - started)
