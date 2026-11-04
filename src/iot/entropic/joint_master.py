@@ -258,41 +258,37 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
     """
     EN: Newton-CG on `(theta, g)` for `min Psi_F`, with a PRIMAL ACTIVE SET on the linear constraints.
 
-        **Variables.** `g[0]` is dropped (gauge). The equality `A theta = b` is removed by choosing a
-        **pivot**: one coordinate is expressed through the others and never varied independently. The
-        pivot is NOT fixed -- when it reaches its bound it is released into the active set and a new
-        pivot is chosen among the remaining free coordinates. That is the correction to the earlier
-        version, which pinned the pivot forever and so left the solver sitting on a coordinate it had
-        pushed to zero while still reporting the run as "in progress".
+        **Stationarity has THREE blocks, and they are kept separate.** Writing `Psi` with `f`
+        eliminated and `g[0] = 0`:
 
-        **Step.** The Newton step is solved by CG on the free coordinates only, capped so it lands
-        exactly on the first bound it would cross, and accepted by Armijo on `Psi`. The iterate is
-        therefore always exactly feasible -- no post-hoc projection.
+          1. **theta block** `d Psi / d theta = phi_bar - sum_e pi_e phi_e`.
+             On the simplex this becomes: for the FREE coordinates the gradient is constant
+             (equal to the multiplier of `sum theta = 1`); for a coordinate pinned at 0 the
+             gradient is `>= 0` (raising it would increase the objective).
+          2. **g block** (gauge coordinate 0 dropped) `d Psi / d g_j = colsum_j - b_j`, and
+             `g[0] = 0` contributes its OWN multiplier to the `g` stationarity rows only.
+          3. **f block** eliminated exactly by the row constraint, so on any evaluation with
+             finite `g` the source marginals hold to round-off.
 
-        **KKT, and the arithmetic of `g[0] = 0`.** `Psi` depends on `(f, g)` only through
-        `sigma_e = f_i + g_j - theta.phi_e` and on `a.f + b.g`. With `a` and `b` both summing to the
-        total mass, the shift `f -> f + lam, g -> g - lam` leaves both invariants, so in the full
-        `(theta, f, g)` problem the KKT system has a ONE-dimensional gauge null space. Carrying `g[0] = 0`
-        as a constraint adds a Lagrangian multiplier `mu` on `g[0]`, and stationarity in `g[0]` (whose
-        `b_0` coefficient is `a.sum()`) forces `mu = -a.sum()*lam`. Every other stationarity equation
-        then picks up the SAME constant `mu`, so the reduced gradient differs from the full one by one
-        vector `(mu, ..., mu)` spread across theta and g.
+        **No cross-block correction is applied.** An earlier version subtracted a statistic of
+        `grad_g` from the theta gradient, on the argument that the `g[0] = 0` multiplier appears in
+        every stationarity row. That is wrong: the multiplier of the `g[0] = 0` constraint belongs to
+        the POTENTIAL equations, and the multiplier of the simplex belongs to the THETA equations;
+        they are different objects and must not be mixed. The theta block is used exactly as it is.
 
-        Consequence, and it is easy to get wrong (this version did): **theta multipliers must be
-        compared to `grad_theta` minus the common `g`-offset**, not to `grad_theta` itself. The KKT
-        sign test below removes that offset; without it a converged vertex looks like a violated
-        constraint.
+        **The step is a Newton step on the equality-reduced problem, but an active set is not a
+        parametric bound.** Row generation of affine-hull directions is capped at the first bound and
+        accepted by Armijo, so the iterate stays feasible; a direction is nevertheless treated as
+        useless when the objective fails to decrease even after the line search.
 
     CN: 在 `(theta, g)` 上做 Newton-CG 解 `min Psi_F`，对线性约束用**原始主动集**。
 
-        - `g[0]` 去掉（规范）。等式 `A theta = b` 用一个**枢轴**坐标消去，该坐标不独立变化。
-          枢轴**不是固定的**：它触及边界时进入主动集，再从剩余自由坐标里选新枢轴。
-          （旧版本把枢轴永久钉死，于是停在被压到零的坐标上却仍报告"进行中"。）
-        - Newton 步只用 CG 在自由坐标上求，步长封顶在第一个会被穿越的边界，Armijo 接受，迭代点始终精确可行。
-        - KKT 与 `g[0]=0` 的算术：`Psi` 通过 `sigma_e` 与 `a·f+b.g` 依赖 `(f,g)`，而
-          `f→f+λ, g→g−λ` 使两者都不变，故完整问题有**一维**规范零空间。把 `g[0]=0` 作为约束带入，
-          其乘子 `mu` 使其他所有平稳方程都获得**同一个**常数偏移。因此 **θ 的乘子必须与
-          `grad_theta` 减去公共 `g` 偏移后比较**；直接用 `grad_theta` 会把收敛的顶点误判为违反约束。
+        平稳性有**三块，且分开处理**：θ 块（单纯形上自由坐标梯度相等、被压在 0 的坐标梯度 ≥ 0）、
+        `g` 块（`g[0]=0` 自带的乘子只进入 g 的方程）、`f` 块（由行约束精确消去）。
+
+        **不做任何跨块修正。** 早期版本从 θ 梯度里减去了 `grad_g` 的某个统计量，理由是 `g[0]=0` 的
+        乘子会出现在每个方程里 —— 这是错的：`g[0]=0` 的乘子属于势函数方程，单纯形的乘子属于 θ 方程，
+        两者不能混用。θ 块就按原样使用。
     """
     started = time.perf_counter()
     a_eq = np.asarray(constraints.a_eq, dtype=np.float64)
@@ -321,25 +317,6 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         out[1:] = g_part
         return out
 
-    def g_offset() -> float:
-        """
-        EN: the common constant `mu` that `g[0] = 0` adds to every stationarity equation.
-
-            Stationarity in `g[0]` reads `b_0 - a.sum() - (d.free_block)/d g_0 ...`: with the row-sum
-            structure fixed, `mu = -(g_free-gradient projected onto the constant direction)`, which is
-            what the code below computes directly from the current gradients. Returned so the KKT test
-            and the reported multipliers both use the gauge-corrected quantity.
-        CN: 由 `g[0]=0` 引入、加到每条平稳方程上的公共常数。
-        """
-        return float(getattr(_g_offset_holder, "value", 0.0))
-
-    class _Holder:
-        """EN: carries the current gauge offset between helpers. CN: 在辅助函数间传递当前偏移。"""
-
-        value: float = 0.0
-
-    _g_offset_holder = _Holder()
-
     state, grad_theta, grad_g = _evaluate(data, theta, with_g(g_free))
     value = state.objective
     hvps = 0
@@ -356,14 +333,6 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
     for _step in range(1, int(max_newton) + 1):
         plan = np.asarray(state.plan, dtype=np.float64)
 
-        # EN: the common offset created by the g[0] gauge, computed from the current g-gradient.
-        #     With `Psi`'s invariants fixed, the free-coordinate stationarity holds up to one constant
-        #     added to BOTH the theta and the g block; that constant is the mean of the g-gradient over
-        #     the free block when the row sums are exact, and is zero when they are not. We use the
-        #     g-block's own value at the gauge coordinate implied by the shift, i.e. the projection of
-        #     the free gradient onto the constant direction.
-        # CN: 由 g 梯度算出的公共偏移（规范 `g[0]=0` 带来的常数）。
-        _g_offset_holder.value = float(np.mean(grad_g))
 
         # EN: pivot = the free coordinate that expresses the equality. Any unpinned coordinate works;
         #     picking the one with the largest current value keeps it away from its bound and minimises
@@ -395,14 +364,12 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         free_norm = float(np.linalg.norm(grad_red))
         trace.append((float(_step), float(value), free_norm))
 
-        # EN: KKT on the active set, with the gauge offset removed. In the full KKT system the reduced
-        #     theta gradient equals the Lagrange multiplier of theta >= 0, and at a correct active set
-        #     the pinned multiplier is >= 0. The offset `mu` is COMMON to theta and g, so removing it
-        #     means comparing against `grad_theta - mu*ones`; `mu` is recovered as the part of the
-        #     g-gradient that the g[0] gauge cannot remove, i.e. `grad_g.mean()`.
-        # CN: 主动集上的 KKT，已去掉规范偏移。被固定坐标的乘子应 >= 0。
-        mu = float(_g_offset_holder.value)
-        corrected_theta_grad = np.asarray(grad_theta, dtype=np.float64) - mu
+        # EN: KKT on the active set, using the THETA block only. A coordinate pinned at 0 is optimal
+        #     exactly when its theta gradient is >= 0: increasing theta_k from 0 raises Psi to first
+        #     order. There is no cross-block correction here by design (see the docstring).
+        # CN: 主动集 KKT 只用 θ 块。被压在 0 的坐标最优当且仅当其 θ 梯度 >= 0：把 θ_k 从 0 抬起会
+        #     一阶增大 Psi。按设计不做跨块修正（见模块文档）。
+        corrected_theta_grad = np.asarray(grad_theta, dtype=np.float64)
         scale_ref = max(1.0, float(np.max(np.abs(np.asarray(grad_theta, dtype=np.float64)))))
         pinned = np.flatnonzero(active)
         kkt_ok = bool(pinned.size == 0 or np.all(corrected_theta_grad[pinned] >= -active_tolerance
@@ -413,6 +380,24 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
             converged = True
             reason = "gradient"
             break
+        if kkt_ok and pinned.size and not frozen_theta and free_norm <= max(
+                float(gradient_tolerance) * 10.0, 1.0):
+            # EN: **the stalled-point test.** A small free-block gradient with no release is NOT optimal
+            #     unless every released direction actually increases `Psi`. At a pinned coordinate `i`
+            #     whose multiplier looks positive, releasing it means adding mass there and removing it
+            #     from the pivot: the true first-order change is `grad_i - grad_pivot`, not `grad_i`.
+            #     Comparing `grad_i` alone to zero is exactly the sign error that left the earlier
+            #     version sitting at theta=(0.49, 0.51, 0, 0) with theta_2 = 0 while the true optimum is
+            #     theta_2 = 0.022. Release the coordinate with the most negative `grad_i - grad_pivot`.
+            # CN: **停滞点判据。** 自由块梯度很小且无释放，只有在每个"释放方向"都真的增大 Psi 时才最优。
+            #     释放坐标 i 是把质量从枢轴移到 i，一阶变化是 `grad_i - grad_pivot`，不是 `grad_i`。
+            #     单看 `grad_i` 的符号正是之前停在 theta_2=0 的原因。
+            deltas = corrected_theta_grad[pinned] - corrected_theta_grad[pivot]
+            worst_position = int(np.argmin(deltas))
+            if float(deltas[worst_position]) < -1e-12:
+                active[int(pinned[worst_position])] = False
+                reason = "released_stalled_point"
+                continue
         if free_norm <= float(gradient_tolerance) and not kkt_ok:
             # EN: a pinned coordinate has a negative multiplier -> it must be released, not kept.
             # CN: 被固定坐标的乘子为负 -> 必须释放，而不是保留。
@@ -482,6 +467,7 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
 
         accepted = False
         alpha = alpha_max
+        accepted_decrease = 0.0
         for _backtrack in range(80):
             trial_theta = theta.copy()
             trial_theta[non_pivot] += alpha * theta_part
@@ -490,11 +476,18 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
             trial_g = g_free + alpha * g_part
             trial_state, trial_gt, trial_gg = _evaluate(data, trial_theta, with_g(trial_g))
             if trial_state.objective <= value + 1e-4 * alpha * slope:
+                # EN: Record the acceptance ratio for the "progress" check. At the stalled point in the
+                #     n=24 instance an Armijo-acceptable step still reduced psi by only ~1e-8, because
+                #     Armijo with a large slope accepts nearly-flat steps. Succeeding at arithmetic must
+                #     not be reported as converging.
+                # CN: 记录接受比。停滞点上 Armijo 可接受的步只令 psi 下降 ~1e-8；算术上通过并不等于收敛。
+                previous_value = value
                 theta, g_free = trial_theta, trial_g
                 state, grad_theta, grad_g = trial_state, trial_gt, trial_gg
                 value = trial_state.objective
                 accepted = True
                 steps = _step
+                accepted_decrease = previous_value - value
                 break
             alpha *= 0.5
         if not accepted:
@@ -504,11 +497,21 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
 
         # EN: a coordinate that landed on its bound joins the active set; if that is the pivot, the
         #     pivot moves to another free coordinate -- this is the case the earlier version got wrong.
-        # CN: 触边坐标进入主动集；若正是枢轴，则枢轴移到其他自由坐标。
+        #     The membership test is by DISTANCE, so a coordinate that is merely small (e.g. theta_2 =
+        #     0.022 after a partial step, with 0.022 still available before its bound) keeps being usable.
+        # CN: 触边坐标进入主动集（按距离判断），因此只是"数值上小"的坐标仍可继续使用。
         tolerance_bound = 1e-14
         for index in range(n_theta):
             if not equality_pinned[index] and theta[index] <= float(lower[index]) + tolerance_bound:
                 active[index] = True
+        # EN: stagnation guard. A step that decreases psi by less than a tiny fraction of the scale is
+        #     not progress; the earlier version looped on such steps for thousands of iterations while
+        #     reporting "max_newton" and an unchanged objective.
+        # CN: 停滞保护：下降量小于尺度的一小部分就不是进展。
+        if accepted_decrease <= 1e-10 * max(1.0, abs(value)):
+            reason = "stagnation"
+            break
+
         if frozen_theta:
             pass
         elif active[pivot]:
