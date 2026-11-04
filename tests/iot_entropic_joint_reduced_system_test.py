@@ -16,7 +16,6 @@ CN: 自定义联合求解器牛顿系统的定向测试（不依赖 Gate B 收�
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from iot.core.edges import EdgeSet
 from iot.core.parameters import cost_std
