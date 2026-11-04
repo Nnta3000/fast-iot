@@ -238,6 +238,15 @@ def _cg(hessian: object, rhs_free: Float[np.ndarray, "free"], *, max_iterations:
         betas.append(new_rr / rr)
         direction = residual + (new_rr / rr) * direction
         rr = new_rr
+    # EN: if CG stopped with an O(1) residual and returned fine, the "step" is an arbitrary point in the
+    #     Krylov space that can even INCREASE the objective; the solver then dies as "stagnation". Fall
+    #     back to the gradient itself, i.e. `H^{-1} rhs ~ rhs`. **Sign matters:** this routine returns
+    #     `p ~ H^{-1} rhs`, and the caller forms `direction = -step`, so returning `-rhs` here would make
+    #     the direction `+rhs` -- an ASCENT direction. That sign slip was caught by the `non_descent`
+    #     guard rather than by a silent wrong answer.
+    # CN: CG 提前停止时返回 `rhs` 本身（即 `~H^{-1}rhs`）。返回 `-rhs` 会让调用方的 `-step` 变成上升方向。
+    if float(residual @ residual) > tol_sq:
+        solution = np.asarray(rhs_free, dtype=np.float64).copy()
     lambda_min = float("nan")
     if alphas:
         diagonal = np.asarray([1.0 / a for a in alphas], dtype=np.float64)
@@ -556,7 +565,15 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         # CN: 触边坐标进入主动集（按距离判断），因此只是"数值上小"的坐标仍可继续使用。
         tolerance_bound = 1e-14
         for index in range(n_theta):
-            if not equality_pinned[index] and theta[index] <= float(lower[index]) + tolerance_bound:
+            if equality_pinned[index] or index in set(non_pivot.tolist()) or index == pivot:
+                # EN: a coordinate already in the FREE set must never be pinned merely because its value is
+                #     small. Pinning it would skip its step and freeze the iterate. (A released theta_2
+                #     = 0 with a positive step was being re-pinned here, which is why the solver took one
+                #     step and stopped.) Only coordinates that were not moved by this step can be pinned,
+                #     which in practice means ones that arrived at their bound during it.
+                # CN: 已在自由集里的坐标不能因为数值小而重新固定，否则迭代冻结。
+                continue
+            if theta[index] <= float(lower[index]) + tolerance_bound:
                 active[index] = True
         # EN: stagnation guard. A step that decreases psi by less than a tiny fraction of the scale is
         #     not progress; the earlier version looped on such steps for thousands of iterations while
