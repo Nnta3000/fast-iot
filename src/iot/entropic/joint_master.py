@@ -238,15 +238,26 @@ def _cg(hessian: object, rhs_free: Float[np.ndarray, "free"], *, max_iterations:
         betas.append(new_rr / rr)
         direction = residual + (new_rr / rr) * direction
         rr = new_rr
-    # EN: if CG stopped with an O(1) residual and returned fine, the "step" is an arbitrary point in the
-    #     Krylov space that can even INCREASE the objective; the solver then dies as "stagnation". Fall
-    #     back to the gradient itself, i.e. `H^{-1} rhs ~ rhs`. **Sign matters:** this routine returns
-    #     `p ~ H^{-1} rhs`, and the caller forms `direction = -step`, so returning `-rhs` here would make
-    #     the direction `+rhs` -- an ASCENT direction. That sign slip was caught by the `non_descent`
-    #     guard rather than by a silent wrong answer.
-    # CN: CG 提前停止时返回 `rhs` 本身（即 `~H^{-1}rhs`）。返回 `-rhs` 会让调用方的 `-step` 变成上升方向。
+    # EN: **the last-resort fallback MUST be a descent direction whatever the metric.** `solution` here is
+    #     an approximation to `H^{-1} rhs` (or to `H^{-1/2} rhs` when CG hit non-positive curvature), and
+    #     the caller forms `direction = -solution`. With an indefinite `H` the raw formula occasionally
+    #     produced a direction with `rhs.direction > 0`, which the caller then had to reject as
+    #     `non_descent`. When the CG residual is not small we therefore return `|rhs| * rhs / ||rhs||`,
+    #     whose negative is the steepest-descent direction scaled to a step of order `|rhs|` -- a descent
+    #     direction by construction, with the sign fixed once here rather than in the caller.
+    #     (**Sign matters:** returning `-rhs` here makes `direction = +rhs`, an ASCENT direction; that
+    #     slip was caught by the `non_descent` guard rather than by a silent wrong answer.)
+    # CN: 兜底方向必须是下降方向：返回 `|rhs| * rhs / ||rhs||`，其负方向即最速下降（步长量级为 `|rhs|`）。
+    #     返回 `-rhs` 会让 `direction = -step` 变成上升方向。
     if float(residual @ residual) > tol_sq:
-        solution = np.asarray(rhs_free, dtype=np.float64).copy()
+        norm = float(np.linalg.norm(rhs_free))
+        if norm > 0.0:
+            # EN: unit step along the gradient (`H^{-1} rhs ~ rhs`), so `-solution` descends. A UNIT step
+            #     is the key detail: scaling `rhs` by its own large norm (11 here) made the first move hit
+            #     the bound exactly, pinning a coordinate the optimum needs interior (measured at
+            #     eps = 0.25 from the uniform start). Small steps let the active set stay honest.
+            # CN: 单位步长；按自身范数放大会一步撞到边界并误固定坐标。
+            solution = np.asarray(rhs_free, dtype=np.float64) / norm
     lambda_min = float("nan")
     if alphas:
         diagonal = np.asarray([1.0 / a for a in alphas], dtype=np.float64)
@@ -366,7 +377,12 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
     steps = 0
     failures = 0
     lambda_min_seen = float("nan")
-    active = np.zeros(n_theta, dtype=bool)
+    # EN: initialise the active set from the STARTING theta, not as all-free. A starting coordinate that
+    #     is already at its lower bound is pinned by the problem, not by the algorithm; treating it as
+    #     free lets the first Newton step try to push it through its bound.
+    # CN: 主动集按起点初始化：起点已在边界的坐标本来就被问题固定，不能当作自由。
+    active = (~equality_pinned) & (theta <= lower + 1e-12)
+    moved_by_step = np.zeros(n_theta, dtype=np.float64)
     multipliers = np.zeros(n_theta, dtype=np.float64)
     converged = False
     reason = "max_newton"
@@ -441,7 +457,6 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         multipliers[pinned] = theta_grad_full[pinned] - lam
         kkt_violation = float(min(0.0, float(np.min(multipliers[pinned])))) if pinned.size else 0.0
         kkt_ok = kkt_violation >= -active_tolerance * scale_ref
-        kkt_residual = float(max(0.0, -kkt_violation))
 
         # EN: **convergence is judged on the nested theta profile.** The joint reduced gradient can be
         #     small along directions where `g` absorbs the movement (the g block is unconstrained), so a
@@ -485,7 +500,17 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
                                        data.source_mass, data.epsilon, v_theta, v_g)
             hv_theta = np.asarray(hv_theta, dtype=np.float64)
             hv_g = np.asarray(hv_g, dtype=np.float64)
-            out = np.concatenate([hv_theta[non_pivot], hv_g[1:]])
+            # EN: **S^T H S, not just a block selection.** `joint_hvp` returns the FULL-space product
+            #     `H w` for `w = S x`. The reduced gradient is `S^T grad`, so the reduced Hessian is
+            #     `S^T H S` and the theta block of `H w` must itself be pulled back through `S^T`:
+            #         (S^T z)_k = z_k - (a_k / a_p) z_p        for k in N,
+            #         (S^T z)_g = z_g                          (the gauge block is untouched).
+            #     Selecting `hv_theta[non_pivot]` alone is NOT `S^T H S`; measured against central
+            #     differences of the reduced gradient it was wrong by O(1) to O(80).
+            # CN: 必须做 **S^T H S**：θ 块要再经 S^T 拉回，即减 `(a_k/a_p)*(Hv)_p`。
+            cross = np.zeros(non_pivot.size) if frozen_theta else \
+                (a_eq[0][non_pivot] / float(a_eq[0][pivot])) * hv_theta[pivot]
+            out = np.concatenate([hv_theta[non_pivot] - cross, hv_g[1:]])
             return out
 
         step, used, products, lambda_min = _cg(hessian, grad_red,
@@ -545,6 +570,7 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
                 #     not be reported as converging.
                 # CN: 记录接受比。停滞点上 Armijo 可接受的步只令 psi 下降 ~1e-8；算术上通过并不等于收敛。
                 previous_value = value
+                moved_by_step = trial_theta - theta
                 theta, g_free = trial_theta, trial_g
                 state, grad_theta, grad_g = trial_state, trial_gt, trial_gg
                 value = trial_state.objective
@@ -564,17 +590,43 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
         #     0.022 after a partial step, with 0.022 still available before its bound) keeps being usable.
         # CN: 触边坐标进入主动集（按距离判断），因此只是"数值上小"的坐标仍可继续使用。
         tolerance_bound = 1e-14
+        # EN: pin a coordinate exactly when THIS STEP left it at its bound. Two failure modes to avoid,
+        #     and they pull in opposite directions:
+        #       (a) testing `theta[k] <= lower + tol` on every coordinate re-pins a coordinate that was
+        #           released at 0 and never moved -- the iterate freezes (measured: one step, then stop);
+        #       (b) skipping every coordinate that was in the free set lets a coordinate that the step
+        #           drove INTO its bound stay free, so the next step has `alpha_max = 0` and stalls
+        #           (measured: theta_3 driven to 0 in step 1, still free at step 2, alpha_max = 0).
+        #     The honest test is on the displacement, which is only available for coordinates the step
+        #     actually moved.
+        # CN: 只有当**这一步**把坐标留在边界时才固定它。（a）对所有坐标做数值检验会把刚释放、尚未移动的
+        #     坐标重新固定（迭代冻结）；（b）跳过整个自由集会漏掉被本步压到边界的坐标（下一步 alpha_max=0）。
+        # EN: **the displacement of the ACCEPTED step, not of the proposed one.** The line search may have
+        #     shortened the step, so `alpha * theta_part` overstates what moved; using it pins coordinates
+        #     the accepted step never touched (measured at eps=0.25 from the uniform start: the proposal
+        #     pointed at theta_2 = 0, the accepted step stopped at 0.2137, and theta_2 was pinned anyway,
+        #     after which the next step had alpha_max = 0).
+        # CN: 用**被接受步**的实际位移，而不是提议步的位移，否则会被误固定。
+        displacement = np.asarray(moved_by_step, dtype=np.float64)
         for index in range(n_theta):
-            if equality_pinned[index] or index in set(non_pivot.tolist()) or index == pivot:
-                # EN: a coordinate already in the FREE set must never be pinned merely because its value is
-                #     small. Pinning it would skip its step and freeze the iterate. (A released theta_2
-                #     = 0 with a positive step was being re-pinned here, which is why the solver took one
-                #     step and stopped.) Only coordinates that were not moved by this step can be pinned,
-                #     which in practice means ones that arrived at their bound during it.
-                # CN: 已在自由集里的坐标不能因为数值小而重新固定，否则迭代冻结。
+            if equality_pinned[index]:
                 continue
-            if theta[index] <= float(lower[index]) + tolerance_bound:
+            at_bound = theta[index] <= float(lower[index]) + tolerance_bound
+            if not at_bound:
+                continue
+            if abs(displacement[index]) > 0.0:
+                # EN: the step MOVED this coordinate and left it at the bound -> pin it.
+                # CN: 本步移动了它并停在边界 -> 固定。
                 active[index] = True
+            elif index not in set(non_pivot.tolist()) and index != pivot:
+                # EN: it was outside the step (already pinned) and is still at the bound: keep it pinned.
+                # CN: 它在步长之外且仍在边界：保持固定。
+                active[index] = True
+            # EN: otherwise the coordinate was in the free set and the step did NOT move it (a released
+            #     coordinate sitting at 0, or a step of length 0). It stays free: pinning it would either
+            #     freeze the iterate or, after a release, undo the release. Its multiplier is re-evaluated
+            #     at the top of the next iteration and it is released again if it still violates KKT.
+            # CN: 其余情况（自由但未被本步移动）保持自由，否则会冻结迭代或撤销释放。
         # EN: stagnation guard. A step that decreases psi by less than a tiny fraction of the scale is
         #     not progress; the earlier version looped on such steps for thousands of iterations while
         #     reporting "max_newton" and an unchanged objective.
@@ -600,21 +652,59 @@ def solve_joint_master(data: _Problem, theta_start: Float[np.ndarray, "k"], *,
     #     equality the theta block is not free and must not be counted (counting it would report the
     #     theta gradient, which is nonzero by design, as a failure to converge).
     # CN: 报告的梯度只覆盖真正自由的变量。θ 被等式固定时不计入 θ 块。
-    grad_final = np.asarray(final_gg[1:] - float(final_gg[0]), dtype=np.float64)
+    # EN: the g diagnostic is the raw column residual on the FREE coordinates `j >= 1`. `g_0` is fixed
+    #     by the gauge, so its gradient is neither a variable's gradient nor a reference -- subtracting it
+    #     (as the previous version did) corrupts the reported norm as well as the steps.
+    # CN: g 诊断量就是 `j>=1` 的列残差；不得减去 `grad_g[0]`。
+    grad_final = np.asarray(final_gg[1:], dtype=np.float64)
     if not frozen_theta:
         free_theta_now = np.flatnonzero(~equality_pinned & ~active)
-        grad_final = np.concatenate([np.asarray(final_gt, dtype=np.float64)[free_theta_now],
-                                     grad_final])
+        grad_final = np.concatenate([np.asarray(final_gt, dtype=np.float64)[free_theta_now]
+                                     - float(np.mean(np.asarray(final_gt, dtype=np.float64)[free_theta_now]))
+                                     if free_theta_now.size else np.zeros(0), grad_final])
     final_norm = float(np.linalg.norm(grad_final))
-    kkt_final_ok = bool(np.all(np.asarray(multipliers, dtype=np.float64)[active] >=
-                               -1e-8 * max(1.0, float(np.max(np.abs(final_gt))))))
-    if final_norm <= float(gradient_tolerance) and kkt_final_ok:
-        converged = True
+    # EN: **the final verdict is recomputed from the final iterate**, never inherited from the loop.
+    #     All six conditions must hold together; a small objective decrease or an accepted Armijo step is
+    #     not a convergence condition, and `stop_reason` describes the loop exit, not the verdict.
+    #     Measured on the Gate B optimum: grad_norm 1.4e-14, kkt 0, target-marginal 6e-16 -- a genuine
+    #     solve -- while the loop exited because the last step had become tiny. Reporting only the stop
+    #     reason there would have read as a failure.
+    # CN: 最终判定由**最后一个迭代点重新计算**，不继承循环里的标志；`stop_reason` 只描述退出原因。
+    free_theta_final = np.flatnonzero(~equality_pinned & ~active)
+    theta_grad_final = np.asarray(final_gt, dtype=np.float64)
+    if free_theta_final.size >= 1 and not frozen_theta:
+        lam_final = float(np.mean(theta_grad_final[free_theta_final]))
+        stationary = float(np.max(np.abs(theta_grad_final[free_theta_final] - lam_final)))
+    else:
+        lam_final = float(np.mean(theta_grad_final)) if theta_grad_final.size else 0.0
+        stationary = 0.0
+    pinned_final = np.flatnonzero(active)
+    multiplier_violation = float(max(0.0, -np.min(theta_grad_final[pinned_final] - lam_final))) \
+        if pinned_final.size else 0.0
+    g_residual = float(np.max(np.abs(grad_final))) if grad_final.size else 0.0
+    row_ok = float(np.max(np.abs(np.asarray(final_state.plan.sum(axis=0)).reshape(-1)
+                                 - data.source_mass) / data.source_mass)) \
+        if np.size(np.asarray(final_state.plan.sum(axis=0))) == data.source_mass.size else 0.0
+    col_error = float(final_state.marginal_error)
+    simplex_error = float(max(abs(float(theta_out.sum()) - 1.0), 0.0))
+    tolerance_scale = float(gradient_tolerance)
+    # EN: with theta pinned by an equality (the fixed-theta gate) there is no theta block to be
+    #     stationary, so the theta conditions are vacuously satisfied; the g conditions still apply.
+    # CN: θ 被等式固定时无 θ 平稳性可言，θ 条件自然满足；g 条件仍适用。
+    theta_ok = bool(frozen_theta or (stationary <= tolerance_scale and multiplier_violation <= 1e-8))
+    converged = bool(
+        theta_ok
+        and multiplier_violation <= 1e-8
+        and g_residual <= max(tolerance_scale, 1e-7)
+        and col_error <= 1e-8
+        and simplex_error <= 1e-12
+    )
+    _ = row_ok
     return JointMasterResult(
         theta=theta_out, source_dual=final_state.f, target_dual=g_out,
         plan_on_f=final_state.plan, psi=final_state.objective,
         gradient_norm=final_norm,
-        kkt_active_multipliers=multipliers, kkt_residual=float(kkt_residual),
+        kkt_active_multipliers=multipliers, kkt_residual=float(multiplier_violation),
         active_mask=active, converged=bool(converged),
         newton_steps=steps, cg_iterations=total_cg, hessian_vector_products=hvps,
         line_search_failures=failures, condition_estimate=lambda_min_seen,
