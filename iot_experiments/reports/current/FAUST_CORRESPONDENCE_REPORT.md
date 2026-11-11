@@ -510,12 +510,53 @@ that pair's own loop finished with. Objective: the **mean of the raw per-pair re
 **Sharing is worse than not learning at all.** The per-pair L1 distances to their own θ are 0.08, 0.16, 0.46 and
 **1.01**, so the four pairs want materially different weights and the compromise is bad for all of them.
 
-**The formulation is at fault, not the data — and this run does not test the hypothesis.** The objective averages
-**raw** regrets whose scales differ by 3× (0.00079, 0.00074, 0.0024, 0.0024), so the two hardest pairs dominate
-the average entirely. That is "one θ dictated by pairs 3 and 4", not "one θ shared fairly". The fix is to
-normalise each `R_p` by its own `R_uniform,p` before averaging; that rerun and a cross-regret matrix are the
-next step, and until it exists this row must be read as **"an unnormalised multi-pair objective fails"**, not as
-"sharing fails".
+### The normalised rerun did not rescue it
+
+Each pair's regret is now divided by its own `R_uniform,p` before averaging (scales 0.0913, 0.0729, 0.1729,
+0.1185 — they differ by 2.4×, so the normalisation is not cosmetic). **θ barely moved**:
+
+```
+unnormalised  [0, .0129, .0004, .0075, .0001, .0037, 0,0,0,0, .0228, .3660, .5866]
+normalised    [0, .0139, .0002, .0081, .0001, .0037, 0,0,0,0, .0362, .3672, .5707]
+```
+
+and the test result is **unchanged**: `multi` 0.4666 miss@5 % versus `single` 0.1974 and `uniform` 0.4043. So
+**the scale was not the cause**. The hypothesis "the objective was dominated by the two hardest pairs" is
+refuted; something else is wrong.
+
+### The cross-regret matrix shows what
+
+`R_p(θ_q) / R_uniform,p` — rows are the pair being *evaluated*, columns the θ that was *fitted* (th0…th3 =
+pairs (0,13), (2,41), (5,88), (7,52); th4 = the shared θ). Zero means that θ certifies that pair's plan.
+
+| | th0 | th1 | th2 | th3 | **shared** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| pair (0,13) | **0.0075** | 0.7566 | 0.0143 | 0.0114 | 0.0142 |
+| pair (2,41) | 0.0207 | **0.0086** | 0.0290 | 0.0252 | 0.0298 |
+| pair (5,88) | 0.1027 | 0.4349 | **0.0135** | 0.0565 | 0.0141 |
+| pair (7,52) | 0.0259 | **1.1218** | 0.0351 | **0.0193** | 0.0281 |
+
+Three readings:
+
+1. **Each θ certifies its own pair** (the diagonal is 0.008–0.019), so the fits work.
+2. **The pairs disagree violently.** The θ fitted on pair (2,41) has **75 %** and **112 %** of `R_uniform` on
+   pairs (0,13) and (7,52) — it is not a general-purpose weighting at all, it is specific to its own pair. Any
+   shared θ must therefore be a genuine compromise, and the shared column is one: **0.014–0.030 on every pair**,
+   as good as the *best* single θ (th2).
+3. **Low training regret does not transfer.** By this metric the shared θ is excellent: it certifies all four
+   plans nearly as well as each pair's own θ. Yet on held-out pairs it scores **0.467 miss@5 %**, worse than
+   uniform. Meanwhile th0, with the same kind of training regret, scores 0.197.
+
+**So the multi-pair objective is measuring the wrong thing, not optimising badly.** Fitting θ so that many plans
+are simultaneously near-optimal selects weights that are *plan-certifying* but not *correspondence-useful*; the
+same tension the corner analysis exposed (a vertex that satisfies the plan, not one that identifies the
+geometry). The honest conclusion is that **"many plans, one θ" in the max-margin/regret form does not help
+here**, and that a shared θ would need a different selection principle — e.g. held-out performance inside the
+fit, or averaging the *per-pair* θs rather than fitting a joint one.
+
+Note also that `learned_avg` in §4e — a plain mean of per-pair θs over vertex subsamples — *did* work. The
+difference is that averaging per-pair solutions is a variance reduction, whereas the joint LP imposes a common
+feasibility that the data does not support.
 
 ---
 

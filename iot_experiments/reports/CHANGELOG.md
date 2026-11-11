@@ -3,6 +3,21 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (final+) — multi-pair: normalisation refuted, cross-regret matrix added
+
+`multi_pair.py` now normalises each pair's regret by its own `R_uniform,p` (scales differ 2.4×) and reports a
+**cross-regret matrix** `R_p(theta_q)/R_uniform_p` via exact POT.
+
+**The normalisation changed nothing** (theta moved by ≤0.016 on one coordinate; test miss@5 % 0.4666 vs 0.4618
+before). So the "dominated by the two hardest pairs" explanation is **refuted**.
+
+**The matrix explains it**: each theta certifies its own pair (diagonal 0.008–0.019), the pairs disagree
+violently (theta from pair (2,41) has regret 0.76 and 1.12 × R_uniform on pairs (0,13) and (7,52)), and the
+shared theta is an excellent compromise by this metric (0.014–0.030 everywhere) — yet it scores 0.467
+miss@5 % on held-out pairs, worse than uniform. **Low training regret does not transfer**: the joint objective
+selects plan-certifying weights, not correspondence-useful ones. Contrast §4e, where simply *averaging
+per-pair* thetas did work.
+
 ## 2026-11-11 (final) — four objectives on one hypothesis class (FAUST)
 
 New `studies/real/faust/arms.py`: same cost family, same standardised 13 descriptors, same training pair, only

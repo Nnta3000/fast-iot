@@ -137,7 +137,26 @@ class _PairProblem:
     regret_single: float
 
 
-def _solve_multi(pairs: list[_PairProblem], k: int) -> dict[str, object]:
+def _uniform_regret(pair: _PairProblem) -> float:
+    """
+    CN: 该对的 `R_uniform`：均匀 θ 与一组可行对偶下的 regret，用作**这一对的尺度**。跨对比较必须用它归一，
+        因为原始 regret 的量级随实例差 3 倍（实测 0.00079 / 0.00074 / 0.0024 / 0.0024），直接平均会让最难的两对
+        独占目标。
+    EN: the pair's `R_uniform`: the regret of uniform theta at a feasible dual, used as **this pair's scale**.
+        Cross-pair averaging requires it because raw regrets differ by 3x across pairs (measured 0.00079,
+        0.00074, 0.0024, 0.0024), and a plain mean lets the two hardest pairs dominate the objective.
+    """
+    from iot.relaxed.master_regret import regret_objective, support_duals  # noqa: PLC0415
+
+    uniform = np.full(int(pair.features.n_features), 1.0 / float(pair.features.n_features))
+    f_u, g_u = support_duals(pair.problem, uniform, pair.edges)
+    objective = np.asarray(regret_objective(pair.problem), dtype=np.float64)
+    value = float(objective @ np.concatenate([uniform, f_u, g_u]))
+    return value if np.isfinite(value) and value > 0.0 else float("nan")
+
+
+def _solve_multi(pairs: list[_PairProblem], k: int, *, scales: list[float] | None = None
+                 ) -> dict[str, object]:
     """
     CN: 装配并求解共享 θ 的块 LP：变量 `[θ | (f_p, g_p) for p]`，每个 `(p, e)` 一条不等式行。
     EN: assemble and solve the shared-θ block LP: variables `[theta | (f_p, g_p) for p]`, one inequality row per
@@ -150,13 +169,15 @@ def _solve_multi(pairs: list[_PairProblem], k: int) -> dict[str, object]:
     data: list[np.ndarray] = []
     offset = int(k)
     objective = np.zeros(ncols, dtype=np.float64)
-    scale = 1.0 / float(len(pairs))
+    # CN: 每对先除以自己的 `R_uniform`，于是目标 = mean_p R_p / R_uniform_p（无量纲）。
+    # EN: divide each pair by its own `R_uniform`, so the objective is mean_p R_p / R_uniform_p (dimensionless).
+    weights = [1.0 / float(len(pairs))] * len(pairs) if scales is None else list(scales)
     # CN: 用 `enumerate` 记录行偏移。`pairs.index(pair)` 会对 dataclass 字段做 `==`，
     #     而字段里含 numpy 数组 ⇒ "truth value ... is ambiguous"（实测崩溃）。
     # EN: track the row offset with `enumerate`. `pairs.index(pair)` compares dataclass fields with `==`, and
     #     those fields hold numpy arrays -> "truth value ... is ambiguous" (measured crash).
     row_offset = 0
-    for pair in pairs:
+    for pair, pair_weight in zip(pairs, weights):
         m = int(pair.problem.n_source)
         n = int(pair.problem.n_target)
         r = np.asarray(pair.edges.rows, dtype=np.int64)
@@ -176,9 +197,9 @@ def _solve_multi(pairs: list[_PairProblem], k: int) -> dict[str, object]:
         rows_idx.append(base)
         cols_idx.append(offset + m + c)
         data.append(np.ones(n_edges, dtype=np.float64))
-        objective[offset:offset + m] = -np.asarray(pair.problem.resolved_source_mass) * scale
-        objective[offset + m:offset + m + n] = -np.asarray(pair.problem.resolved_target_mass) * scale
-        objective[: int(k)] += scale * np.asarray(regret_objective(pair.problem)[: int(k)])
+        objective[offset:offset + m] = -np.asarray(pair.problem.resolved_source_mass) * pair_weight
+        objective[offset + m:offset + m + n] = -np.asarray(pair.problem.resolved_target_mass) * pair_weight
+        objective[: int(k)] += pair_weight * np.asarray(regret_objective(pair.problem)[: int(k)])
         offset += m + n
 
     a_ub = sparse.coo_matrix((np.concatenate(data), (np.concatenate(rows_idx), np.concatenate(cols_idx))),
@@ -197,6 +218,42 @@ def _solve_multi(pairs: list[_PairProblem], k: int) -> dict[str, object]:
     theta = theta / total if total > 0 else theta
     return {"ok": True, "theta": theta, "objective": float(result.fun),
             "shape": (total_rows, ncols), "nnz": int(a_ub.nnz)}
+
+
+def _cross_regret(pairs: list[_PairProblem], thetas: list[np.ndarray], scales: list[float]
+                  ) -> np.ndarray:
+    """
+    CN: **交叉 regret 矩阵** `M[p, q] = R_p(theta_q) / R_uniform_p`，其中 `R_p(θ) = <θ, φ̄_p> − OT_p(c_p(θ))`
+        （`pi_hat` 是最优方案时该值为 0）。用 POT 精确求解，故 θ 来自另一对时也能给出诚实的量。
+    EN: the **cross-regret matrix** `M[p, q] = R_p(theta_q) / R_uniform_p`, with
+        `R_p(theta) = <theta, phi_bar_p> - OT_p(c_p(theta))` (zero iff `pi_hat` is optimal). Exact POT, so a
+        theta borrowed from another pair is still measured honestly.
+    """
+    import ot  # noqa: PLC0415
+    from iot.relaxed.master_regret import regret_objective  # noqa: PLC0415
+
+    # CN: 行 = 被评估的对（P），列 = θ 的来源（P 个单对 θ + 共享 θ ⇒ P+1）。两者大小不同，
+    #     之前按 (P, P) 分配导致 `index 4 is out of bounds`（实测崩溃）。
+    # EN: rows = the pair being evaluated (P), columns = where theta came from (P single thetas + the shared
+    #     one => P+1). They differ; allocating `(P, P)` raised `index 4 is out of bounds` (measured crash).
+    out = np.full((len(pairs), len(thetas)), np.nan, dtype=np.float64)
+    for p, pair in enumerate(pairs):
+        phi_bar = np.asarray(regret_objective(pair.problem)[: int(pair.features.n_features)],
+                             dtype=np.float64)
+        a = np.asarray(pair.problem.resolved_source_mass, dtype=np.float64)
+        b = np.asarray(pair.problem.resolved_target_mass, dtype=np.float64)
+        a = a / a.sum()
+        b = b / b.sum()
+        n_src = int(pair.features.n_source)
+        n_tgt = int(pair.features.n_target)
+        rows = np.repeat(np.arange(n_src, dtype=np.int64), n_tgt)
+        cols = np.tile(np.arange(n_tgt, dtype=np.int64), n_src)
+        for q, theta in enumerate(thetas):
+            cost = np.asarray(pair.features.costs(np.asarray(theta, dtype=np.float64), rows, cols),
+                              dtype=np.float64).reshape(n_src, n_tgt)
+            transport = float(ot.emd2(a, b, cost, numItermax=10_000_000))
+            out[p, q] = (float(phi_bar @ np.asarray(theta, dtype=np.float64)) - transport) / scales[p]
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -246,7 +303,13 @@ def main(argv: list[str] | None = None) -> int:
         log.line(f"pair {pair}: |F|={int(master.last_edges.size)} regret_single={float(single.regret):.6g}")
 
     k = int(built[0].features.n_features)
-    multi = _solve_multi(built, k)
+    scales = [_uniform_regret(piece) for piece in built]
+    log.line("per-pair R_uniform (the normalising scale): "
+             + ", ".join(f"{s:.4g}" for s in scales))
+    if not all(np.isfinite(scales)):
+        log.line("a pair has a non-positive R_uniform; falling back to the unnormalised objective")
+        scales = None  # type: ignore[assignment]
+    multi = _solve_multi(built, k, scales=scales)
     if not multi.get("ok"):
         log.line(f"multi-pair LP failed: {multi.get('reason')} (shape {multi.get('shape')})")
         log.close()
@@ -259,6 +322,22 @@ def main(argv: list[str] | None = None) -> int:
         log.line(f"  pair {pair}: L1(theta_single, theta_multi) = {diff:.4f}")
 
     rows: list[RunRecord] = []
+    # CN: 交叉 regret 矩阵：行 = 评估用的对，列 = θ 的来源（单对 θ 们 + 共享 θ）。
+    # EN: cross-regret matrix: rows = the pair being evaluated, columns = where the theta came from.
+    thetas_cols = [piece.theta_single for piece in built] + [theta_multi]
+    scale_column = [float(v) if np.isfinite(v) else 1.0 for v in scales] if scales else [1.0] * len(built)
+    matrix = _cross_regret(built, thetas_cols, scale_column)
+    log.line("\ncross-regret R_p(theta_q) / R_uniform_p   (rows = evaluated pair, cols = theta source)")
+    header = "        " + "".join(f"{'th'+str(q):>10}" for q in range(len(thetas_cols)))
+    log.line(header + "   (last column = shared theta)")
+    for p, pair in enumerate(train_pairs):
+        log.line(f"pair{str(pair):<10}" + "".join(f"{matrix[p, q]:>10.4f}" for q in range(len(thetas_cols))))
+    rows.append(RunRecord(study=str(config.study), geometry="cross_regret", arm="matrix", k=k,
+                          m=int(config.n_sub), draw=0, metrics={},
+                          config=config.to_dict(),
+                          extra={"matrix": matrix.tolist(), "train_pairs": [list(p) for p in train_pairs],
+                                 "scales": [float(v) for v in (scales or [])]}))
+
     for pair in test_pairs:
         a = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
         b = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
