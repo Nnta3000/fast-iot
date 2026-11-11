@@ -35,8 +35,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-import ot
-from jaxtyping import Float
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -45,7 +43,11 @@ if str(_REPO_ROOT) not in sys.path:
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import pair_geometry, read_ply, shared_index  # noqa: E402
-from iot_experiments.harness.faust_match import cost_matrix, map_metrics  # noqa: E402
+from iot_experiments.harness.faust_match import (  # noqa: E402
+    duality_gap,
+    map_metrics,
+    near_optimal_walk,
+)
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import RunLog, RunRecord, summarise, write_records  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import default_pairs, fit_theta  # noqa: E402
@@ -102,34 +104,6 @@ class FaceConfig(RunConfig):
         parser.add_argument("--max-iterations", type=int, default=30)
 
 
-def diagnose(theta: Float[np.ndarray, "k"], a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
-             ) -> tuple[bool, float, int]:
-    """
-    EN: admissibility and its two diagnostics, all label-free.
-
-        `admissible` is **discrete and exact**: decode the exact OT plan under `c(theta)` and ask whether the
-        induced map is the identity on every vertex. That is the statement the study actually needs -- "this
-        theta reproduces the training correspondence" -- and it is robust to the 1e-13 numerical noise that
-        makes a *regret* threshold a knife edge (the reference's own regret is ~1e-4, so a tolerance below
-        that rejects every perturbation).
-
-        `regret` is `R(theta) = <c(theta), I/n> - OT(c(theta))`, reported for context, and `wrong` is the
-        number of vertices the decoded map gets wrong (0 for an admitted theta).
-
-    CN: `admissible` 用**离散精确**判据：在 `c(θ)` 下解精确 OT，检查诱导映射是否逐顶点为单位映射——这正是本研究
-        需要的"该 θ 复现训练对应"。`regret` 与错配顶点数一并返回作为诊断量。
-    """
-    cost = cost_matrix(a, b, theta)
-    n = int(cost.shape[0])
-    mass = np.full(n, 1.0 / n)
-    plan = ot.emd(mass, mass, cost, numItermax=10_000_000)
-    predicted = np.argmax(plan, axis=1).astype(np.int64)
-    wrong = int(np.sum(predicted != np.arange(n)))
-    transport = float(np.sum(cost * plan))
-    value = float(np.trace(cost) / n) - transport
-    return wrong == 0, value, wrong
-
-
 def main(argv: list[str] | None = None) -> int:
     """CN: 入口。EN: entry point."""
     parser = build_parser(FaceConfig)
@@ -162,8 +136,9 @@ def main(argv: list[str] | None = None) -> int:
     log.line(f"reference (max-margin) theta fitted in {time.perf_counter() - started:.1f}s; "
              f"regret={fit['regret']:.4g} zeros={int(np.sum(reference <= 1e-12))}")
 
-    uniform_admissible, uniform_regret, uniform_wrong = diagnose(np.full(k, 1.0 / k), a, b)
-    ref_admissible, reference_regret, ref_wrong = diagnose(reference, a, b)
+    uniform_regret, uniform_wrong = duality_gap(np.full(k, 1.0 / k), a, b)
+    reference_regret, ref_wrong = duality_gap(reference, a, b)
+    ref_admissible = abs(reference_regret) < 1e-12 and ref_wrong == 0
     log.line(f"R_uniform={uniform_regret:.4g} (decoded map wrong at {uniform_wrong} vertices); "
              f"R(reference)={reference_regret:.4g} (wrong at {ref_wrong}); "
              f"reference admissible: {ref_admissible}")
@@ -172,34 +147,16 @@ def main(argv: list[str] | None = None) -> int:
     # EN: **rejection sampling** from the reference vertex, keeping only perturbations that still certify the
     #     training plan. The step shrinks on rejection and is nudged up on acceptance, so the walk explores the
     #     cone instead of sticking at one point.
-    rng = np.random.default_rng(0)
     # CN: 相对判据——"与已交付参考解在训练对上同样好"。绝对判据在参考点处为空集（见 provenance）。
     # EN: relative criterion -- "as good as the shipped reference on the training pair". The absolute one is
     #     empty at the reference, which would have made the diagnostic report "one point" for the wrong reason.
     tolerance = abs(reference_regret) * (1.0 + float(config.slack_rel))
-    log.line(f"admission tolerance (relative): R <= {tolerance:.4g} = R(reference) * {1 + float(config.slack_rel):.2f}")
-
-    admitted: list[Float[np.ndarray, "k"]] = [reference]
-    admitted_regret: list[float] = [abs(reference_regret)]
-    step = float(config.step)
-    proposals = 0
-    while proposals < int(config.proposals):
-        proposals += 1
-        direction = rng.normal(size=k)
-        candidate = np.maximum(reference + step * direction, 0.0)
-        total = float(candidate.sum())
-        if total <= 0.0:
-            step *= 0.7
-            continue
-        candidate /= total
-        _ok, value, _wrong = diagnose(candidate, a, b)
-        value = abs(value)
-        if value <= tolerance:
-            admitted.append(candidate)
-            admitted_regret.append(value)
-            step = min(step * 1.15, 0.5)
-        else:
-            step *= 0.85
+    log.line(f"admission tolerance (relative): R <= {tolerance:.4g} = R(reference) * "
+             f"{1 + float(config.slack_rel):.2f}")
+    proposals = int(config.proposals)
+    admitted = near_optimal_walk(reference, a, b, tolerance=tolerance, proposals=proposals,
+                                 step=float(config.step), seed=0)
+    admitted_regret = [abs(duality_gap(theta, a, b)[0]) for theta in admitted]
     log.line(f"admitted {len(admitted) - 1}/{proposals} proposals (shell thickness); "
              f"max admission regret {max(admitted_regret):.3g}")
     log.line(f"admitted thetas have {int(np.mean([np.sum(t <= 1e-12) for t in admitted]))} exact zeros on average, "

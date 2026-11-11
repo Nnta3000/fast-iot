@@ -66,7 +66,11 @@ splits), and report the pairwise L1 distance between the regional θ's.
 
 ## 2. Candidate directions, in the order I would spend time
 
-### A. Return the admissible set, not a point
+### A. Return the admissible set, not a point — **RUN, positive (report §4l)**
+
+Result: validation selection beats the max-margin reference by 0.0138 `miss@5 %` (CI [−0.0224, −0.0024], 7/8
+pairs), recovering 68 % of the test-oracle ceiling; the median of the set does not (it is worse). The protocol
+below is kept as written, for reference.
 
 Use iOT's **cone** as a candidate generator, then select inside it on held-out data. This turns the
 identifiability weakness (§4.5 of `AGENTS.md`, the corner analysis) into a feature, and needs no new

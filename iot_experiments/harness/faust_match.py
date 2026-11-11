@@ -31,11 +31,13 @@ __all__ = [
     "cost_matrix",
     "cost_matrix_torch",
     "cost_tensor",
+    "duality_gap",
     "fit_softmax",
     "free_vram_gb",
     "geodesic_errors",
     "map_metrics",
     "match",
+    "near_optimal_walk",
     "sinkhorn_log",
 ]
 
@@ -187,6 +189,64 @@ def fit_softmax(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, tau
     with torch.no_grad():
         theta = torch.softmax(u, dim=0).detach().to("cpu", torch.float64).numpy()
     return np.asarray(theta, dtype=np.float64)
+
+
+def duality_gap(theta: Float[np.ndarray, "k"], a: Float[np.ndarray, "m k"], b: Float[np.ndarray, "n k"]
+                ) -> tuple[float, int]:
+    """
+    EN: `(R(theta), wrong)` with no labels: `R = <c(theta), pi_hat> - OT(c(theta))` measures how far the
+        observed plan is from being optimal, and `wrong` counts the vertices whose decoded target differs from
+        the diagonal. `R = 0` and `wrong = 0` mean the cost certifies the plan.
+
+        Both are returned because they disagree in practice: the fit's `R` is ~1 % of `R_uniform` while its
+        decoded map is wrong at thousands of vertices, so a regret tolerance is much weaker than it looks.
+
+    CN: 无标签的 `(R(θ), wrong)`：`R` 是观测方案离最优的距离，`wrong` 是解码后在训练对上错配的顶点数。
+    """
+    cost = cost_matrix(a, b, theta)
+    n = int(cost.shape[0])
+    mass = np.full(n, 1.0 / n)
+    plan = ot.emd(mass, mass, cost, numItermax=10_000_000)
+    predicted = np.argmax(plan, axis=1).astype(np.int64)
+    wrong = int(np.sum(predicted != np.arange(n)))
+    return float(np.trace(cost) / n - np.sum(cost * plan)), wrong
+
+
+def near_optimal_walk(reference: Float[np.ndarray, "k"], a: Float[np.ndarray, "m k"],
+                      b: Float[np.ndarray, "n k"], *, tolerance: float, proposals: int,
+                      step: float = 0.08, seed: int = 0) -> list[Float[np.ndarray, "k"]]:
+    """
+    EN: sample the set `{theta : R(theta) <= tolerance}` by a normalised Gaussian random walk from
+        `reference`, keeping only feasible proposals. The step grows on acceptance and shrinks on rejection,
+        so the walk explores the shell instead of sticking to one point. Returns the reference plus every
+        accepted point (reference first, so callers can treat index 0 as the shipped answer).
+
+        A random walk is needed because `reference` sits on the boundary: an isotropic draw from the simplex is
+        rejected essentially always, and a fixed step is either entirely inside (no exploration) or entirely
+        outside (no points).
+
+    CN: 从 `reference` 出发的归一化高斯随机游走，只保留 `R <= tolerance` 的可行点；步长自适应。参考点位于边界
+        上，因此不能靠均匀采样。
+    """
+    rng = np.random.default_rng(int(seed))
+    admitted: list[Float[np.ndarray, "k"]] = [reference]
+    step = float(step)
+    made = 0
+    while made < int(proposals):
+        made += 1
+        candidate = np.maximum(reference + step * rng.normal(size=int(reference.size)), 0.0)
+        total = float(candidate.sum())
+        if total <= 0.0:
+            step *= 0.7
+            continue
+        candidate = candidate / total
+        gap, _wrong = duality_gap(candidate, a, b)
+        if abs(gap) <= tolerance:
+            admitted.append(candidate)
+            step = min(step * 1.15, 0.5)
+        else:
+            step *= 0.85
+    return admitted
 
 
 def free_vram_gb() -> float:

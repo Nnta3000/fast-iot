@@ -3,6 +3,24 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-12 — direction A: validation selection inside the near-optimal set WORKS
+
+New `studies/real/faust/select.py` (n=4000): the 71 near-optimal candidates from D1, ranked on 6 validation
+pairs from the TRAINING subjects; only the winner goes to the 8 held-out pairs.
+
+  uniform 0.4219 | median-of-set 0.2232 | reference (max-margin) 0.2028 | selected 0.1890
+  (D1's test-selected ceiling: 0.1833)
+
+  selected - reference  -0.0138  CI [-0.0224,-0.0024]  wins 7/8   <- CI excludes zero
+  median   - reference  +0.0204  CI [+0.0137,+0.0280]  wins 0/8
+
+So validation selection recovers 68% of the distance to the test-oracle ceiling, for free. The reference ranks
+23/71 on validation (0.1802 vs best 0.1605): the max-margin point was never a good selection rule.
+Aggregation does NOT substitute -- the median of the set is worse than the reference, the opposite of the
+per-seed averaging in 4e, because this set spans genuinely different solutions.
+
+Caveat: 0.0138 is 6.8% relative, smaller than the LP-vs-supervised gap (0.026).
+
 ## 2026-11-11 (final++++) — the two go/no-go diagnostics: both GO, with a caveat that matters more
 
 New `studies/real/faust/face.py` (D1, n=4000) and `regional.py` (D2, n=2000), each pre-registered in

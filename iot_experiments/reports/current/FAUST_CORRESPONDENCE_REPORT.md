@@ -706,6 +706,49 @@ is a submission.
 
 ---
 
+## 4l. Direction A: selecting inside the near-optimal set, on validation pairs
+
+D1 (§4k) measured the **ceiling** of selecting inside the near-optimal set by choosing the best candidate on
+the *test* pairs. This is the method: the same 71 candidates, ranked on **6 validation pairs drawn from the
+training subjects**, and only the winner taken to the held-out pairs. Nothing is selected on test data.
+
+| | `miss@5 %` (8 held-out pairs) |
+| --- | ---: |
+| `uniform` | 0.4219 |
+| `median` of the candidate set (selection-free) | 0.2232 |
+| **`reference`** (shipped max-margin θ) | **0.2028** |
+| **`selected`** (validation-best) | **0.1890** |
+| test-selected ceiling from D1 | 0.1833 |
+
+Paired bootstrap over the 8 held-out pairs:
+
+| comparison | Δ `miss@5 %` | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| `selected` − `reference` | **−0.0138** | **[−0.0224, −0.0024]** | **7/8** |
+| `median` − `reference` | **+0.0204** | [+0.0137, +0.0280] | 0/8 |
+| `selected` − `uniform` | −0.2329 | [−0.3101, −0.1659] | 8/8 |
+
+**Three readings.**
+
+1. **The selection works, and it works from validation data.** The gap is −0.0138 with a CI that excludes zero,
+   winning 7 of 8 pairs. It recovers **68 %** of the distance from the shipped θ to the test-oracle ceiling
+   (0.2028 → 0.1890, ceiling 0.1833) without touching test data, without a new solver, and without extra
+   labels — the candidate set comes from the same fit that was already being run.
+2. **The reference is mediocre by its own criterion, not just on test.** On the validation pairs it ranks
+   **23 / 71** (val `miss@5 %` 0.1802 against a best of 0.1605, spread 0.0856). So the shipped max-margin point
+   was never a good selection rule; it was simply the point the solver happened to return.
+3. **Aggregation does not substitute for selection.** The coordinate-wise median of the set is *worse* than the
+   reference (+0.0204, 0/8). This is the opposite of §4e, where averaging per-seed θ helped: there, averaging
+   reduced noise in a *single* estimator; here the set spans genuinely different solutions, and the mean of
+   them is a worse cost than any of its better members.
+
+**Caveat, stated plainly.** 0.0138 is 6.8 % relative. It is smaller than the LP-vs-supervised gap measured in
+§4f (0.026) and far smaller than the gap to a competitive FAUST method. The claim it supports is narrow and
+true: *the max-margin θ is an arbitrary point in a set that matters, and picking in that set on validation data
+buys a small, reproducible improvement for free.*
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

@@ -1,0 +1,32 @@
+[16:56:54 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_select/run.log
+[16:56:54 +    0.0s] preflight ok=True mem=7.8 GB
+[16:56:54 +    0.0s] train pair (0, 13); validation (training subjects) [(0, 16), (6, 21), (3, 35), (9, 49), (14, 22), (11, 36)]; test [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[16:58:50 +  116.4s] reference fitted in 110.2s; regret=0.001038, training map wrong at 2346/4000; tolerance=0.001297
+[17:03:05 +  371.0s] admitted 70/150 proposals -> 71 candidates
+[17:03:05 +  371.0s] 
+--- validation on 6 training-subject pairs (71 candidates) ---
+[17:04:58 +  484.5s]    validation pair (0, 16): scored 71 candidates
+[17:07:12 +  617.7s]    validation pair (6, 21): scored 71 candidates
+[17:09:34 +  759.7s]    validation pair (3, 35): scored 71 candidates
+[17:11:23 +  869.0s]    validation pair (9, 49): scored 71 candidates
+[17:13:11 +  976.7s]    validation pair (14, 22): scored 71 candidates
+[17:14:48 + 1074.5s]    validation pair (11, 36): scored 71 candidates
+[17:14:48 + 1074.5s] validation miss@5%: reference 0.1802 (rank 23/71); best candidate 0.1605 (index 32); spread 0.0856
+[17:14:48 + 1074.5s] 
+--- evaluation on held-out pairs ---
+[17:15:02 + 1087.6s]    pair050-066: reference=0.1593  selected=0.1805  median=0.1710  uniform=0.5188
+[17:15:15 + 1101.5s]    pair056-071: reference=0.2660  selected=0.2457  median=0.2790  uniform=0.5118
+[17:15:30 + 1115.7s]    pair053-085: reference=0.2102  selected=0.1978  median=0.2268  uniform=0.6435
+[17:15:41 + 1127.1s]    pair059-099: reference=0.1013  selected=0.0750  median=0.1353  uniform=0.1747
+[17:15:55 + 1140.8s]    pair064-072: reference=0.2172  selected=0.1883  median=0.2495  uniform=0.3590
+[17:16:08 + 1154.3s]    pair061-086: reference=0.1797  selected=0.1600  median=0.1883  uniform=0.3605
+[17:16:23 + 1169.2s]    pair067-091: reference=0.3390  selected=0.3300  median=0.3523  uniform=0.5038
+[17:16:35 + 1181.3s]    pair072-085: reference=0.1495  selected=0.1345  median=0.1832  uniform=0.3033
+[17:16:35 + 1181.4s]    selected  - reference mean -0.0138  95% CI [-0.0224, -0.0024]  wins 7/8
+[17:16:35 + 1181.4s]    selected  - uniform   mean -0.2329  95% CI [-0.3101, -0.1659]  wins 8/8
+[17:16:35 + 1181.4s]    median    - reference mean +0.0204  95% CI [+0.0137, +0.0280]  wins 0/8
+[17:16:35 + 1181.4s]    median    - uniform   mean -0.1988  95% CI [-0.2859, -0.1218]  wins 8/8
+[17:16:35 + 1181.4s] 
+[{'arm': 'median', 'n_draws': 8, 'mean_mean': 0.056997869476953116, 'mean_std': 0.033675046508333216, 'miss_5pct_mean': 0.22315625, 'miss_5pct_std': 0.06495129635686651}, {'arm': 'median_minus_reference', 'n_draws': 1, 'mean_mean': 0.020375000000000004, 'mean_std': 0.0}, {'arm': 'median_minus_uniform', 'n_draws': 1, 'mean_mean': -0.19875, 'mean_std': 0.0}, {'arm': 'reference', 'n_draws': 8, 'mean_mean': 0.052940880835489215, 'mean_std': 0.034633820938358505, 'miss_5pct_mean': 0.20278125000000002, 'miss_5pct_std': 0.06927317273618627}, {'arm': 'selected', 'n_draws': 8, 'mean_mean': 0.05234719402387005, 'mean_std': 0.035200757091510375, 'miss_5pct_mean': 0.18896875000000002, 'miss_5pct_std': 0.07076208349771437}, {'arm': 'selected_minus_reference', 'n_draws': 1, 'mean_mean': -0.0138125, 'mean_std': 0.0}, {'arm': 'selected_minus_uniform', 'n_draws': 1, 'mean_mean': -0.23293750000000002, 'mean_std': 0.0}, {'arm': 'uniform', 'n_draws': 8, 'mean_mean': 0.11526618027673119, 'mean_std': 0.061382591281672644, 'miss_5pct_mean': 0.42190625, 'miss_5pct_std': 0.13970783898349262}, {'arm': 'validation', 'n_draws': 1}]
+[17:16:35 + 1181.4s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_select/records.json (37 rows)
+[17:16:35 + 1181.4s] log closed after 1181.4s
