@@ -378,6 +378,42 @@ default: n=4000 costs 6 min/fit, n=6890 costs 5.2 min/fit at 8× the EMD work.
 
 ---
 
+## 4e. Support-matched control, bootstrap-averaged θ, and three seeds (n = 4000)
+
+Three vertex subsamples (seeds 0/1/2), n=4000, subject-disjoint, 8 held-out pairs → **24 readings**. The run
+also evaluates two derived weights:
+
+- **`learned_avg`** — the per-coordinate mean of θ across the three subsamples (variance reduction; the corner
+  analysis showed t=32/64/128 trade mass across resamples).
+- **`support_matched`** — uniform weights over the **nonzero support** of that average: the same selected
+  descriptors, no fitted magnitudes.
+
+| arm | mean error | miss@1 % | miss@5 % |
+| --- | ---: | ---: | ---: |
+| `uniform_theta` | 0.1164 | 0.689 | 0.4215 |
+| `support_matched` (simplex support) | 0.0869 | 0.585 | **0.3330** |
+| **`learned`** (per seed) | 0.0532 | 0.500 | **0.2020** |
+| `learned_avg` (averaged θ) | 0.0526 | 0.505 | **0.2025** |
+| `uniform_late_hks` | 0.3411 | 0.829 | 0.6726 |
+
+**The support/weights decomposition.** Choosing *which* descriptors to use is worth 0.4215 → 0.3330
+(−0.089), and the fitted magnitudes are worth 0.3330 → 0.2020 (**−0.131**). So **the magnitudes matter more
+than the support** — the opposite of what "the fit just picks the late-HKS block" would predict, and consistent
+with §4c where uniform late-HKS is the worst arm.
+
+**Bootstrap-averaging changes nothing** (0.2025 vs 0.2020, inside noise). That is a *positive* result for
+stability: the per-seed θ already agree closely enough that averaging them is a no-op, which agrees with the
+corner analysis (stable support, modest within-face wobble).
+
+**Three seeds at n=4000:** `learned_selected` over 24 readings is 0.2020 miss@5 %, Δ vs uniform **−0.2196**,
+8/8 pairs. The seed spread on the mean error is ≤0.02, well below the gap to any baseline.
+
+Note `support_matched` for the **box** arm (rel 0.25) is exactly `uniform_theta`: with a box the support is all
+13 coordinates, so the control carries no information there. It only bites under simplex — which is another
+reason the simplex-only setting is the informative one.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

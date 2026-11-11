@@ -88,6 +88,8 @@ PROVENANCE: dict[str, object] = {
     "question": "does a theta fitted on one registered FAUST pair recover the true vertex correspondence on "
                 "HELD-OUT pairs, better than uniform weights?",
     "plan": "pi_hat = I/n on a shared index subsample of both meshes (the registered bijection)",
+    "pairing": "inter = pairs across two different subjects (the hard case); intra = the same subject in two "
+               "poses (the easy case). Subject-disjointness holds either way",
     "split": "SUBJECT-DISJOINT: training and evaluation subjects do not intersect (checked by `check_split`, "
              "which exits on violation). Training pair ids come from the training subjects only and every "
              "evaluation pair from the test subjects only. An earlier revision of this module had NO such "
@@ -101,6 +103,12 @@ PROVENANCE: dict[str, object] = {
                    "and rel=0.9 the narrowest; rel=None (learned_simplex) is the whole simplex",
     "vertex_subsamples": "several index subsamples (default seeds 0,1,2); theta is REFITTED per seed because it "
                          "depends on the sampled vertices",
+    "bootstrap_averaged_theta": "learned_avg_<rel>: the per-coordinate mean of theta across the vertex "
+                                "subsamples, evaluated on the test pairs. It reduces the variance of how much "
+                                "mass each HKS scale takes, which the corner analysis showed is not identified",
+    "support_matched_control": "support_matched_<rel>: uniform weights over the NONZERO support of the averaged "
+                               "theta. Same selected descriptors, no fitted magnitudes -- separates 'right block' "
+                               "from 'right weights inside the block'",
     "metric": "GEODESIC distance on the target (potpourri3d heat method) between predicted and true vertex, "
               "normalised by sqrt(surface area) of the target -- the FAUST protocol. Miss rates at 1% and 5%",
     "descriptors": "K=13: extrinsic xyz (centred, scaled by diameter), log 1-ring area, log curvature, 8 HKS "
@@ -131,6 +139,7 @@ class CorrespondenceConfig(RunConfig):
     train_pair: tuple[int, ...] = (0, 13)
     test_pairs: tuple[int, ...] = ()
     test_pair_count: int = 8
+    pairing: str = "inter"        # inter = different subjects | intra = same subject, different pose
     seeds: tuple[int, ...] = (0, 1, 2)
     oracle: int = 1            # refit theta on each evaluated pair (a ceiling, not a method)
     validation: int = 1        # evaluate the validation pairs (used to choose the box width)
@@ -151,6 +160,7 @@ class CorrespondenceConfig(RunConfig):
         parser.add_argument("--train-pair", type=int, nargs=2, default=[0, 13])
         parser.add_argument("--test-pairs", type=int, nargs="*", default=[])
         parser.add_argument("--test-pair-count", type=int, default=8)
+        parser.add_argument("--pairing", default="inter", choices=["inter", "intra"])
         parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
         parser.add_argument("--oracle", type=int, default=1,
                             help="0 skips the per-pair oracle refit (the ceiling); the headline arms are "
@@ -203,6 +213,31 @@ def default_pairs(subjects: tuple[int, ...], count: int) -> list[tuple[int, int]
         i += 1
         if i > 50 * int(count) + 50:
             raise SystemExit("could not build enough distinct pairs from that subject set")
+    return out
+
+
+def intra_pairs(subjects: tuple[int, ...], count: int) -> list[tuple[int, int]]:
+    """
+    CN: **同受试者、不同姿态**的配对：`10*s + p1` 与 `10*s + p2`。这比跨受试者容易，所以它是"难度轴"的下端；
+        已见过的受试者不出现在评估侧（仍由 `check_split` 保证）。
+    EN: **same subject, different pose** pairs: `10*s + p1` against `10*s + p2`. Easier than inter-subject, so
+        it is the low end of the difficulty axis; the disjointness of the subject sets is still enforced by
+        `check_split`.
+    """
+    poses = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    uniq = sorted({int(v) for v in subjects})
+    out: list[tuple[int, int]] = []
+    i = 0
+    while len(out) < int(count):
+        subject = uniq[i % len(uniq)]
+        first = poses[(2 * i) % len(poses)]
+        second = poses[(2 * i + 3) % len(poses)]
+        pair = (10 * subject + first, 10 * subject + second)
+        if pair[0] != pair[1] and pair not in out:
+            out.append(pair)
+        i += 1
+        if i > 50 * int(count) + 50:
+            raise SystemExit("could not build enough distinct intra-subject pairs")
     return out
 
 
@@ -363,7 +398,8 @@ def _sample_index(mesh: FaustMesh, config: CorrespondenceConfig, seed: int) -> I
 
 
 def _evaluate_pair(a_mesh: FaustMesh, b_mesh: FaustMesh, *, config: CorrespondenceConfig,
-                   thetas: dict[str, Float[np.ndarray, "k"]], seed: int) -> list[RunRecord]:
+                   thetas: dict[str, Float[np.ndarray, "k"]], seed: int,
+                   baselines: bool = True) -> list[RunRecord]:
     """CN: 在一对形状上评估全部臂（θ 由外部提供）。EN: evaluate every arm on one pair."""
     idx = _sample_index(a_mesh, config, seed)
     a, b = standardise(descriptors(a_mesh)[idx], descriptors(b_mesh)[idx])
@@ -405,6 +441,10 @@ def _evaluate_pair(a_mesh: FaustMesh, b_mesh: FaustMesh, *, config: Corresponden
         "uniform_theta": _cost_matrix(a, b, uniform_theta),
         "grouped_uniform": grouped_cost,
     }
+    if not baselines:
+        # CN: 第二遍只算新加入的 θ（平均 θ / 支撑匹配），不重复算基线。
+        # EN: the second pass evaluates only the new thetas (averaged / support-matched); no baseline rerun.
+        costs = {}
     for name, theta in thetas.items():
         if theta is not None:
             costs[name] = _cost_matrix(a, b, np.asarray(theta, dtype=np.float64))
@@ -442,6 +482,8 @@ def main(argv: list[str] | None = None) -> int:
         if len(flat) % 2:
             raise SystemExit("--test-pairs needs an even number of ids (i j k l ...)")
         test_pairs = [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
+    elif str(config.pairing) == "intra":
+        test_pairs = intra_pairs(test_subjects, int(config.test_pair_count))
     else:
         test_pairs = default_pairs(test_subjects, int(config.test_pair_count))
     check_split(train_subjects, test_subjects, train_pair, test_pairs)
@@ -476,6 +518,7 @@ def main(argv: list[str] | None = None) -> int:
     b_tr = read_ply(root / f"tr_reg_{train_pair[1]:03d}.ply")
 
     rows: list[RunRecord] = []
+    per_rel_thetas: dict[float | None, list[np.ndarray]] = {rel: [] for rel in rels}
     for seed in [int(v) for v in config.seeds]:
         idx = _sample_index(a_tr, config, seed)
         a, b = standardise(descriptors(a_tr)[idx], descriptors(b_tr)[idx])
@@ -487,6 +530,8 @@ def main(argv: list[str] | None = None) -> int:
             fits[rel] = fit
             theta_r = fit["theta"]
             n_at_bound = int(np.sum(np.isclose(theta_r, theta_r.min(), atol=1e-9))) if theta_r is not None else -1
+            if theta_r is not None:
+                per_rel_thetas[rel].append(np.asarray(theta_r, dtype=np.float64))
             log.line(f"[seed {seed}] {arm_of(rel):<18} regret={fit['regret']:.4g} "
                      f"converged={fit['converged']} min={0.0 if theta_r is None else theta_r.min():.4f} "
                      f"max={0.0 if theta_r is None else theta_r.max():.4f} at_min={n_at_bound}")
@@ -548,6 +593,41 @@ def main(argv: list[str] | None = None) -> int:
     rows = [dataclasses.replace(r, geometry=r.geometry[5:]) if r.geometry.startswith("test:") else r
             for r in rows]
     log.line(f"selected by validation: {best_arm}")
+
+    # CN: **自助平均 θ（bootstrap-averaged）**：跨种子取每个坐标的均值，降低"哪个 HKS 尺度拿多少质量"的方差
+    #     （corner 分析表明这一部分未被识别）。**支撑匹配对照（support-matched）**：取平均 θ 的非零支撑并在其上
+    #     等权——保留"哪些描述子被选中"，丢掉拟合幅值，从而把"选块"与"块内权重"分开。
+    # EN: **bootstrap-averaged theta**: per-coordinate mean across vertex subsamples, which reduces the
+    #     variance of "how much mass each HKS scale takes" (the corner analysis showed this is not
+    #     identified). **support-matched control**: uniform weights over the nonzero support of that average --
+    #     same selected descriptors, no fitted magnitudes, separating "right block" from "right weights".
+    averaged: dict[float | None, np.ndarray] = {
+        rel: np.mean(np.stack(values), axis=0) for rel, values in per_rel_thetas.items() if values}
+    derived: dict[str, np.ndarray] = {}
+    for rel, mean_theta in averaged.items():
+        tag = "simplex" if rel is None else f"rel{rel:g}"
+        derived[f"learned_avg_{tag}"] = np.asarray(mean_theta, dtype=np.float64)
+        # CN: 支撑阈值必须**相对**：CuPDLPx 在盒内留下 ~1e-7 的噪声，绝对 1e-9 会把它们全算成支撑
+        #     （实测 simplex 臂因此报出 13/13 而不是 8/13）。用最大值的千分之一。
+        # EN: the support threshold must be **relative**: CuPDLPx leaves ~1e-7 inside the box and an absolute
+        #     1e-9 counts all of it (measured: the simplex arm reported 13/13 instead of 8/13).
+        support = np.asarray(mean_theta) > 1e-3 * float(np.max(mean_theta))
+        if bool(support.any()):
+            matched = np.zeros_like(mean_theta)
+            matched[support] = 1.0 / float(np.count_nonzero(support))
+            derived[f"support_matched_{tag}"] = np.asarray(matched, dtype=np.float64)
+    if derived:
+        for name, theta in derived.items():
+            log.line(f"derived {name}: support {int(np.count_nonzero(theta > 1e-9))}/{theta.size} "
+                     f"theta={np.round(theta, 4).tolist()}")
+        for pair in test_pairs:
+            a_m = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
+            b_m = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
+            rows.extend(dataclasses.replace(r, geometry=f"test:{r.geometry}")
+                        for r in _evaluate_pair(a_m, b_m, config=config, thetas=derived,
+                                                seed=int(config.seeds[0]), baselines=False))
+        rows = [dataclasses.replace(r, geometry=r.geometry[5:]) if r.geometry.startswith("test:") else r
+                for r in rows]
 
     baselines = ("uniform_theta", "grouped_uniform", "uniform_hks", "uniform_late_hks", "position_only")
     per_pair_seed: dict[str, dict[str, dict[int, float]]] = {}

@@ -1,0 +1,71 @@
+[12:25:19 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_seeds4000/run.log
+[12:25:19 +    0.0s] preflight ok=True mem=12.1 GB
+[12:25:19 +    0.0s] train subjects (0, 1, 2, 3, 4)  |  test subjects (5, 6, 7, 8, 9)  (disjoint: PASS)
+[12:25:19 +    0.0s] train pair (0, 13); validation pairs (train subjects) []
+[12:25:19 +    0.0s] test pairs (test subjects) [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[12:25:19 +    0.0s] box widths ['learned_rel0.25', 'learned_simplex']; vertex subsamples seeds (0, 1, 2)
+[12:26:57 +   97.5s] [seed 0] learned_rel0.25    regret=0.01522 converged=False min=0.0192 max=0.3077 at_min=7
+[12:28:46 +  206.8s] [seed 0] learned_simplex    regret=0.001149 converged=False min=0.0000 max=0.7617 at_min=4
+[12:33:14 +  474.9s] [seed 1] learned_rel0.25    regret=0.01498 converged=False min=0.0192 max=0.3077 at_min=7
+[12:34:47 +  568.4s] [seed 1] learned_simplex    regret=0.001108 converged=False min=0.0000 max=0.7413 at_min=4
+[12:39:11 +  831.5s] [seed 2] learned_rel0.25    regret=0.01474 converged=False min=0.0192 max=0.3077 at_min=7
+[12:40:50 +  931.4s] [seed 2] learned_simplex    regret=0.001129 converged=False min=0.0000 max=0.7741 at_min=4
+[12:43:37 + 1097.7s] 
+validation miss@5% by box width (lower is better; this is the selection criterion):
+[12:43:37 + 1097.7s] no validation pairs: box width not selected here; using learned_simplex
+[12:43:37 + 1097.7s] selected by validation: learned_simplex
+[12:43:37 + 1097.7s] derived learned_avg_rel0.25: support 13/13 theta=[0.0739, 0.0298, 0.0192, 0.048, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0983, 0.3077, 0.3077]
+[12:43:37 + 1097.7s] derived support_matched_rel0.25: support 13/13 theta=[0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769]
+[12:43:37 + 1097.7s] derived learned_avg_simplex: support 13/13 theta=[0.0127, 0.0248, 0.0006, 0.0117, 0.0001, 0.0054, 0.0, 0.0, 0.0, 0.0, 0.0353, 0.1502, 0.7591]
+[12:43:37 + 1097.7s] derived support_matched_simplex: support 7/13 theta=[0.1429, 0.1429, 0.0, 0.1429, 0.0, 0.1429, 0.0, 0.0, 0.0, 0.0, 0.1429, 0.1429, 0.1429]
+[12:45:33 + 1213.5s] 
+[12:45:33 + 1213.5s] learned_selected     - uniform_theta      miss@5%: mean -0.2196 95% CI [-0.3008, -0.1502]  wins 8/8
+[12:45:33 + 1213.5s] learned_selected     - grouped_uniform    miss@5%: mean -0.2948 95% CI [-0.3805, -0.2145]  wins 8/8
+[12:45:33 + 1213.6s] learned_selected     - uniform_hks        miss@5%: mean -0.5132 95% CI [-0.5425, -0.4817]  wins 8/8
+[12:45:33 + 1213.6s] learned_selected     - uniform_late_hks   miss@5%: mean -0.4706 95% CI [-0.4987, -0.4388]  wins 8/8
+[12:45:33 + 1213.6s] learned_selected     - position_only      miss@5%: mean -0.4501 95% CI [-0.5768, -0.3057]  wins 8/8
+[12:45:33 + 1213.6s] learned_rel0.25      - uniform_theta      miss@5%: mean -0.1479 95% CI [-0.1988, -0.1053]  wins 8/8
+[12:45:33 + 1213.6s] learned_rel0.25      - grouped_uniform    miss@5%: mean -0.2232 95% CI [-0.2738, -0.1849]  wins 8/8
+[12:45:33 + 1213.6s] learned_rel0.25      - uniform_hks        miss@5%: mean -0.4416 95% CI [-0.4932, -0.3796]  wins 8/8
+[12:45:33 + 1213.6s] learned_rel0.25      - uniform_late_hks   miss@5%: mean -0.3990 95% CI [-0.4610, -0.3361]  wins 8/8
+[12:45:33 + 1213.6s] learned_rel0.25      - position_only      miss@5%: mean -0.3785 95% CI [-0.4879, -0.2534]  wins 8/8
+[12:45:33 + 1213.6s] learned_simplex      - uniform_theta      miss@5%: mean -0.2196 95% CI [-0.3027, -0.1464]  wins 8/8
+[12:45:33 + 1213.6s] learned_simplex      - grouped_uniform    miss@5%: mean -0.2948 95% CI [-0.3806, -0.2194]  wins 8/8
+[12:45:33 + 1213.6s] learned_simplex      - uniform_hks        miss@5%: mean -0.5132 95% CI [-0.5410, -0.4807]  wins 8/8
+[12:45:33 + 1213.7s] learned_simplex      - uniform_late_hks   miss@5%: mean -0.4706 95% CI [-0.4983, -0.4384]  wins 8/8
+[12:45:33 + 1213.7s] learned_simplex      - position_only      miss@5%: mean -0.4501 95% CI [-0.5819, -0.2974]  wins 8/8
+[12:45:33 + 1213.7s] 
+                                    arm  n_draws  mean_mean  miss_1pct_mean  miss_5pct_mean
+---------------------------------------  -------  ---------  --------------  --------------
+                        grouped_uniform       24     0.1307          0.7410          0.4968
+                    learned_avg_rel0.25        8     0.0693          0.5724          0.2734
+                    learned_avg_simplex        8     0.0526          0.5052          0.2025
+                        learned_rel0.25       24     0.0702          0.5720          0.2736
+    learned_rel0.25_minus_uniform_theta        1    -0.1479               -               -
+                       learned_selected       24     0.0532          0.4999          0.2020
+ learned_selected_minus_grouped_uniform        1    -0.2948               -               -
+   learned_selected_minus_position_only        1    -0.4501               -               -
+     learned_selected_minus_uniform_hks        1    -0.5132               -               -
+learned_selected_minus_uniform_late_hks        1    -0.4706               -               -
+   learned_selected_minus_uniform_theta        1    -0.2196               -               -
+                        learned_simplex       24     0.0532          0.4999          0.2020
+    learned_simplex_minus_uniform_theta        1    -0.2196               -               -
+                     nn_grouped_uniform       24     0.1873          0.8624          0.6652
+                 nn_learned_avg_rel0.25        8     0.1355          0.7696          0.5095
+                 nn_learned_avg_simplex        8     0.1050          0.7586          0.4339
+                     nn_learned_rel0.25       24     0.1367          0.7679          0.5092
+                     nn_learned_simplex       24     0.1060          0.7568          0.4349
+                       nn_position_only       24     0.2342          0.9876          0.8259
+             nn_support_matched_rel0.25        8     0.1750          0.8286          0.6103
+             nn_support_matched_simplex        8     0.1282          0.7817          0.4882
+                         nn_uniform_hks       24     0.3563          0.8453          0.6996
+                    nn_uniform_late_hks       24     0.3628          0.8575          0.7087
+                       nn_uniform_theta       24     0.1761          0.8264          0.6078
+                          position_only       24     0.2144          0.8700          0.6520
+                support_matched_rel0.25        8     0.1153          0.6907          0.4219
+                support_matched_simplex        8     0.0869          0.5849          0.3330
+                            uniform_hks       24     0.3669          0.8545          0.7152
+                       uniform_late_hks       24     0.3411          0.8293          0.6726
+                          uniform_theta       24     0.1164          0.6887          0.4215
+[12:45:33 + 1213.7s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_seeds4000/records.json (431 rows)
+[12:45:33 + 1213.7s] log closed after 1213.7s

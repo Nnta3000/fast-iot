@@ -3,7 +3,22 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (latest) — support-matched control, averaged θ, three seeds
+
+`correspondence.py` gains two derived weight vectors, evaluated on the same held-out pairs:
+`learned_avg` (per-coordinate mean of θ across vertex subsamples) and `support_matched` (uniform over the
+nonzero support of that average). Plus `--pairing intra|inter`.
+
+At n=4000, 3 seeds, 8 pairs (24 readings): `uniform` 0.4215 → `support_matched` **0.3330** → `learned`
+**0.2020** miss@5 %. So **the fitted magnitudes matter more than the support** (−0.131 vs −0.089) — the
+opposite of "the fit only picks the late-HKS block", and consistent with uniform-late-HKS being the worst arm.
+`learned_avg` (0.2025) is indistinguishable from per-seed, so averaging is a no-op — a stability result.
+
+`support_matched` under the **box** arm is exactly `uniform_theta` (the box makes the support all 13), so the
+control only carries information under simplex-only.
+
 ## 2026-11-11 (later still) — memory: the master's full-grid arrays are gone; n=6890 fits
+
 
 **Full-resolution result**: the correspondence experiment now runs on all **6890 vertices**, 19.1 min, peak
 1.63 GB, exit 0 (it previously did not fit). `learned` 0.1996 miss@5 % vs `uniform` 0.4186 and
