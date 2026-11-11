@@ -316,8 +316,6 @@ def repair_point(
     x: np.ndarray,
     layout: LpLayout,
     *,
-    all_rows: np.ndarray,
-    all_cols: np.ndarray,
     support_rows: np.ndarray,
     support_cols: np.ndarray,
     support_values: np.ndarray,
@@ -363,11 +361,16 @@ def repair_point(
     f += float(g[0])
     g -= float(g[0])
 
-    cost_all = np.asarray(
-        problem.features.costs(theta, all_rows, all_cols), dtype=np.float64
-    )
-    sigma_all = f[all_rows] + g[all_cols] - cost_all
-    s = max(0.0, float(sigma_all.max()))
+    # CN: `s = max sigma` 在**整张网格**上，但只需要这个最大值，所以按行块算（`maximum_slack_grid`）。
+    #     以前这里一次性 `features.costs(all_rows, all_cols)`：n=6890 时是 4.9 GB 的中间量，每次 master
+    #     求解都分配一次——memray 观测到的峰值主要就是它。取值完全相同（同一组边，`max` 与顺序无关）。
+    # EN: `s = max sigma` over the **whole grid**, but only the maximum is needed, so it is computed in row
+    #     blocks (`maximum_slack_grid`). This used to call `features.costs(all_rows, all_cols)` in one shot:
+    #     4.9 GB of intermediates at n=6890, allocated on every master solve -- the dominant peak in the
+    #     memray profile. The value is identical (same edge set, `max` is order-invariant).
+    from ..core.scan import maximum_slack_grid  # noqa: PLC0415 - avoids a cycle via exact.master
+
+    s = max(0.0, maximum_slack_grid(problem, theta, f, g))
     # CN: 在平移前保存"投影 + 规范修复"后的点与其 R —— 调用方必须**扫描这个点**，
     #     否则扫描到的已是平移后（全域可行）的点，永远看不到违例。
     # EN: keep the projected + gauge-fixed point and its R **before** the shift; callers must scan this

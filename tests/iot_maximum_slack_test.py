@@ -21,7 +21,7 @@ import scipy.sparse as sparse
 
 from iot.core.features import DiagonalWeightFeatures
 from iot.core.problem import InverseOTProblem
-from iot.core.scan import maximum_slack, maximum_slack_grid
+from iot.core.scan import maximum_slack, maximum_slack_grid, maximum_slack_outside_grid
 from iot.core.theta import SimplexTheta
 
 
@@ -104,3 +104,52 @@ def test_planted_certificate_is_still_exact() -> None:
     assert result.is_optimal is True
     assert result.converged is True
     assert result.delta > 0.0
+
+
+def test_grid_max_outside_matches_the_setdiff_formula() -> None:
+    """
+    CN: `maximum_slack_outside_grid` 必须与"物化全图键、`setdiff1d` 去掉 F、再求 max"**逐位相同**。
+        它是 `sigma_max_out_F` 的唯一来源，也是 master 每次求解都要走的热路径。
+    EN: `maximum_slack_outside_grid` must equal "materialise every grid key, `setdiff1d` against F, then
+        take the max" **exactly**. It is the sole source of `sigma_max_out_F` and sits on the master's hot
+        path on every solve.
+    """
+    from iot.core.edges import EdgeSet
+
+    problem = _problem(m=6, n=5, k=3)
+    rng = np.random.default_rng(2)
+    theta = rng.random(3)
+    theta = theta / theta.sum()
+    source_dual = rng.normal(size=int(problem.n_source))
+    target_dual = rng.normal(size=int(problem.n_target))
+
+    rr, cc = np.meshgrid(np.arange(problem.n_source), np.arange(problem.n_target), indexing="ij")
+    all_rows = rr.reshape(-1).astype(np.int64)
+    all_cols = cc.reshape(-1).astype(np.int64)
+    # CN: F 取一个真子集。EN: F is a strict subset of the grid.
+    keep = np.array([0, 4, 7, 11], dtype=np.int64)
+    excluded = EdgeSet.from_arrays(all_rows[keep], all_cols[keep], n_target=int(problem.n_target))
+
+    all_keys = all_rows * int(problem.n_target) + all_cols
+    out_keys = np.setdiff1d(all_keys, excluded.keys, assume_unique=False)
+    rows_o, cols_o = np.divmod(out_keys, int(problem.n_target))
+    sig = (source_dual[rows_o] + target_dual[cols_o]
+           - np.asarray(problem.features.costs(theta, rows_o, cols_o), dtype=np.float64))
+    reference = float(sig.max())
+
+    for block in (1, 3, 7, 1000):
+        got = maximum_slack_outside_grid(problem, theta, source_dual, target_dual, excluded, block=block)
+        assert got == reference, f"block={block}: {got!r} != {reference!r}"
+
+
+def test_grid_max_outside_is_minus_inf_when_nothing_is_outside() -> None:
+    """CN: F 等于整张网格时，补集为空，必须返回 `-inf`（与 `setdiff1d` 分支一致）。EN: empty complement."""
+    from iot.core.edges import EdgeSet
+
+    problem = _problem(m=3, n=2, k=2)
+    rr, cc = np.meshgrid(np.arange(problem.n_source), np.arange(problem.n_target), indexing="ij")
+    rows = rr.reshape(-1).astype(np.int64)
+    cols = cc.reshape(-1).astype(np.int64)
+    full = EdgeSet.from_arrays(rows, cols, n_target=int(problem.n_target))
+    got = maximum_slack_outside_grid(problem, np.asarray([0.5, 0.5]), np.zeros(3), np.zeros(2), full)
+    assert got == float("-inf")

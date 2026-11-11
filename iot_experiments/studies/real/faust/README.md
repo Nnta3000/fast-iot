@@ -55,7 +55,8 @@ Measured on this machine, not estimated.
 | `(n, n, K)` feature tensor | **4.94 GB** at `n=6890, K=13`, and **×2 transiently** (`diff * diff` keeps `diff` alive) | **removed** — the fit now uses `SquaredDifferenceFeatures`, which computes `(E, K)` only for the edges the solver requests |
 | geodesic matrix `(n, n)` | 380 MB | unavoidable; only at evaluation, one pair at a time |
 | EMD cost + POT internals + plan | ~1.1 GB at `n=6890` | unavoidable with exact EMD; this is why the heat maps solve one arm at a time |
-| library full-grid index arrays (`all_rows`/`all_cols`) | 16 B/edge — 64 MB at `n=2000`, **760 MB at `n=6890`**, kept for the whole solve | **removed** — `_compute_baseline` / `_run_round` now call `maximum_slack_grid`, which generates the indices per row block. Verified value-identical (§ below) |
+| library full-grid index arrays (`all_rows`/`all_cols`, `all_keys`+`setdiff1d`) | 16–24 B/edge — 760 MB–1.1 GB at `n=6890`, **per master solve** | **removed** — `maximum_slack_grid` / `maximum_slack_outside_grid` generate indices per row block |
+| `repair_point`'s full-grid cost | `(m·n, K)` in one shot = **4.9 GB at n=6890**, allocated on **every** master solve | **removed** — only `max σ` is needed, so it is computed blockwise |
 | first round (scan + LP assembly) | +897 MB at `n=2000` | scales with `|F|`; ~75 kB per edge |
 
 **What is fixed**: `fit_theta` no longer builds `(n, n, K)`. Verified: the whole box-width sweep re-ran and every
@@ -67,6 +68,19 @@ shared metric is **identical to 1e-12** (bootstrap rows bit-identical), so the c
 (`delta = 0.009580575581`, `is_optimal = True`). `tests/iot_maximum_slack_test.py` pins the equality, including a
 case where the maximum sits on the **last row** — the failure mode that would silently under-state the
 certificate's upper bound `U`.
+
+**Peak after the fix, measured with `memray`** (which located it: `features.py:180/181` and
+`repair_point` on the full grid, not the LP matrix):
+
+| n | peak before | peak after |
+| ---: | ---: | ---: |
+| 2000 | 2116.9 MB | **1565.4 MB** |
+| 5000 | 7239.7 MB | **1612.1 MB** |
+| **6890** | ≈11 GB (extrapolated, never completed) | **1628.1 MB** |
+
+Memory is now essentially **flat in `n`** (1612 → 1628 MB from 5000 to 6890): the remaining terms are
+fixed-size blocks. `delta`, `is_optimal`, relaxed `theta`/`regret`/`max_sigma_all` and the FAUST fit are
+**bit-identical** before and after (`baseline.py`, diffed).
 
 **What is not**: memory is **independent of `|F|`** (measured: tripling `|F|` at fixed `n` left the peak flat), but
 it still grows with `n` — the remaining terms are the `n²` geodesic/cost matrices in the evaluation and one

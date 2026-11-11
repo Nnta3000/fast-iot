@@ -170,4 +170,53 @@ def maximum_slack_grid(
     return worst
 
 
-__all__ = ["ScanBackend", "maximum_slack", "maximum_slack_grid", "scan_for_violations"]
+def maximum_slack_outside_grid(
+    problem: InverseOTProblem,
+    theta: Float[np.ndarray, "k"],
+    source_dual: Float[np.ndarray, "m"],
+    target_dual: Float[np.ndarray, "n"],
+    excluded: EdgeSet,
+    *,
+    block: int = 2_000_000,
+) -> float:
+    """
+    CN: 网格上**不属于 `excluded`** 的边的 `max sigma`，按行块生成索引。与"先物化全图键、再 `setdiff1d`"
+        取值完全相同（命中同一组边，`max` 与顺序无关），但不分配 `m*n` 的键数组（n=6890 时 380 MB，
+        且 `setdiff1d` 还要再排序一份）。
+
+    EN: `max sigma` over the grid edges **not in `excluded`**, with indices generated per row block. Value is
+        identical to "materialise all grid keys, then `setdiff1d`" (same edge set, `max` is order-invariant),
+        but it does not allocate an `m*n` key array (380 MB at n=6890) nor a sorted copy for `setdiff1d`.
+    """
+    n_source = int(problem.n_source)
+    n_target = int(problem.n_target)
+    if n_source < 1 or n_target < 1:
+        return -np.inf
+    rows_per_block = max(1, min(n_source, int(block) // max(1, n_target)))
+    worst = -np.inf
+    for row_start in range(0, n_source, rows_per_block):
+        row_stop = min(n_source, row_start + rows_per_block)
+        rows = np.arange(row_start, row_stop, dtype=np.int64)
+        grid_rows = np.repeat(rows, n_target)
+        grid_cols = np.tile(np.arange(n_target, dtype=np.int64), rows.size)
+        keys = grid_rows * n_target + grid_cols
+        outside = ~np.asarray(excluded.contains(keys), dtype=bool)
+        if not bool(outside.any()):
+            continue
+        r_o = grid_rows[outside]
+        c_o = grid_cols[outside]
+        cost = np.asarray(problem.features.costs(theta, r_o, c_o), dtype=np.float64)
+        value = (np.asarray(source_dual, dtype=np.float64)[r_o]
+                 + np.asarray(target_dual, dtype=np.float64)[c_o] - cost)
+        if value.size:
+            worst = max(worst, float(value.max()))
+    return worst
+
+
+__all__ = [
+    "ScanBackend",
+    "maximum_slack",
+    "maximum_slack_grid",
+    "maximum_slack_outside_grid",
+    "scan_for_violations",
+]

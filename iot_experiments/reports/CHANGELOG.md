@@ -3,6 +3,31 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (later still) — memory: the master's full-grid arrays are gone; n=6890 fits
+
+`memray` located the peak, and it was **not** the LP matrix (which is sparse: `assemble_lp` at `|F|=7805`
+costs +5 MB). It was:
+
+1. `repair_point` computing `features.costs(theta, all_rows, all_cols)` over the **whole grid** in one
+   allocation — **4.9 GB at n=6890**, on *every* master solve. Only `max σ` is used, so it is now computed
+   blockwise (`maximum_slack_grid`).
+2. `master_regret` materialising `all_rows`/`all_cols` (16 B/edge) to feed that call.
+3. `master_regret` materialising `all_keys` and `setdiff1d` against F for the `sigma_max_out_F` diagnostic
+   (~1.1 GB at n=6890) — now `maximum_slack_outside_grid`, blockwise.
+
+**Measured**: peak at n=2000 **2116.9 → 1565.4 MB**, at n=5000 **7239.7 → 1612.1 MB**, and **n=6890 now
+peaks at 1628.1 MB** (previously ≈11 GB extrapolated and never completed). Memory is now flat in `n`.
+
+**Verified value-identical** (`baseline.py` before/after, `diff`): exact `delta`/`is_optimal`/`gap`, relaxed
+`theta`/`regret`/`lower`/`upper`/`max_sigma_all`, FAUST fit `theta`/`regret`. Only the memory lines moved.
+
+**Tests**: `tests/iot_maximum_slack_test.py` gains 2 — the outside-grid max must equal the `setdiff` formula
+exactly (across block sizes 1…1000), and an empty complement must return `-inf`.
+
+**Tooling**: `memray` 1.20.0 and `pytest-memray` installed in the venv only. `pyproject.toml` is unchanged —
+`AGENTS.md` §0 permits only the `"iot*"` include and the `psd` extra, so a profiling tool is not a project
+dependency.
+
 ## 2026-11-11 (later) — FAUST at n=4000, and the boundary-θ question
 
 **Resolution check**: the correspondence experiment re-run at **n = 4000** (5× the 800 used everywhere else),

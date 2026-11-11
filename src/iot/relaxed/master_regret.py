@@ -39,6 +39,7 @@ from scipy.optimize import linprog
 
 from ..core.edges import EdgeSet
 from ..core.problem import InverseOTProblem
+from ..core.scan import maximum_slack_outside_grid
 from ..backends.lp_common import (
     LpLayout,
     assemble_lp,
@@ -284,10 +285,10 @@ class RegretMasterSolver:
         # CN: 修复返回点（投影 theta、修规范、全图 sigma、f <- f - s），并只用修复后的向量报告。
         # EN: repair the returned point (project theta, fix gauge, full-grid sigma, f <- f - s) and report
         #     only quantities computed from the repaired vector.
-        r, c = np.meshgrid(
-            np.arange(system.n_source), np.arange(system.n_target), indexing="ij"
-        )
-        all_rows, all_cols = r.reshape(-1), c.reshape(-1)
+        # CN: 不再物化全图索引（`2*8` 字节/边，n=6890 时 760 MB，每次求解都分配）。`repair_point` 现在
+        #     自己按块算全图 `max sigma`。
+        # EN: the full-grid index arrays are gone (16 bytes/edge, 760 MB at n=6890, allocated on every
+        #     solve); `repair_point` now computes the full-grid `max sigma` blockwise itself.
         sup_rows, sup_cols, sup_vals = problem.support()
         layout = LpLayout(
             has_delta=False,
@@ -299,8 +300,6 @@ class RegretMasterSolver:
             problem,
             primal,
             layout,
-            all_rows=all_rows,
-            all_cols=all_cols,
             support_rows=sup_rows,
             support_cols=sup_cols,
             support_values=sup_vals,
@@ -326,26 +325,13 @@ class RegretMasterSolver:
         #     was really `F \\ S` and reported a slack rather than a real violation.)
         sigma_edges = _sigma_pre(repaired, edges, problem)
         max_in = float(sigma_edges.max()) if sigma_edges.size else float("-inf")
-        r_g, c_g = np.meshgrid(
-            np.arange(int(problem.n_source)),
-            np.arange(int(problem.n_target)),
-            indexing="ij",
-        )
-        all_keys = (r_g * int(problem.n_target) + c_g).reshape(-1)
-        out_keys = np.setdiff1d(all_keys, edges.keys, assume_unique=False)
-        if out_keys.size:
-            rows_o, cols_o = np.divmod(out_keys, int(problem.n_target))
-            sig_o = (
-                np.asarray(repaired.source_dual_pre, dtype=np.float64)[rows_o]
-                + np.asarray(repaired.target_dual_pre, dtype=np.float64)[cols_o]
-                - np.asarray(
-                    problem.features.costs(repaired.theta_pre, rows_o, cols_o),
-                    dtype=np.float64,
-                )
-            )
-            max_out = float(sig_o.max())
-        else:
-            max_out = float("-inf")
+        # CN: "F 外"的 `max sigma` 按行块算，不再物化 `m*n` 的键数组再 `setdiff1d`（后者还要排序一份，
+        #     n=6890 时约 1.1 GB）。取值相同：命中同一组边，`max` 与顺序无关。
+        # EN: `max sigma` outside F is computed in row blocks instead of materialising `m*n` keys and
+        #     `setdiff1d` (which also sorts a copy -- ~1.1 GB at n=6890). Same value: same edge set, and
+        #     `max` is order-invariant.
+        max_out = float(maximum_slack_outside_grid(
+            problem, repaired.theta_pre, repaired.source_dual_pre, repaired.target_dual_pre, edges))
         iters = (
             int(result_info.get("iterations", 0))
             if isinstance(result_info, dict)
