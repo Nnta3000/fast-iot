@@ -462,6 +462,63 @@ supports.
 
 ---
 
+## 4g. Accuracy against a controlled deformation (n = 1500)
+
+A **twist about the vertical axis** applied to the *target* only, angle `a = σ·π·y_norm`: a smooth point map, so
+vertex identity is preserved and `π̂ = I/n` stays the ground truth with no new labelling. `θ` is fitted **once**
+at `σ = 0` and applied unchanged at every `σ`, so this is a transfer curve, not a refit. Single pair, one seed.
+
+| σ | `learned` | `uniform` | gap | `uniform_late_hks` | `position_only` |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | **0.161** | 0.502 | **−0.341** | 0.575 | 0.868 |
+| 0.25 | **0.322** | 0.530 | −0.208 | 0.575 | 0.829 |
+| 0.50 | **0.436** | 0.677 | −0.241 | 0.599 | 0.823 |
+| 0.75 | **0.612** | 0.745 | −0.133 | 0.630 | 0.881 |
+| 1.00 | **0.708** | 0.775 | **−0.067** | 0.697 | 0.889 |
+
+**The gap shrinks by a factor of five.** The learned cost degrades gracefully (0.161 → 0.708) but so does
+everything else, and at the strongest twist it is **barely distinguishable from uniform** (−0.067, against
+−0.341 undeformed). Two consequences:
+
+1. **The method's advantage is a low-deformation phenomenon on this data.** Any claim about it must name the
+   deformation regime, because at `σ = 1` a fixed uniform weighting is nearly as good.
+2. **`uniform_late_hks` is the most deformation-robust arm** (0.575 → 0.697, a change of 0.12 versus the learned
+   arm's 0.55). That is the *opposite* ordering from the rigid-pose case, where late-HKS was the worst arm
+   (0.601 vs 0.248). So the ranking of descriptors is deformation-dependent, and there is no single "best"
+   weighting across regimes — which is precisely the argument for conditioning the fit on the regime, not for
+   one global `θ`.
+
+**This is not an articulation.** A twist is not isometric, so intrinsic descriptors are not invariant to it, and
+it is not joint bending. The curve bounds *descriptor degradation under smooth distortion*, not tolerance to
+real pose change — the FAUST pose axis (§2) remains the evidence for that. Also: **one pair, one seed**, so this
+is a single-pair curve.
+
+---
+
+## 4h. Many plans, one θ (negative result)
+
+A block LP with **one shared `θ`** and per-pair `(f_p, g_p)`, over 4 training pairs; each `F_p` is the edge set
+that pair's own loop finished with. Objective: the **mean of the raw per-pair regrets**. Evaluated on the same
+8 held-out test pairs at `n = 1200`.
+
+| arm | mean error | miss@5 % |
+| --- | ---: | ---: |
+| `single` (θ from pair (0,13) alone) | **0.0475** | **0.197** |
+| `uniform` | 0.1069 | 0.404 |
+| **`multi` (shared over 4 pairs)** | **0.2018** | **0.462** |
+
+**Sharing is worse than not learning at all.** The per-pair L1 distances to their own θ are 0.08, 0.16, 0.46 and
+**1.01**, so the four pairs want materially different weights and the compromise is bad for all of them.
+
+**The formulation is at fault, not the data — and this run does not test the hypothesis.** The objective averages
+**raw** regrets whose scales differ by 3× (0.00079, 0.00074, 0.0024, 0.0024), so the two hardest pairs dominate
+the average entirely. That is "one θ dictated by pairs 3 and 4", not "one θ shared fairly". The fix is to
+normalise each `R_p` by its own `R_uniform,p` before averaging; that rerun and a cross-regret matrix are the
+next step, and until it exists this row must be read as **"an unnormalised multi-pair objective fails"**, not as
+"sharing fails".
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

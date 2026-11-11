@@ -1,0 +1,6731 @@
+{
+  "provenance": {
+    "question": "does a theta shared across several training pairs transfer to held-out pairs better than a theta fitted on one pair?",
+    "formulation": "block LP: one shared theta, per-pair (f_p, g_p), per-pair edge set F_p, objective is the mean of the per-pair regrets",
+    "edge_sets": "F_p is the edge set each single-pair loop finished with, NOT regenerated in the joint LP, so theta_multi solves a RESTRICTED master and its regret is a lower bound on the joint optimum",
+    "solver": "scipy HiGHS on the assembled sparse LP (one solve, no constraint generation)",
+    "comparison": "theta_single (fitted on pair 1) vs theta_multi (shared over all P), both evaluated on the same held-out test pairs"
+  },
+  "records": [
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.39403479068435404,
+        "median": 0.34579872202623335,
+        "miss_1pct": 0.8883333333333333,
+        "miss_5pct": 0.8591666666666666,
+        "flip_rate": 0.43833333333333335,
+        "flip_share_of_errors": 0.5445134575569358,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.41548272133792163,
+        "median": 0.35294753451965827,
+        "miss_1pct": 0.9925,
+        "miss_5pct": 0.955,
+        "flip_rate": 0.41083333333333333,
+        "flip_share_of_errors": 0.4527089072543618,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3234948646537493,
+        "median": 0.13344958429258755,
+        "miss_1pct": 0.7658333333333334,
+        "miss_5pct": 0.6216666666666667,
+        "flip_rate": 0.395,
+        "flip_share_of_errors": 0.5629453681710214,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3392044935591509,
+        "median": 0.16642045534030367,
+        "miss_1pct": 0.7775,
+        "miss_5pct": 0.6525,
+        "flip_rate": 0.4008333333333333,
+        "flip_share_of_errors": 0.5645539906103286,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.27087363328464154,
+        "median": 0.08275895979432674,
+        "miss_1pct": 0.685,
+        "miss_5pct": 0.5466666666666666,
+        "flip_rate": 0.3333333333333333,
+        "flip_share_of_errors": 0.5333333333333333,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3340815113432025,
+        "median": 0.13517878770465702,
+        "miss_1pct": 0.7975,
+        "miss_5pct": 0.6483333333333333,
+        "flip_rate": 0.36666666666666664,
+        "flip_share_of_errors": 0.5028571428571429,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.18249904946823725,
+        "median": 0.052348714508610575,
+        "miss_1pct": 0.6308333333333334,
+        "miss_5pct": 0.5066666666666667,
+        "flip_rate": 0.1875,
+        "flip_share_of_errors": 0.3223495702005731,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.31094605592236185,
+        "median": 0.15545405075612725,
+        "miss_1pct": 0.8333333333333334,
+        "miss_5pct": 0.7508333333333334,
+        "flip_rate": 0.3591666666666667,
+        "flip_share_of_errors": 0.47676991150442477,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.20618304611345623,
+        "median": 0.08830998995061304,
+        "miss_1pct": 0.7066666666666667,
+        "miss_5pct": 0.5983333333333334,
+        "flip_rate": 0.21916666666666668,
+        "flip_share_of_errors": 0.3389175257731959,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3760197376816728,
+        "median": 0.2163610105108818,
+        "miss_1pct": 0.8533333333333334,
+        "miss_5pct": 0.7783333333333333,
+        "flip_rate": 0.39416666666666667,
+        "flip_share_of_errors": 0.5102481121898598,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1612205667226091,
+        "median": 0.003469070199424402,
+        "miss_1pct": 0.4533333333333333,
+        "miss_5pct": 0.335,
+        "flip_rate": 0.17583333333333334,
+        "flip_share_of_errors": 0.42115768463073855,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2511928670334715,
+        "median": 0.0638347218209891,
+        "miss_1pct": 0.7233333333333334,
+        "miss_5pct": 0.5458333333333333,
+        "flip_rate": 0.2225,
+        "flip_share_of_errors": 0.3341677096370463,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0462160183091224,
+        "median": 0.0,
+        "miss_1pct": 0.27,
+        "miss_5pct": 0.15083333333333335,
+        "flip_rate": 0.0575,
+        "flip_share_of_errors": 0.23469387755102042,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair050-066",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10816260942836829,
+        "median": 0.028882440514934472,
+        "miss_1pct": 0.625,
+        "miss_5pct": 0.37833333333333335,
+        "flip_rate": 0.095,
+        "flip_share_of_errors": 0.16642335766423358,
+        "mirror_error_mean": 0.41552245834257434
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.20276405213580478,
+        "median": 0.13163467072817148,
+        "miss_1pct": 0.8666666666666667,
+        "miss_5pct": 0.7758333333333334,
+        "flip_rate": 0.29833333333333334,
+        "flip_share_of_errors": 0.35764235764235763,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2916064045572402,
+        "median": 0.2683289142086076,
+        "miss_1pct": 0.9908333333333333,
+        "miss_5pct": 0.955,
+        "flip_rate": 0.31666666666666665,
+        "flip_share_of_errors": 0.3301476976542137,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3457363476162377,
+        "median": 0.22667598165770647,
+        "miss_1pct": 0.8058333333333333,
+        "miss_5pct": 0.7041666666666667,
+        "flip_rate": 0.42583333333333334,
+        "flip_share_of_errors": 0.5482832618025751,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3383713658799086,
+        "median": 0.17976212183534146,
+        "miss_1pct": 0.7975,
+        "miss_5pct": 0.6783333333333333,
+        "flip_rate": 0.36666666666666664,
+        "flip_share_of_errors": 0.4756756756756757,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34983668985399774,
+        "median": 0.20748161967074993,
+        "miss_1pct": 0.7975,
+        "miss_5pct": 0.6975,
+        "flip_rate": 0.42,
+        "flip_share_of_errors": 0.5466377440347071,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34096162535578783,
+        "median": 0.19849748788994298,
+        "miss_1pct": 0.7958333333333333,
+        "miss_5pct": 0.6841666666666667,
+        "flip_rate": 0.4,
+        "flip_share_of_errors": 0.5200433369447454,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.13474570759994553,
+        "median": 0.04973733868914229,
+        "miss_1pct": 0.6758333333333333,
+        "miss_5pct": 0.49666666666666665,
+        "flip_rate": 0.155,
+        "flip_share_of_errors": 0.23938223938223938,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2218669024840304,
+        "median": 0.11455127148317754,
+        "miss_1pct": 0.8141666666666667,
+        "miss_5pct": 0.7041666666666667,
+        "flip_rate": 0.23416666666666666,
+        "flip_share_of_errors": 0.29830148619957536,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.15124202165924,
+        "median": 0.06985578280193748,
+        "miss_1pct": 0.7258333333333333,
+        "miss_5pct": 0.5683333333333334,
+        "flip_rate": 0.1875,
+        "flip_share_of_errors": 0.26881720430107525,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2166814767279604,
+        "median": 0.12247692673533378,
+        "miss_1pct": 0.8666666666666667,
+        "miss_5pct": 0.7383333333333333,
+        "flip_rate": 0.23,
+        "flip_share_of_errors": 0.2749003984063745,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.22207092439861673,
+        "median": 0.061487828887781815,
+        "miss_1pct": 0.6958333333333333,
+        "miss_5pct": 0.5325,
+        "flip_rate": 0.22583333333333333,
+        "flip_share_of_errors": 0.33498145859085293,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.24557238830606234,
+        "median": 0.09943826468658892,
+        "miss_1pct": 0.7283333333333334,
+        "miss_5pct": 0.6,
+        "flip_rate": 0.25,
+        "flip_share_of_errors": 0.35335689045936397,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.08568257706587697,
+        "median": 0.010993706647957568,
+        "miss_1pct": 0.5108333333333334,
+        "miss_5pct": 0.2791666666666667,
+        "flip_rate": 0.0825,
+        "flip_share_of_errors": 0.16638655462184873,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair056-071",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.15639572506189556,
+        "median": 0.03531387870352637,
+        "miss_1pct": 0.6483333333333333,
+        "miss_5pct": 0.43083333333333335,
+        "flip_rate": 0.0725,
+        "flip_share_of_errors": 0.11432325886990802,
+        "mirror_error_mean": 0.516904795563822
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.311652456939537,
+        "median": 0.2784813781027359,
+        "miss_1pct": 0.8816666666666667,
+        "miss_5pct": 0.8233333333333334,
+        "flip_rate": 0.3933333333333333,
+        "flip_share_of_errors": 0.46502463054187193,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.23590551122216422,
+        "median": 0.12964177882809955,
+        "miss_1pct": 0.9925,
+        "miss_5pct": 0.8841666666666667,
+        "flip_rate": 0.20333333333333334,
+        "flip_share_of_errors": 0.21254355400696864,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3254390287199522,
+        "median": 0.2059321483981512,
+        "miss_1pct": 0.8058333333333333,
+        "miss_5pct": 0.6783333333333333,
+        "flip_rate": 0.4083333333333333,
+        "flip_share_of_errors": 0.5291576673866091,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.35124980298389225,
+        "median": 0.20274478853016048,
+        "miss_1pct": 0.82,
+        "miss_5pct": 0.7,
+        "flip_rate": 0.39916666666666667,
+        "flip_share_of_errors": 0.5047418335089568,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2866830119312668,
+        "median": 0.11897630042953687,
+        "miss_1pct": 0.7266666666666667,
+        "miss_5pct": 0.6016666666666667,
+        "flip_rate": 0.37,
+        "flip_share_of_errors": 0.5304659498207885,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3629617329462339,
+        "median": 0.2115533194427194,
+        "miss_1pct": 0.8466666666666667,
+        "miss_5pct": 0.715,
+        "flip_rate": 0.43083333333333335,
+        "flip_share_of_errors": 0.527013251783894,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.16080024584863373,
+        "median": 0.08186587103280106,
+        "miss_1pct": 0.7366666666666667,
+        "miss_5pct": 0.6033333333333334,
+        "flip_rate": 0.20666666666666667,
+        "flip_share_of_errors": 0.2938388625592417,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.18176597557933466,
+        "median": 0.10270494555716422,
+        "miss_1pct": 0.8025,
+        "miss_5pct": 0.6591666666666667,
+        "flip_rate": 0.14083333333333334,
+        "flip_share_of_errors": 0.18230852211434737,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.17932961374764678,
+        "median": 0.10271183701895131,
+        "miss_1pct": 0.8008333333333333,
+        "miss_5pct": 0.6833333333333333,
+        "flip_rate": 0.2425,
+        "flip_share_of_errors": 0.31699346405228757,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.19861879238338578,
+        "median": 0.11964139637271935,
+        "miss_1pct": 0.8491666666666666,
+        "miss_5pct": 0.7175,
+        "flip_rate": 0.175,
+        "flip_share_of_errors": 0.21450459652706844,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1874955876915794,
+        "median": 0.03043325260526103,
+        "miss_1pct": 0.5866666666666667,
+        "miss_5pct": 0.44333333333333336,
+        "flip_rate": 0.2175,
+        "flip_share_of_errors": 0.38438880706921946,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.30385508123119565,
+        "median": 0.11798445246182858,
+        "miss_1pct": 0.83,
+        "miss_5pct": 0.675,
+        "flip_rate": 0.25333333333333335,
+        "flip_share_of_errors": 0.31568016614745587,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.032540702503867674,
+        "median": 0.0,
+        "miss_1pct": 0.41083333333333333,
+        "miss_5pct": 0.20166666666666666,
+        "flip_rate": 0.04833333333333333,
+        "flip_share_of_errors": 0.12314225053078556,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair053-085",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.11743788985539387,
+        "median": 0.053755692914109796,
+        "miss_1pct": 0.7708333333333334,
+        "miss_5pct": 0.52,
+        "flip_rate": 0.06583333333333333,
+        "flip_share_of_errors": 0.08826815642458101,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.02629768931967072,
+        "median": 0.008351562998928187,
+        "miss_1pct": 0.4775,
+        "miss_5pct": 0.14833333333333334,
+        "flip_rate": 0.035833333333333335,
+        "flip_share_of_errors": 0.07818181818181819,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0605042776410165,
+        "median": 0.042597747830563304,
+        "miss_1pct": 0.8991666666666667,
+        "miss_5pct": 0.4325,
+        "flip_rate": 0.058333333333333334,
+        "flip_share_of_errors": 0.06704980842911877,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.30619878916049637,
+        "median": 0.12100872868533963,
+        "miss_1pct": 0.7366666666666667,
+        "miss_5pct": 0.6133333333333333,
+        "flip_rate": 0.36916666666666664,
+        "flip_share_of_errors": 0.5193434935521688,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.29869449054670466,
+        "median": 0.1086277195683148,
+        "miss_1pct": 0.7383333333333333,
+        "miss_5pct": 0.6058333333333333,
+        "flip_rate": 0.3591666666666667,
+        "flip_share_of_errors": 0.5017462165308498,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2708014358839277,
+        "median": 0.08540058724645594,
+        "miss_1pct": 0.6833333333333333,
+        "miss_5pct": 0.56,
+        "flip_rate": 0.31333333333333335,
+        "flip_share_of_errors": 0.47474747474747475,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3039775346180865,
+        "median": 0.10903936825104737,
+        "miss_1pct": 0.74,
+        "miss_5pct": 0.605,
+        "flip_rate": 0.335,
+        "flip_share_of_errors": 0.46744186046511627,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.02587295485901064,
+        "median": 0.0,
+        "miss_1pct": 0.38,
+        "miss_5pct": 0.165,
+        "flip_rate": 0.045,
+        "flip_share_of_errors": 0.12189616252821671,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.03696709274556087,
+        "median": 0.01960081365110135,
+        "miss_1pct": 0.5825,
+        "miss_5pct": 0.2841666666666667,
+        "flip_rate": 0.04416666666666667,
+        "flip_share_of_errors": 0.07794117647058824,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04328983415276329,
+        "median": 0.009437049558121701,
+        "miss_1pct": 0.495,
+        "miss_5pct": 0.26916666666666667,
+        "flip_rate": 0.07583333333333334,
+        "flip_share_of_errors": 0.15771230502599654,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.05071272357032372,
+        "median": 0.03233760982298435,
+        "miss_1pct": 0.6633333333333333,
+        "miss_5pct": 0.37083333333333335,
+        "flip_rate": 0.06416666666666666,
+        "flip_share_of_errors": 0.09922680412371133,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.17291405306961954,
+        "median": 0.0159535432447824,
+        "miss_1pct": 0.5383333333333333,
+        "miss_5pct": 0.395,
+        "flip_rate": 0.17916666666666667,
+        "flip_share_of_errors": 0.33965244865718797,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.20766400829280673,
+        "median": 0.043021629154903845,
+        "miss_1pct": 0.6408333333333334,
+        "miss_5pct": 0.4725,
+        "flip_rate": 0.2,
+        "flip_share_of_errors": 0.32,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.013650780826440887,
+        "median": 0.0,
+        "miss_1pct": 0.22083333333333333,
+        "miss_5pct": 0.10083333333333333,
+        "flip_rate": 0.0125,
+        "flip_share_of_errors": 0.057034220532319393,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair059-099",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.030510028252009592,
+        "median": 0.013219037304640194,
+        "miss_1pct": 0.5341666666666667,
+        "miss_5pct": 0.23583333333333334,
+        "flip_rate": 0.016666666666666666,
+        "flip_share_of_errors": 0.032,
+        "mirror_error_mean": 0.5313531910855346
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10210105826636358,
+        "median": 0.04818727407982097,
+        "miss_1pct": 0.8208333333333333,
+        "miss_5pct": 0.48083333333333333,
+        "flip_rate": 0.0775,
+        "flip_share_of_errors": 0.09717868338557993,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.11323492042317324,
+        "median": 0.07823537263341933,
+        "miss_1pct": 0.9883333333333333,
+        "miss_5pct": 0.7116666666666667,
+        "flip_rate": 0.13833333333333334,
+        "flip_share_of_errors": 0.14472537053182213,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3518763259930468,
+        "median": 0.2039908403061686,
+        "miss_1pct": 0.8225,
+        "miss_5pct": 0.71,
+        "flip_rate": 0.40166666666666667,
+        "flip_share_of_errors": 0.5068349106203995,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.36880490587216,
+        "median": 0.20268705929446643,
+        "miss_1pct": 0.8258333333333333,
+        "miss_5pct": 0.7133333333333334,
+        "flip_rate": 0.4175,
+        "flip_share_of_errors": 0.5240585774058577,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.35612041507051645,
+        "median": 0.20769718149020447,
+        "miss_1pct": 0.8183333333333334,
+        "miss_5pct": 0.6933333333333334,
+        "flip_rate": 0.4266666666666667,
+        "flip_share_of_errors": 0.5412262156448203,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.36166460829028,
+        "median": 0.20809171192763642,
+        "miss_1pct": 0.8358333333333333,
+        "miss_5pct": 0.73,
+        "flip_rate": 0.44333333333333336,
+        "flip_share_of_errors": 0.5490196078431373,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07446078071460294,
+        "median": 0.022250070217700424,
+        "miss_1pct": 0.5908333333333333,
+        "miss_5pct": 0.35,
+        "flip_rate": 0.08083333333333333,
+        "flip_share_of_errors": 0.14119359534206696,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10045820927504444,
+        "median": 0.05472696135114303,
+        "miss_1pct": 0.7491666666666666,
+        "miss_5pct": 0.5316666666666666,
+        "flip_rate": 0.1325,
+        "flip_share_of_errors": 0.18339100346020762,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0873063494902001,
+        "median": 0.03387185457325259,
+        "miss_1pct": 0.6533333333333333,
+        "miss_5pct": 0.4091666666666667,
+        "flip_rate": 0.09166666666666666,
+        "flip_share_of_errors": 0.14588859416445624,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.11346637785293455,
+        "median": 0.06721195075243495,
+        "miss_1pct": 0.7766666666666666,
+        "miss_5pct": 0.5766666666666667,
+        "flip_rate": 0.1475,
+        "flip_share_of_errors": 0.19688542825361513,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2337556410746264,
+        "median": 0.053792571130250294,
+        "miss_1pct": 0.685,
+        "miss_5pct": 0.5116666666666667,
+        "flip_rate": 0.23666666666666666,
+        "flip_share_of_errors": 0.35678391959798994,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2472432190829843,
+        "median": 0.08974777395644516,
+        "miss_1pct": 0.7691666666666667,
+        "miss_5pct": 0.5966666666666667,
+        "flip_rate": 0.2808333333333333,
+        "flip_share_of_errors": 0.37611607142857145,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0380868600411719,
+        "median": 0.00701467665162998,
+        "miss_1pct": 0.4683333333333333,
+        "miss_5pct": 0.21166666666666667,
+        "flip_rate": 0.04083333333333333,
+        "flip_share_of_errors": 0.09107806691449814,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair064-072",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06549366125345185,
+        "median": 0.03415373248160985,
+        "miss_1pct": 0.6883333333333334,
+        "miss_5pct": 0.3875,
+        "flip_rate": 0.06666666666666667,
+        "flip_share_of_errors": 0.09950248756218906,
+        "mirror_error_mean": 0.5250619429699693
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1416176448059892,
+        "median": 0.08994761281940941,
+        "miss_1pct": 0.855,
+        "miss_5pct": 0.705,
+        "flip_rate": 0.2,
+        "flip_share_of_errors": 0.2484472049689441,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.19389691811471957,
+        "median": 0.14124101863167696,
+        "miss_1pct": 0.99,
+        "miss_5pct": 0.9308333333333333,
+        "flip_rate": 0.3358333333333333,
+        "flip_share_of_errors": 0.35790408525754885,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3377705970396053,
+        "median": 0.19810030720984434,
+        "miss_1pct": 0.7925,
+        "miss_5pct": 0.6916666666666667,
+        "flip_rate": 0.4091666666666667,
+        "flip_share_of_errors": 0.5449500554938956,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3293061175900572,
+        "median": 0.18831295145195087,
+        "miss_1pct": 0.7508333333333334,
+        "miss_5pct": 0.6583333333333333,
+        "flip_rate": 0.38416666666666666,
+        "flip_share_of_errors": 0.5398126463700235,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.30345552204987153,
+        "median": 0.15338169772646232,
+        "miss_1pct": 0.775,
+        "miss_5pct": 0.6566666666666666,
+        "flip_rate": 0.37333333333333335,
+        "flip_share_of_errors": 0.5079365079365079,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3600343323298128,
+        "median": 0.191061200009225,
+        "miss_1pct": 0.8,
+        "miss_5pct": 0.6841666666666667,
+        "flip_rate": 0.4083333333333333,
+        "flip_share_of_errors": 0.5408388520971302,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07106599225202806,
+        "median": 0.022170426383691266,
+        "miss_1pct": 0.5708333333333333,
+        "miss_5pct": 0.3408333333333333,
+        "flip_rate": 0.08833333333333333,
+        "flip_share_of_errors": 0.16588419405320814,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.15802531983246776,
+        "median": 0.0777558712085549,
+        "miss_1pct": 0.7616666666666667,
+        "miss_5pct": 0.6125,
+        "flip_rate": 0.2708333333333333,
+        "flip_share_of_errors": 0.37572254335260113,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0769778980593968,
+        "median": 0.03444182279781119,
+        "miss_1pct": 0.6216666666666667,
+        "miss_5pct": 0.42083333333333334,
+        "flip_rate": 0.10666666666666667,
+        "flip_share_of_errors": 0.1813031161473088,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.17563005687030753,
+        "median": 0.09963128077518368,
+        "miss_1pct": 0.8116666666666666,
+        "miss_5pct": 0.6916666666666667,
+        "flip_rate": 0.2966666666666667,
+        "flip_share_of_errors": 0.38653637350705755,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.19313548247460582,
+        "median": 0.04340643073462862,
+        "miss_1pct": 0.6475,
+        "miss_5pct": 0.4766666666666667,
+        "flip_rate": 0.23416666666666666,
+        "flip_share_of_errors": 0.3812754409769335,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2864689142612586,
+        "median": 0.09822234928504303,
+        "miss_1pct": 0.755,
+        "miss_5pct": 0.6241666666666666,
+        "flip_rate": 0.3075,
+        "flip_share_of_errors": 0.42658959537572255,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0423066092066791,
+        "median": 0.0,
+        "miss_1pct": 0.3383333333333333,
+        "miss_5pct": 0.17416666666666666,
+        "flip_rate": 0.05333333333333334,
+        "flip_share_of_errors": 0.1671018276762402,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair061-086",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07474795888665038,
+        "median": 0.03263019973621215,
+        "miss_1pct": 0.6291666666666667,
+        "miss_5pct": 0.40166666666666667,
+        "flip_rate": 0.059166666666666666,
+        "flip_share_of_errors": 0.09806629834254144,
+        "mirror_error_mean": 0.45124719705852556
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.40437543019475686,
+        "median": 0.3192427510574284,
+        "miss_1pct": 0.9875,
+        "miss_5pct": 0.9225,
+        "flip_rate": 0.37916666666666665,
+        "flip_share_of_errors": 0.39737991266375544,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2935425587713661,
+        "median": 0.18672551769880058,
+        "miss_1pct": 0.985,
+        "miss_5pct": 0.935,
+        "flip_rate": 0.23666666666666666,
+        "flip_share_of_errors": 0.24890446976336547,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.4094399422480372,
+        "median": 0.22480770023327826,
+        "miss_1pct": 0.8483333333333334,
+        "miss_5pct": 0.7508333333333334,
+        "flip_rate": 0.41333333333333333,
+        "flip_share_of_errors": 0.5066394279877426,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34580989132220563,
+        "median": 0.18717828543191162,
+        "miss_1pct": 0.8083333333333333,
+        "miss_5pct": 0.7066666666666667,
+        "flip_rate": 0.37083333333333335,
+        "flip_share_of_errors": 0.4754273504273504,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.354943200144427,
+        "median": 0.1860579824822967,
+        "miss_1pct": 0.8008333333333333,
+        "miss_5pct": 0.675,
+        "flip_rate": 0.3775,
+        "flip_share_of_errors": 0.4913232104121475,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.35790148038321473,
+        "median": 0.1894278571405932,
+        "miss_1pct": 0.8108333333333333,
+        "miss_5pct": 0.7,
+        "flip_rate": 0.37166666666666665,
+        "flip_share_of_errors": 0.47547974413646055,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.16105655046881798,
+        "median": 0.042253029576558535,
+        "miss_1pct": 0.6533333333333333,
+        "miss_5pct": 0.4708333333333333,
+        "flip_rate": 0.15916666666666668,
+        "flip_share_of_errors": 0.2519788918205805,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.24477181139680596,
+        "median": 0.1043949368640987,
+        "miss_1pct": 0.8525,
+        "miss_5pct": 0.6958333333333333,
+        "flip_rate": 0.22166666666666668,
+        "flip_share_of_errors": 0.2697768762677485,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1829559243079084,
+        "median": 0.051034906900673374,
+        "miss_1pct": 0.6908333333333333,
+        "miss_5pct": 0.505,
+        "flip_rate": 0.175,
+        "flip_share_of_errors": 0.2638190954773869,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.25030583899216857,
+        "median": 0.1213278196079009,
+        "miss_1pct": 0.89,
+        "miss_5pct": 0.7591666666666667,
+        "flip_rate": 0.2075,
+        "flip_share_of_errors": 0.24198250728862974,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2678796865648484,
+        "median": 0.09332898433031617,
+        "miss_1pct": 0.7133333333333334,
+        "miss_5pct": 0.59,
+        "flip_rate": 0.25,
+        "flip_share_of_errors": 0.36319612590799033,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2986594145732267,
+        "median": 0.13943366709013838,
+        "miss_1pct": 0.7908333333333334,
+        "miss_5pct": 0.68,
+        "flip_rate": 0.29,
+        "flip_share_of_errors": 0.3778501628664495,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10277854486263799,
+        "median": 0.014423181642370834,
+        "miss_1pct": 0.5433333333333333,
+        "miss_5pct": 0.31666666666666665,
+        "flip_rate": 0.08916666666666667,
+        "flip_share_of_errors": 0.16957210776545167,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair067-091",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.21662794452030348,
+        "median": 0.0840374161424722,
+        "miss_1pct": 0.8125,
+        "miss_5pct": 0.6366666666666667,
+        "flip_rate": 0.17583333333333334,
+        "flip_share_of_errors": 0.22470713525026625,
+        "mirror_error_mean": 0.5415968776942168
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.08565141727539785,
+        "median": 0.046889534193354336,
+        "miss_1pct": 0.7575,
+        "miss_5pct": 0.47583333333333333,
+        "flip_rate": 0.07333333333333333,
+        "flip_share_of_errors": 0.10057142857142858,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.21494988369015497,
+        "median": 0.09671284258857848,
+        "miss_1pct": 0.965,
+        "miss_5pct": 0.7525,
+        "flip_rate": 0.15,
+        "flip_share_of_errors": 0.1615798922800718,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3122004594372696,
+        "median": 0.15695200364578155,
+        "miss_1pct": 0.7841666666666667,
+        "miss_5pct": 0.6633333333333333,
+        "flip_rate": 0.3958333333333333,
+        "flip_share_of_errors": 0.5260243632336655,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.32899525179414785,
+        "median": 0.16123840206723655,
+        "miss_1pct": 0.7883333333333333,
+        "miss_5pct": 0.6608333333333334,
+        "flip_rate": 0.4116666666666667,
+        "flip_share_of_errors": 0.5410733844468785,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.30024576442146844,
+        "median": 0.12338541396177416,
+        "miss_1pct": 0.725,
+        "miss_5pct": 0.6141666666666666,
+        "flip_rate": 0.39416666666666667,
+        "flip_share_of_errors": 0.5604265402843602,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3256674506316762,
+        "median": 0.17429691975114564,
+        "miss_1pct": 0.795,
+        "miss_5pct": 0.6558333333333334,
+        "flip_rate": 0.4241666666666667,
+        "flip_share_of_errors": 0.5526601520086862,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04473936965742058,
+        "median": 0.01753551895178479,
+        "miss_1pct": 0.5541666666666667,
+        "miss_5pct": 0.30083333333333334,
+        "flip_rate": 0.06666666666666667,
+        "flip_share_of_errors": 0.12578616352201258,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.056785682561530396,
+        "median": 0.038755641682704206,
+        "miss_1pct": 0.6783333333333333,
+        "miss_5pct": 0.4166666666666667,
+        "flip_rate": 0.06333333333333334,
+        "flip_share_of_errors": 0.09681528662420383,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.059509531928595,
+        "median": 0.035772170125073666,
+        "miss_1pct": 0.6441666666666667,
+        "miss_5pct": 0.41083333333333333,
+        "flip_rate": 0.09666666666666666,
+        "flip_share_of_errors": 0.15696887686062247,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0750303278830339,
+        "median": 0.05270656833902404,
+        "miss_1pct": 0.7641666666666667,
+        "miss_5pct": 0.5158333333333334,
+        "flip_rate": 0.08666666666666667,
+        "flip_share_of_errors": 0.11751412429378531,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1760266309466346,
+        "median": 0.020156460864104293,
+        "miss_1pct": 0.5533333333333333,
+        "miss_5pct": 0.415,
+        "flip_rate": 0.2075,
+        "flip_share_of_errors": 0.3878504672897196,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_multi",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.252108032977167,
+        "median": 0.05620910177089297,
+        "miss_1pct": 0.7183333333333334,
+        "miss_5pct": 0.525,
+        "flip_rate": 0.3016666666666667,
+        "flip_share_of_errors": 0.434052757793765,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.01858026587622026,
+        "median": 0.0,
+        "miss_1pct": 0.31583333333333335,
+        "miss_5pct": 0.14416666666666667,
+        "flip_rate": 0.029166666666666667,
+        "flip_share_of_errors": 0.0958904109589041,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_multi_pair",
+      "geometry": "pair072-085",
+      "arm": "nn_single",
+      "k": 13,
+      "m": 1200,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04587458703584515,
+        "median": 0.030693470581177183,
+        "miss_1pct": 0.6383333333333333,
+        "miss_5pct": 0.36083333333333334,
+        "flip_rate": 0.06416666666666666,
+        "flip_share_of_errors": 0.10349462365591398,
+        "mirror_error_mean": 0.5082822399262946
+      },
+      "config": {
+        "study": "faust_multi_pair",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_multi_pair",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pairs": [
+          0,
+          13,
+          2,
+          41,
+          5,
+          88,
+          7,
+          52
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 1200,
+        "max_iterations": 30,
+        "per_pair_backend": "cupdlpx",
+        "__section__": "faust_multi_pair",
+        "__class__": "MultiPairConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}

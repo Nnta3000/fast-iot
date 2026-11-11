@@ -1,0 +1,32 @@
+[13:07:45 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_multi_pair/run.log
+[13:07:45 +    0.0s] preflight ok=True mem=12.1 GB
+[13:07:45 +    0.0s] 4 training pairs [(0, 13), (2, 41), (5, 88), (7, 52)]; 8 held-out pairs
+[13:08:02 +   17.6s] pair (0, 13): |F|=10521 regret_single=0.000788994
+[13:08:15 +   30.7s] pair (2, 41): |F|=10318 regret_single=0.000740468
+[13:08:33 +   48.5s] pair (5, 88): |F|=13818 regret_single=0.00242621
+[13:08:49 +   64.0s] pair (7, 52): |F|=13937 regret_single=0.00236838
+[13:11:04 +  199.1s] multi LP: shape (48594, 9613) nnz 728,910 objective 0.00184768
+[13:11:04 +  199.1s] theta_multi=[0.0, 0.0129, 0.0004, 0.0075, 0.0001, 0.0037, 0.0, 0.0, 0.0, 0.0, 0.0228, 0.366, 0.5866]
+[13:11:04 +  199.1s]   pair (0, 13): L1(theta_single, theta_multi) = 0.4622
+[13:11:04 +  199.1s]   pair (2, 41): L1(theta_single, theta_multi) = 1.0080
+[13:11:04 +  199.1s]   pair (5, 88): L1(theta_single, theta_multi) = 0.1623
+[13:11:04 +  199.1s]   pair (7, 52): L1(theta_single, theta_multi) = 0.0834
+[13:11:28 +  223.2s] 
+                arm  n_draws  mean_mean  miss_5pct_mean
+-------------------  -------  ---------  --------------
+    grouped_uniform        8     0.1233          0.4831
+              multi        8     0.2018          0.4624
+ nn_grouped_uniform        8     0.1821          0.6435
+           nn_multi        8     0.2616          0.5899
+   nn_position_only        8     0.2274          0.8196
+          nn_single        8     0.1019          0.4190
+     nn_uniform_hks        8     0.3376          0.6720
+nn_uniform_late_hks        8     0.3434          0.6778
+   nn_uniform_theta        8     0.1639          0.5819
+      position_only        8     0.2086          0.6489
+             single        8     0.0475          0.1974
+        uniform_hks        8     0.3390          0.6792
+   uniform_late_hks        8     0.3116          0.6306
+      uniform_theta        8     0.1069          0.4043
+[13:11:28 +  223.2s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_multi_pair/records.json (112 rows)
+[13:11:28 +  223.2s] log closed after 223.2s

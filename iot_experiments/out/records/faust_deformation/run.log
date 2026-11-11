@@ -1,0 +1,78 @@
+[12:27:11 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_deformation/run.log
+[12:27:11 +    0.0s] preflight ok=True mem=11.1 GB
+[12:27:38 +   26.9s] theta fitted once at sigma=0: regret=0.0008638 |F|=13882 theta=[0.0163, 0.022, 0.0007, 0.0141, 0.0001, 0.0079, 0.0, 0.0, 0.0, 0.0, 0.048, 0.1372, 0.7538]
+[12:27:38 +   27.0s] sigma=0: target deformed (vertex identity preserved)
+[12:27:42 +   31.0s]   sigma=0  learned miss@5%=0.161  uniform=0.502  position=0.868
+[12:27:42 +   31.0s] sigma=0.25: target deformed (vertex identity preserved)
+[12:27:46 +   35.2s]   sigma=0.25  learned miss@5%=0.322  uniform=0.530  position=0.829
+[12:27:46 +   35.2s] sigma=0.5: target deformed (vertex identity preserved)
+[12:27:50 +   39.6s]   sigma=0.5  learned miss@5%=0.436  uniform=0.677  position=0.823
+[12:27:50 +   39.6s] sigma=0.75: target deformed (vertex identity preserved)
+[12:27:54 +   43.4s]   sigma=0.75  learned miss@5%=0.612  uniform=0.745  position=0.881
+[12:27:54 +   43.4s] sigma=1: target deformed (vertex identity preserved)
+[12:28:00 +   48.8s]   sigma=1  learned miss@5%=0.708  uniform=0.775  position=0.889
+[12:28:00 +   48.8s] 
+ geometry                  arm  n_draws  mean_mean  miss_5pct_mean
+---------  -------------------  -------  ---------  --------------
+   sigma0      grouped_uniform        1     0.2026          0.6007
+   sigma0              learned        1     0.0480          0.1613
+   sigma0   nn_grouped_uniform        1     0.3794          0.7927
+   sigma0           nn_learned        1     0.1178          0.3740
+   sigma0     nn_position_only        1     0.4146          0.9567
+   sigma0       nn_uniform_hks        1     0.3398          0.6607
+   sigma0  nn_uniform_late_hks        1     0.3496          0.6693
+   sigma0     nn_uniform_theta        1     0.3122          0.7600
+   sigma0        position_only        1     0.3919          0.8680
+   sigma0          uniform_hks        1     0.3377          0.6413
+   sigma0     uniform_late_hks        1     0.2818          0.5753
+   sigma0        uniform_theta        1     0.1820          0.5020
+sigma0.25      grouped_uniform        1     0.2344          0.6480
+sigma0.25              learned        1     0.1353          0.3220
+sigma0.25   nn_grouped_uniform        1     0.2708          0.7500
+sigma0.25           nn_learned        1     0.1517          0.4247
+sigma0.25     nn_position_only        1     0.3442          0.9593
+sigma0.25       nn_uniform_hks        1     0.3464          0.6727
+sigma0.25  nn_uniform_late_hks        1     0.3502          0.6700
+sigma0.25     nn_uniform_theta        1     0.2702          0.7180
+sigma0.25        position_only        1     0.2959          0.8287
+sigma0.25          uniform_hks        1     0.3584          0.6720
+sigma0.25     uniform_late_hks        1     0.2876          0.5747
+sigma0.25        uniform_theta        1     0.1991          0.5300
+ sigma0.5      grouped_uniform        1     0.2792          0.7393
+ sigma0.5              learned        1     0.1784          0.4360
+ sigma0.5   nn_grouped_uniform        1     0.2709          0.7313
+ sigma0.5           nn_learned        1     0.2211          0.6080
+ sigma0.5     nn_position_only        1     0.3184          0.9120
+ sigma0.5       nn_uniform_hks        1     0.3586          0.6880
+ sigma0.5  nn_uniform_late_hks        1     0.3392          0.6647
+ sigma0.5     nn_uniform_theta        1     0.2659          0.6973
+ sigma0.5        position_only        1     0.3133          0.8233
+ sigma0.5          uniform_hks        1     0.3646          0.6927
+ sigma0.5     uniform_late_hks        1     0.3095          0.5993
+ sigma0.5        uniform_theta        1     0.2547          0.6773
+sigma0.75      grouped_uniform        1     0.2966          0.7747
+sigma0.75              learned        1     0.2436          0.6120
+sigma0.75   nn_grouped_uniform        1     0.3791          0.8127
+sigma0.75           nn_learned        1     0.3145          0.6880
+sigma0.75     nn_position_only        1     0.4471          0.9340
+sigma0.75       nn_uniform_hks        1     0.3308          0.6687
+sigma0.75  nn_uniform_late_hks        1     0.3365          0.6573
+sigma0.75     nn_uniform_theta        1     0.3720          0.7980
+sigma0.75        position_only        1     0.3786          0.8807
+sigma0.75          uniform_hks        1     0.3497          0.6947
+sigma0.75     uniform_late_hks        1     0.3232          0.6300
+sigma0.75        uniform_theta        1     0.2856          0.7453
+   sigma1      grouped_uniform        1     0.3199          0.7900
+   sigma1              learned        1     0.2992          0.7080
+   sigma1   nn_grouped_uniform        1     0.4024          0.8047
+   sigma1           nn_learned        1     0.3395          0.7680
+   sigma1     nn_position_only        1     0.4167          0.8653
+   sigma1       nn_uniform_hks        1     0.3852          0.7260
+   sigma1  nn_uniform_late_hks        1     0.3601          0.6993
+   sigma1     nn_uniform_theta        1     0.3921          0.7920
+   sigma1        position_only        1     0.4055          0.8887
+   sigma1          uniform_hks        1     0.4211          0.7653
+   sigma1     uniform_late_hks        1     0.3697          0.6967
+   sigma1        uniform_theta        1     0.3199          0.7747
+[12:28:00 +   48.8s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_deformation/records.json (60 rows)
+[12:28:00 +   48.8s] log closed after 48.8s

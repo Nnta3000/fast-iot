@@ -1,0 +1,3372 @@
+{
+  "provenance": {
+    "question": "how fast does correspondence accuracy degrade under a controlled non-isometric deformation?",
+    "deformation": "twist about the vertical axis, angle a = sigma*pi*y_norm, applied to the TARGET only; sigma in the swept set, sigma=0 = identity",
+    "vertex_identity": "the deformation is a point map, so vertex i still corresponds to vertex i and pi_hat = I/n is unchanged -- no new ground truth is needed",
+    "not_an_articulation": "a twist is not isometric and is not joint bending; it measures descriptor degradation, not tolerance to real pose change (the FAUST pose axis covers that)",
+    "theta": "fitted ONCE on the undeformed training pair, then applied at every sigma -- so the curve is transfer, not refitting",
+    "metric": "geodesic error on the deformed target, normalised by sqrt(surface area), as everywhere else"
+  },
+  "records": [
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3919371071353132,
+        "median": 0.3399598645119237,
+        "miss_1pct": 0.8933333333333333,
+        "miss_5pct": 0.868,
+        "flip_rate": 0.44533333333333336,
+        "flip_share_of_errors": 0.5444172779136104,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.41461665312523854,
+        "median": 0.35340030219784757,
+        "miss_1pct": 0.994,
+        "miss_5pct": 0.9566666666666667,
+        "flip_rate": 0.42333333333333334,
+        "flip_share_of_errors": 0.46114742193173563,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.33769612980067926,
+        "median": 0.16686951092224794,
+        "miss_1pct": 0.8006666666666666,
+        "miss_5pct": 0.6413333333333333,
+        "flip_rate": 0.42133333333333334,
+        "flip_share_of_errors": 0.5663082437275986,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3398137079355024,
+        "median": 0.16959468650204437,
+        "miss_1pct": 0.7966666666666666,
+        "miss_5pct": 0.6606666666666666,
+        "flip_rate": 0.404,
+        "flip_share_of_errors": 0.551410373066424,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2817792787694516,
+        "median": 0.10032076653167202,
+        "miss_1pct": 0.714,
+        "miss_5pct": 0.5753333333333334,
+        "flip_rate": 0.3486666666666667,
+        "flip_share_of_errors": 0.5282828282828282,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3495587409477877,
+        "median": 0.16433578830614798,
+        "miss_1pct": 0.8206666666666667,
+        "miss_5pct": 0.6693333333333333,
+        "flip_rate": 0.3873333333333333,
+        "flip_share_of_errors": 0.5109938434476693,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1820350663174315,
+        "median": 0.05091058340369889,
+        "miss_1pct": 0.65,
+        "miss_5pct": 0.502,
+        "flip_rate": 0.2,
+        "flip_share_of_errors": 0.33112582781456956,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.31221955889735176,
+        "median": 0.15226435780982533,
+        "miss_1pct": 0.8486666666666667,
+        "miss_5pct": 0.76,
+        "flip_rate": 0.36933333333333335,
+        "flip_share_of_errors": 0.4739093242087254,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.20260748488770317,
+        "median": 0.08825622015656233,
+        "miss_1pct": 0.7193333333333334,
+        "miss_5pct": 0.6006666666666667,
+        "flip_rate": 0.218,
+        "flip_share_of_errors": 0.32667332667332666,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.37942083082980527,
+        "median": 0.21424836787651663,
+        "miss_1pct": 0.8686666666666667,
+        "miss_5pct": 0.7926666666666666,
+        "flip_rate": 0.4093333333333333,
+        "flip_share_of_errors": 0.5125208681135225,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.047981698388698875,
+        "median": 0.0,
+        "miss_1pct": 0.30266666666666664,
+        "miss_5pct": 0.16133333333333333,
+        "flip_rate": 0.058666666666666666,
+        "flip_share_of_errors": 0.21674876847290642,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0",
+      "arm": "nn_learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.11779207698465022,
+        "median": 0.028888949358100643,
+        "miss_1pct": 0.646,
+        "miss_5pct": 0.374,
+        "flip_rate": 0.1,
+        "flip_share_of_errors": 0.16910935738444194,
+        "mirror_error_mean": 0.41204781878112345
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2959081724879866,
+        "median": 0.20769606915561328,
+        "miss_1pct": 0.8786666666666667,
+        "miss_5pct": 0.8286666666666667,
+        "flip_rate": 0.422,
+        "flip_share_of_errors": 0.5068054443554844,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34422750280600173,
+        "median": 0.25275255118123235,
+        "miss_1pct": 0.994,
+        "miss_5pct": 0.9593333333333334,
+        "flip_rate": 0.494,
+        "flip_share_of_errors": 0.5240452616690241,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3583853857284753,
+        "median": 0.19476379986080322,
+        "miss_1pct": 0.8066666666666666,
+        "miss_5pct": 0.672,
+        "flip_rate": 0.4246666666666667,
+        "flip_share_of_errors": 0.5602462620932278,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34644442273009,
+        "median": 0.17336776191500042,
+        "miss_1pct": 0.8126666666666666,
+        "miss_5pct": 0.6726666666666666,
+        "flip_rate": 0.414,
+        "flip_share_of_errors": 0.5409407665505227,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.28760606404714806,
+        "median": 0.09561394432937903,
+        "miss_1pct": 0.7313333333333333,
+        "miss_5pct": 0.5746666666666667,
+        "flip_rate": 0.3433333333333333,
+        "flip_share_of_errors": 0.5009727626459144,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3501856695741487,
+        "median": 0.16529075696360662,
+        "miss_1pct": 0.82,
+        "miss_5pct": 0.67,
+        "flip_rate": 0.396,
+        "flip_share_of_errors": 0.513840830449827,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.19910477840179547,
+        "median": 0.06427269179632275,
+        "miss_1pct": 0.6886666666666666,
+        "miss_5pct": 0.53,
+        "flip_rate": 0.2906666666666667,
+        "flip_share_of_errors": 0.4448979591836735,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2702298265508898,
+        "median": 0.12975390260984423,
+        "miss_1pct": 0.8253333333333334,
+        "miss_5pct": 0.718,
+        "flip_rate": 0.39466666666666667,
+        "flip_share_of_errors": 0.5064157399486741,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2344361533071021,
+        "median": 0.10402926463706166,
+        "miss_1pct": 0.7753333333333333,
+        "miss_5pct": 0.648,
+        "flip_rate": 0.33866666666666667,
+        "flip_share_of_errors": 0.46139872842870117,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2707538473072295,
+        "median": 0.15168676502473244,
+        "miss_1pct": 0.8473333333333334,
+        "miss_5pct": 0.75,
+        "flip_rate": 0.4186666666666667,
+        "flip_share_of_errors": 0.5237698081734778,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.13533835907371447,
+        "median": 0.007792444859467383,
+        "miss_1pct": 0.478,
+        "miss_5pct": 0.322,
+        "flip_rate": 0.184,
+        "flip_share_of_errors": 0.40233236151603496,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.25",
+      "arm": "nn_learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.15172816072013545,
+        "median": 0.035837997806157554,
+        "miss_1pct": 0.688,
+        "miss_5pct": 0.4246666666666667,
+        "flip_rate": 0.196,
+        "flip_share_of_errors": 0.3027806385169928,
+        "mirror_error_mean": 0.38264016408934937
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.31326637415669595,
+        "median": 0.19885340115202266,
+        "miss_1pct": 0.9013333333333333,
+        "miss_5pct": 0.8233333333333334,
+        "flip_rate": 0.4146666666666667,
+        "flip_share_of_errors": 0.4740853658536585,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.31837642522301896,
+        "median": 0.2277994779135894,
+        "miss_1pct": 0.99,
+        "miss_5pct": 0.912,
+        "flip_rate": 0.332,
+        "flip_share_of_errors": 0.3470383275261324,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3645602524678414,
+        "median": 0.2076995904030443,
+        "miss_1pct": 0.828,
+        "miss_5pct": 0.6926666666666667,
+        "flip_rate": 0.3953333333333333,
+        "flip_share_of_errors": 0.49581939799331104,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.35859322944436933,
+        "median": 0.1949027302293107,
+        "miss_1pct": 0.8206666666666667,
+        "miss_5pct": 0.688,
+        "flip_rate": 0.39466666666666667,
+        "flip_share_of_errors": 0.5008460236886633,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3095366506937306,
+        "median": 0.11815077085611382,
+        "miss_1pct": 0.766,
+        "miss_5pct": 0.5993333333333334,
+        "flip_rate": 0.3433333333333333,
+        "flip_share_of_errors": 0.4660633484162896,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.33920384435778966,
+        "median": 0.14461350538563555,
+        "miss_1pct": 0.8166666666666667,
+        "miss_5pct": 0.6646666666666666,
+        "flip_rate": 0.366,
+        "flip_share_of_errors": 0.46683673469387754,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2547417755997274,
+        "median": 0.12407435243691489,
+        "miss_1pct": 0.786,
+        "miss_5pct": 0.6773333333333333,
+        "flip_rate": 0.3233333333333333,
+        "flip_share_of_errors": 0.42284219703574544,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2658733195507581,
+        "median": 0.12221538037451576,
+        "miss_1pct": 0.804,
+        "miss_5pct": 0.6973333333333334,
+        "flip_rate": 0.25933333333333336,
+        "flip_share_of_errors": 0.3316283034953112,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.27919653081096485,
+        "median": 0.14575286102012025,
+        "miss_1pct": 0.832,
+        "miss_5pct": 0.7393333333333333,
+        "flip_rate": 0.378,
+        "flip_share_of_errors": 0.46782178217821785,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2708718960113163,
+        "median": 0.12851698670273126,
+        "miss_1pct": 0.8313333333333334,
+        "miss_5pct": 0.7313333333333333,
+        "flip_rate": 0.274,
+        "flip_share_of_errors": 0.3402317880794702,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1783624718489933,
+        "median": 0.03227296878200074,
+        "miss_1pct": 0.5913333333333334,
+        "miss_5pct": 0.436,
+        "flip_rate": 0.224,
+        "flip_share_of_errors": 0.3916083916083916,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.5",
+      "arm": "nn_learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.22106374734981152,
+        "median": 0.08678586413657742,
+        "miss_1pct": 0.7746666666666666,
+        "miss_5pct": 0.608,
+        "flip_rate": 0.18733333333333332,
+        "flip_share_of_errors": 0.24911347517730498,
+        "mirror_error_mean": 0.4611604380241347
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3785581704810906,
+        "median": 0.24355178051599274,
+        "miss_1pct": 0.9406666666666667,
+        "miss_5pct": 0.8806666666666667,
+        "flip_rate": 0.47333333333333333,
+        "flip_share_of_errors": 0.5182481751824818,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.44706501099823903,
+        "median": 0.3564067284692467,
+        "miss_1pct": 0.9886666666666667,
+        "miss_5pct": 0.934,
+        "flip_rate": 0.496,
+        "flip_share_of_errors": 0.5184668989547039,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.34973251605350725,
+        "median": 0.1902074107462092,
+        "miss_1pct": 0.836,
+        "miss_5pct": 0.6946666666666667,
+        "flip_rate": 0.38466666666666666,
+        "flip_share_of_errors": 0.4780447390223695,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.33076495578279763,
+        "median": 0.15817792392365942,
+        "miss_1pct": 0.8113333333333334,
+        "miss_5pct": 0.6686666666666666,
+        "flip_rate": 0.35733333333333334,
+        "flip_share_of_errors": 0.45772843723313406,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3232012272053447,
+        "median": 0.14098376714449595,
+        "miss_1pct": 0.7946666666666666,
+        "miss_5pct": 0.63,
+        "flip_rate": 0.35533333333333333,
+        "flip_share_of_errors": 0.4626736111111111,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3365075129356193,
+        "median": 0.1663625613002076,
+        "miss_1pct": 0.8073333333333333,
+        "miss_5pct": 0.6573333333333333,
+        "flip_rate": 0.36,
+        "flip_share_of_errors": 0.4631217838765009,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.28559239597708846,
+        "median": 0.16223972345596133,
+        "miss_1pct": 0.812,
+        "miss_5pct": 0.7453333333333333,
+        "flip_rate": 0.33666666666666667,
+        "flip_share_of_errors": 0.42760372565622357,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.37200971987879333,
+        "median": 0.1884802177773406,
+        "miss_1pct": 0.8553333333333333,
+        "miss_5pct": 0.798,
+        "flip_rate": 0.38,
+        "flip_share_of_errors": 0.45819935691318325,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2966497331313064,
+        "median": 0.16791082526867307,
+        "miss_1pct": 0.838,
+        "miss_5pct": 0.7746666666666666,
+        "flip_rate": 0.35333333333333333,
+        "flip_share_of_errors": 0.43478260869565216,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3790855769100449,
+        "median": 0.1976356541596617,
+        "miss_1pct": 0.8646666666666667,
+        "miss_5pct": 0.8126666666666666,
+        "flip_rate": 0.4073333333333333,
+        "flip_share_of_errors": 0.4864649681528662,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2435611261759859,
+        "median": 0.10903813993019171,
+        "miss_1pct": 0.7133333333333334,
+        "miss_5pct": 0.612,
+        "flip_rate": 0.294,
+        "flip_share_of_errors": 0.42567567567567566,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma0.75",
+      "arm": "nn_learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3145431517063299,
+        "median": 0.1459516155245953,
+        "miss_1pct": 0.8053333333333333,
+        "miss_5pct": 0.688,
+        "flip_rate": 0.33266666666666667,
+        "flip_share_of_errors": 0.4257679180887372,
+        "mirror_error_mean": 0.4418499217981007
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.405513786841334,
+        "median": 0.23581566317434766,
+        "miss_1pct": 0.9266666666666666,
+        "miss_5pct": 0.8886666666666667,
+        "flip_rate": 0.5673333333333334,
+        "flip_share_of_errors": 0.6658841940532081,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_position_only",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.4166974061055821,
+        "median": 0.34106699948886904,
+        "miss_1pct": 0.9833333333333333,
+        "miss_5pct": 0.8653333333333333,
+        "flip_rate": 0.6786666666666666,
+        "flip_share_of_errors": 0.7468818782098312,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.4210997711193455,
+        "median": 0.22853578417297898,
+        "miss_1pct": 0.8913333333333333,
+        "miss_5pct": 0.7653333333333333,
+        "flip_rate": 0.49733333333333335,
+        "flip_share_of_errors": 0.6084828711256117,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_uniform_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3852300626743964,
+        "median": 0.20910679127134651,
+        "miss_1pct": 0.8673333333333333,
+        "miss_5pct": 0.726,
+        "flip_rate": 0.4553333333333333,
+        "flip_share_of_errors": 0.570593149540518,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.36965434625089316,
+        "median": 0.1847499586197961,
+        "miss_1pct": 0.8353333333333334,
+        "miss_5pct": 0.6966666666666667,
+        "flip_rate": 0.4146666666666667,
+        "flip_share_of_errors": 0.5389948006932409,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_uniform_late_hks",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3601081999746275,
+        "median": 0.1726302507578572,
+        "miss_1pct": 0.8486666666666667,
+        "miss_5pct": 0.6993333333333334,
+        "flip_rate": 0.41533333333333333,
+        "flip_share_of_errors": 0.5343053173241853,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.31985359380753614,
+        "median": 0.19817817601145904,
+        "miss_1pct": 0.8266666666666667,
+        "miss_5pct": 0.7746666666666666,
+        "flip_rate": 0.4593333333333333,
+        "flip_share_of_errors": 0.6086572438162544,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_uniform_theta",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3920869214748898,
+        "median": 0.2300542135941146,
+        "miss_1pct": 0.8553333333333333,
+        "miss_5pct": 0.792,
+        "flip_rate": 0.492,
+        "flip_share_of_errors": 0.6227848101265823,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3199063515428544,
+        "median": 0.1989084331006304,
+        "miss_1pct": 0.848,
+        "miss_5pct": 0.79,
+        "flip_rate": 0.46266666666666667,
+        "flip_share_of_errors": 0.5941780821917808,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_grouped_uniform",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.40241034271326315,
+        "median": 0.2539673062012532,
+        "miss_1pct": 0.8573333333333333,
+        "miss_5pct": 0.8046666666666666,
+        "flip_rate": 0.5126666666666667,
+        "flip_share_of_errors": 0.6451342281879194,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.2992106802998379,
+        "median": 0.16824579856386737,
+        "miss_1pct": 0.7833333333333333,
+        "miss_5pct": 0.708,
+        "flip_rate": 0.38466666666666666,
+        "flip_share_of_errors": 0.5362453531598513,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_deformation",
+      "geometry": "sigma1",
+      "arm": "nn_learned",
+      "k": 13,
+      "m": 1500,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.3394653502103647,
+        "median": 0.1965548154143552,
+        "miss_1pct": 0.8546666666666667,
+        "miss_5pct": 0.768,
+        "flip_rate": 0.41533333333333333,
+        "flip_share_of_errors": 0.5288624787775892,
+        "mirror_error_mean": 0.3537591485690482
+      },
+      "config": {
+        "study": "faust_deformation",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_deformation",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pair": [
+          50,
+          66
+        ],
+        "n_sub": 1500,
+        "sigmas": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_deformation",
+        "__class__": "DeformationConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}
