@@ -1,0 +1,290 @@
+"""
+EN: **Four objectives, one hypothesis class -- which part of the relaxed LP actually earns its keep?**
+
+    Every arm here fits the *same* object: `c_ij = sum_k theta_k (a_ik - b_jk)^2`, `theta >= 0`, on the same
+    standardised descriptors and the same training pair. Only the **objective** differs:
+
+      | arm | objective | marginals it sees |
+      | --- | --- | --- |
+      | `row_softmax` | `mean_i CE(-C_ij/tau, i)` | source only (one-sided) |
+      | `rowcol_softmax` | `mean_i CE(log P_ii, i)`, `P = Sinkhorn(exp(-C/tau))` | source **and** target |
+      | `entropic_iot` | minimise the entropic joint master `Psi(theta, f, g)` | source and target, exact |
+      | `relaxed_lp` | minimise the regret of the relaxed master | source and target, exact, LP |
+
+    plus `uniform` as the label-free reference.
+
+    **Why these four.** The pairing study (`SANITY_CHECKS_REPORT.md`) never separated "inverse OT" from "a
+    supervised reweighting of the same features". Here the features are identical, so a difference between the
+    columns is attributable to the objective alone. In particular `row_softmax` is the classic InfoNCE-style
+    arm: if it matches the LP, the LP's structure is not what is doing the work.
+
+    **Fairness of comparison.** Each arm's hyperparameter (`tau` for the two softmax arms, `rel_eps` for the
+    entropic arm) is chosen on **validation pairs drawn from the training subjects**, never on the test pairs;
+    the relaxed LP has no hyperparameter once the box is dropped (simplex-only, as selected in the main study).
+    All arms are then evaluated on the same held-out test pairs with the same geodesic metric.
+
+    CN: **四个目标、同一个假设类**：代价形式、特征标准化、训练对完全相同，只有**目标函数**不同。`tau` 与
+        `rel_eps` 只在**训练受试者**的验证对上选，测试对从不参与选择。
+
+    Run:
+        .venv/bin/python -u -m iot_experiments.studies.real.faust.arms --n-sub 2000
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import sys
+from pathlib import Path
+
+import numpy as np
+import torch
+from jaxtyping import Float
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
+from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
+from iot_experiments.harness.faust import read_ply  # noqa: E402
+from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
+from iot_experiments.harness.records import (  # noqa: E402
+    RunLog,
+    RunRecord,
+    format_table,
+    summarise,
+    write_records,
+)
+from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
+    _evaluate_pair,
+    _sample_index,
+    default_pairs,
+    descriptors,
+    fit_theta,
+    standardise,
+)
+from iot_experiments.studies.real.t1t2.entropic_metric.run import fit_entropic  # noqa: E402
+
+DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+
+PROVENANCE: dict[str, object] = {
+    "question": "with the hypothesis class held fixed, does the relaxed LP's structure beat a plain supervised "
+                "reweighting?",
+    "hypothesis_class": "c_ij = sum_k theta_k (a_ik - b_jk)^2, theta on the simplex, same standardised "
+                        "descriptors (K=13) in every arm",
+    "arms": "row_softmax (one-sided CE), rowcol_softmax (Sinkhorn CE, both marginals), entropic_iot (entropic "
+            "joint master), relaxed_lp (regret master), uniform (label-free reference)",
+    "selection": "tau in {0.01,0.05,0.1,0.5} and rel_eps in {0.05,0.1,0.25,0.5} chosen on VALIDATION pairs from "
+                 "the TRAINING subjects; the relaxed LP is simplex-only and has no hyperparameter",
+    "solver": "row_softmax / rowcol_softmax: torch autograd on a softmax parameterisation, Adam; entropic_iot: "
+              "SLSQP from iot.entropic.joint_reference; relaxed_lp: the regret loop (CuPDLPx)",
+    "metric": "geodesic error on the target, normalised by sqrt(surface area) -- identical to the main study",
+    "memory": "n=2000 keeps the entropic arm's (m*m*K) feature tensor at 416 MB; at n=6890 it would be 4.9 GB",
+}
+
+
+@dataclasses.dataclass(frozen=True)
+class ArmsConfig(RunConfig):
+    """CN: 旋钮。EN: knobs."""
+
+    study: str = "faust_arms"
+    section: str = "faust_arms"
+    root: str = DEFAULT_ROOT
+    train_pair: tuple[int, ...] = (0, 13)
+    train_subjects: tuple[int, ...] = (0, 1, 2, 3, 4)
+    test_subjects: tuple[int, ...] = (5, 6, 7, 8, 9)
+    test_pair_count: int = 8
+    val_pair_count: int = 3
+    n_sub: int = 2000
+    max_iterations: int = 30
+    steps: int = 600
+    lr: float = 0.05
+    tau_grid: tuple[float, ...] = (0.01, 0.05, 0.1, 0.5)
+    rel_eps_grid: tuple[float, ...] = (0.05, 0.1, 0.25, 0.5)
+    sinkhorn_iterations: int = 50
+
+    @classmethod
+    def add_study_arguments(cls, parser) -> None:
+        """CN: 只加本研究特有的参数。EN: only this study's flags."""
+        parser.add_argument("--root", default=DEFAULT_ROOT)
+        parser.add_argument("--train-pair", type=int, nargs=2, default=[0, 13])
+        parser.add_argument("--train-subjects", type=int, nargs="+", default=[0, 1, 2, 3, 4])
+        parser.add_argument("--test-subjects", type=int, nargs="+", default=[5, 6, 7, 8, 9])
+        parser.add_argument("--test-pair-count", type=int, default=8)
+        parser.add_argument("--val-pair-count", type=int, default=3)
+        parser.add_argument("--n-sub", type=int, default=2000)
+        parser.add_argument("--max-iterations", type=int, default=30)
+        parser.add_argument("--steps", type=int, default=600)
+        parser.add_argument("--lr", type=float, default=0.05)
+        parser.add_argument("--tau-grid", type=float, nargs="+", default=[0.01, 0.05, 0.1, 0.5])
+        parser.add_argument("--rel-eps-grid", type=float, nargs="+", default=[0.05, 0.1, 0.25, 0.5])
+        parser.add_argument("--sinkhorn-iterations", type=int, default=50)
+
+
+def _cost_torch(a: torch.Tensor, b: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
+    """
+    CN: `c_ij = sum_k theta_k (a_ik - b_jk)^2` 的双线性形式（只物化 `n×n`，可微）。
+    EN: the bilinear form of `c_ij = sum_k theta_k (a_ik - b_jk)^2` (only `n x n`, differentiable).
+    """
+    root = torch.sqrt(torch.clamp(theta, min=1e-12))
+    x = a * root
+    y = b * root
+    return (x * x).sum(1)[:, None] + (y * y).sum(1)[None, :] - 2.0 * (x @ y.t())
+
+
+def _sinkhorn(log_kernel: torch.Tensor, iterations: int) -> torch.Tensor:
+    """
+    CN: 交替缩放到均匀边缘，返回双随机矩阵（对数域外做归一化，数值上足够稳）。
+    EN: alternating scaling to uniform marginals; returns a doubly stochastic matrix.
+    """
+    n = int(log_kernel.shape[0])
+    log_u = torch.zeros(n, dtype=log_kernel.dtype)
+    log_v = torch.zeros(n, dtype=log_kernel.dtype)
+    for _ in range(int(iterations)):
+        log_u = -torch.logsumexp(log_kernel + log_v[None, :], dim=1)
+        log_v = -torch.logsumexp(log_kernel + log_u[:, None], dim=0)
+    plan = torch.exp(log_kernel + log_u[:, None] + log_v[None, :])
+    return plan / plan.sum()
+
+
+def fit_softmax(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, tau: float,
+                two_sided: bool, steps: int, lr: float, sinkhorn_iterations: int
+                ) -> Float[np.ndarray, "k"]:
+    """
+    CN: 用 torch 自动微调 `theta = softmax(u)`。`two_sided=False` 是单边行 CE；`True` 是 Sinkhorn 双随机 CE。
+    EN: fit `theta = softmax(u)` with torch autograd. `two_sided=False` is one-sided row CE; `True` is
+        Sinkhorn doubly-stochastic CE.
+    """
+    xa = torch.tensor(np.asarray(a, dtype=np.float64), dtype=torch.float64)
+    xb = torch.tensor(np.asarray(b, dtype=np.float64), dtype=torch.float64)
+    n, k = int(xa.shape[0]), int(xa.shape[1])
+    u = torch.zeros(k, dtype=torch.float64, requires_grad=True)
+    optimiser = torch.optim.Adam([u], lr=float(lr))
+    target = torch.arange(n)
+    for _ in range(int(steps)):
+        theta = torch.softmax(u, dim=0)
+        cost = _cost_torch(xa, xb, theta)
+        if two_sided:
+            plan = _sinkhorn(-cost / float(tau), int(sinkhorn_iterations))
+            loss = torch.nn.functional.nll_loss(torch.log(plan + 1e-30), target)
+        else:
+            loss = torch.nn.functional.cross_entropy(-cost / float(tau), target)
+        optimiser.zero_grad()
+        loss.backward()
+        optimiser.step()
+    with torch.no_grad():
+        theta = torch.softmax(u, dim=0).cpu().numpy().astype(np.float64)
+    return np.asarray(theta, dtype=np.float64)
+
+
+def _fit_relaxed(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, max_iterations: int
+                 ) -> Float[np.ndarray, "k"] | None:
+    """CN: 我们的松弛 LP（simplex-only）。EN: our relaxed LP (simplex-only)."""
+    fit = fit_theta(SquaredDifferenceFeatures(a, b), rel=None, max_iterations=int(max_iterations))
+    return None if fit["theta"] is None else np.asarray(fit["theta"], dtype=np.float64)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CN: 入口。EN: entry point."""
+    parser = build_parser(ArmsConfig)
+    args = parser.parse_args(list(argv) if argv is not None else None)
+    config = ArmsConfig.from_namespace(args, parser)
+    run_dir = config.run_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log = RunLog(run_dir / "run.log")
+    pre = preflight_check(run_tiny=False, need_gpu=False)
+    pre.write(run_dir / "preflight.json")
+    log.line(f"preflight ok={pre.ok} mem={pre.mem_available_gb:.1f} GB")
+
+    root = Path(config.root)
+    train_pair = (int(config.train_pair[0]), int(config.train_pair[1]))
+    test_pairs = default_pairs(tuple(int(v) for v in config.test_subjects), int(config.test_pair_count))
+    pool = default_pairs(tuple(int(v) for v in config.train_subjects), 4 * int(config.val_pair_count) + 16)
+    val_pairs = [p for p in pool if p != train_pair][: int(config.val_pair_count)]
+    log.line(f"train pair {train_pair}; validation {val_pairs}; test {test_pairs}")
+
+    a_mesh = read_ply(root / f"tr_reg_{train_pair[0]:03d}.ply")
+    b_mesh = read_ply(root / f"tr_reg_{train_pair[1]:03d}.ply")
+    idx = _sample_index(a_mesh, config, 0)
+    a, b = standardise(descriptors(a_mesh)[idx], descriptors(b_mesh)[idx])
+    k = int(a.shape[1])
+    log.line(f"train fit: n={idx.size}, K={k}")
+
+    def validation_score(theta: Float[np.ndarray, "k"]) -> float:
+        """CN: 在训练受试者的验证对上算 miss@5%。EN: miss@5 % on the training-subject validation pairs."""
+        scores = []
+        for pair in val_pairs:
+            va = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
+            vb = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
+            rows = _evaluate_pair(va, vb, config=config, thetas={"cand": theta}, seed=0, baselines=False)
+            scores.append(rows[0].metrics["miss_5pct"])
+        return float(np.mean(scores))
+
+    log.line("\n--- hyperparameter selection on training-subject validation pairs ---")
+    best_tau: dict[str, float] = {}
+    for name, two_sided in (("row_softmax", False), ("rowcol_softmax", True)):
+        scored: list[tuple[float, float]] = []
+        for tau in config.tau_grid:
+            theta = fit_softmax(a, b, tau=float(tau), two_sided=two_sided, steps=int(config.steps),
+                                lr=float(config.lr), sinkhorn_iterations=int(config.sinkhorn_iterations))
+            score = validation_score(theta)
+            scored.append((float(tau), score))
+            log.line(f"   {name:<16} tau={tau:g}  val miss@5%={score:.4f}")
+        best_tau[name] = min(scored, key=lambda t: t[1])[0]
+
+    best_eps = float(config.rel_eps_grid[0])
+    entropic_scored: list[tuple[float, float]] = []
+    for rel_eps in config.rel_eps_grid:
+        theta, _diag = fit_entropic(a, b, rel_eps=float(rel_eps),
+                                    max_iterations=int(config.max_iterations))
+        score = validation_score(np.asarray(theta, dtype=np.float64))
+        entropic_scored.append((float(rel_eps), score))
+        log.line(f"   {'entropic_iot':<16} rel_eps={rel_eps:g}  val miss@5%={score:.4f}")
+    best_eps = min(entropic_scored, key=lambda t: t[1])[0]
+    log.line(f"selected: tau(row)={best_tau['row_softmax']:g}, tau(rowcol)={best_tau['rowcol_softmax']:g}, "
+             f"rel_eps={best_eps:g}")
+
+    log.line("\n--- refit on the training pair ---")
+    thetas: dict[str, Float[np.ndarray, "k"]] = {
+        "uniform": np.full(k, 1.0 / k),
+        "row_softmax": fit_softmax(a, b, tau=best_tau["row_softmax"], two_sided=False,
+                                   steps=int(config.steps), lr=float(config.lr),
+                                   sinkhorn_iterations=int(config.sinkhorn_iterations)),
+        "rowcol_softmax": fit_softmax(a, b, tau=best_tau["rowcol_softmax"], two_sided=True,
+                                      steps=int(config.steps), lr=float(config.lr),
+                                      sinkhorn_iterations=int(config.sinkhorn_iterations)),
+    }
+    theta_e, _diag = fit_entropic(a, b, rel_eps=best_eps, max_iterations=int(config.max_iterations))
+    thetas["entropic_iot"] = np.asarray(theta_e, dtype=np.float64)
+    theta_lp = _fit_relaxed(a, b, max_iterations=int(config.max_iterations))
+    if theta_lp is None:
+        log.line("relaxed_lp FAILED; dropping the arm")
+    else:
+        thetas["relaxed_lp"] = theta_lp
+    for name, theta in thetas.items():
+        log.line(f"   {name:<16} theta={np.round(theta, 4).tolist()}  "
+                 f"L1-to-uniform={float(np.abs(theta - 1.0 / k).sum()):.3f}")
+
+    log.line("\n--- evaluation on held-out test pairs ---")
+    rows: list[RunRecord] = []
+    for pair in test_pairs:
+        va = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
+        vb = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
+        rows.extend(_evaluate_pair(va, vb, config=config, thetas=thetas, seed=0, baselines=False))
+    rows.append(RunRecord(study=str(config.study), geometry="selection", arm="chosen",
+                          k=k, m=int(idx.size), draw=0,
+                          metrics={"tau_row": best_tau["row_softmax"],
+                                   "tau_rowcol": best_tau["rowcol_softmax"],
+                                   "rel_eps": best_eps},
+                          config=config.to_dict()))
+
+    table = summarise(rows, group=("arm",), metrics=("mean", "miss_1pct", "miss_5pct"))
+    log.line("\n" + format_table(table, ("arm", "n_draws", "mean_mean", "miss_1pct_mean", "miss_5pct_mean")))
+    write_records(run_dir / "records.json", rows, provenance=PROVENANCE)
+    log.line(f"wrote {run_dir / 'records.json'} ({len(rows)} rows)")
+    log.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

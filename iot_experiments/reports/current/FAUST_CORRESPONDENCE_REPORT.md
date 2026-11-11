@@ -414,6 +414,54 @@ reason the simplex-only setting is the informative one.
 
 ---
 
+## 4f. Four objectives, one hypothesis class (n = 1500)
+
+The hypothesis class is held fixed — `c_ij = Σ_k θ_k (a_ik − b_jk)²`, `θ` on the simplex, the **same**
+standardised 13 descriptors, the **same** training pair — so every difference below is attributable to the
+**objective**. Hyperparameters (`tau`, `rel_eps`) were chosen on validation pairs from the **training**
+subjects; the LP is simplex-only and has no hyperparameter. 8 held-out test pairs, 1 seed, `n = 1500` (the
+entropic arm materialises an `(m²K)` tensor, so this comparison is at reduced resolution).
+
+| arm | objective | mean error | miss@1 % | miss@5 % |
+| --- | --- | ---: | ---: | ---: |
+| `uniform` | none | 0.1088 | 0.626 | 0.4125 |
+| `entropic_iot` | entropic joint master (`rel_eps=0.05`) | 0.0941 | 0.573 | 0.3838 |
+| `row_softmax` | one-sided CE | 0.0588 | 0.433 | 0.2323 |
+| `rowcol_softmax` | Sinkhorn CE (`tau=0.01`) | 0.0546 | 0.421 | 0.2231 |
+| **`relaxed_lp`** | regret master | **0.0480** | **0.405** | **0.1972** |
+
+Paired bootstrap over the 8 held-out pairs:
+
+| comparison | Δ miss@5 % | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| `relaxed_lp` − `uniform` | −0.2153 | [−0.295, −0.147] | 8/8 |
+| `relaxed_lp` − `entropic_iot` | −0.1867 | [−0.215, −0.158] | 8/8 |
+| `relaxed_lp` − `row_softmax` | **−0.0352** | [−0.050, −0.017] | **7/8** |
+| `relaxed_lp` − `rowcol_softmax` | **−0.0259** | [−0.059, +0.001] | **5/8** |
+
+**What this settles.**
+
+1. **The LP wins, but only by a little.** Against the *best* supervised reweighting of the identical features the
+   advantage is **0.026 miss@5 %**, and against the two-sided Sinkhorn arm the CI **includes zero** (5/8 pairs).
+   The big 10× advantage is over *uniform*; over "same features, supervised loss" it is 1.13×. So **most of what
+   this method does is reweighting, not structured matching** — on this data, at this resolution.
+2. **Adding the column marginal helps slightly** (0.2323 → 0.2231 one-sided → two-sided), i.e. the competition
+   in the plan does contribute, but only ~0.01 miss@5 % over the row-only loss.
+3. **The entropic iOT master is the worst learned arm** — 0.3838, barely better than uniform and far behind both
+   softmax arms. That is consistent with the EOT line's own finding that `min_θ Ψ` does not recover `θ*`
+   (`current/eot/README.md` §1), and it says the entropic regularisation is the expensive part of this
+   comparison: it is the arm whose temperature hurts most (0.05 selected — the smallest in the grid, so the
+   objective wanted *less* smoothing, like the box width wanting *less* constraint).
+4. **`nn_*` (per-row argmin) is uniformly worse than its OT counterpart** in every arm, by 0.22–0.33 miss@5 %.
+   So the coupling does matter — it is just not worth much against a well-fit supervised cost.
+
+**Honest reading**: at `K=13` and `n=1500`, the structured LP beats plain supervised reweighting of the same
+descriptors by a small but consistent margin against the one-sided loss, and by nothing measurable against the
+two-sided one. That is a weaker claim than "inverse OT is the right tool here", and it is the claim the data
+supports.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

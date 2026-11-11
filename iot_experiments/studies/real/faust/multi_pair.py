@@ -99,6 +99,7 @@ class MultiPairConfig(RunConfig):
     test_pair_count: int = 8
     n_sub: int = 1500
     max_iterations: int = 30
+    per_pair_backend: str = "cupdlpx"   # the per-pair fits; the joint LP itself is solved by HiGHS
 
     @classmethod
     def add_study_arguments(cls, parser) -> None:
@@ -110,6 +111,7 @@ class MultiPairConfig(RunConfig):
         parser.add_argument("--test-pair-count", type=int, default=8)
         parser.add_argument("--n-sub", type=int, default=1500)
         parser.add_argument("--max-iterations", type=int, default=30)
+        parser.add_argument("--per-pair-backend", default="cupdlpx", choices=["cupdlpx", "highs"])
 
 
 class _RecordingMaster(RegretMasterSolver):
@@ -149,14 +151,19 @@ def _solve_multi(pairs: list[_PairProblem], k: int) -> dict[str, object]:
     offset = int(k)
     objective = np.zeros(ncols, dtype=np.float64)
     scale = 1.0 / float(len(pairs))
+    # CN: 用 `enumerate` 记录行偏移。`pairs.index(pair)` 会对 dataclass 字段做 `==`，
+    #     而字段里含 numpy 数组 ⇒ "truth value ... is ambiguous"（实测崩溃）。
+    # EN: track the row offset with `enumerate`. `pairs.index(pair)` compares dataclass fields with `==`, and
+    #     those fields hold numpy arrays -> "truth value ... is ambiguous" (measured crash).
+    row_offset = 0
     for pair in pairs:
         m = int(pair.problem.n_source)
         n = int(pair.problem.n_target)
         r = np.asarray(pair.edges.rows, dtype=np.int64)
         c = np.asarray(pair.edges.cols, dtype=np.int64)
         n_edges = int(r.size)
-        base = np.arange(n_edges, dtype=np.int64) + int(sum(
-            int(p.edges.size) for p in pairs[:pairs.index(pair)]))
+        base = np.arange(n_edges, dtype=np.int64) + int(row_offset)
+        row_offset += n_edges
         # CN: -phi_e 在 θ 列上。EN: -phi_e on the theta columns.
         phi = np.asarray(pair.features.features(r, c), dtype=np.float64)
         rows_idx.append(np.repeat(base, int(k)))
@@ -222,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
         plan = sparse.csr_matrix((np.full(n, 1.0 / n), (np.arange(n), np.arange(n))), shape=(n, n))
         family = SquaredDifferenceFeatures(da, db)
         problem = InverseOTProblem(features=family, theta_set=SimplexTheta(int(da.shape[1])), plan=plan)
-        master = _RecordingMaster(backend="highs", tie_break=False)
+        master = _RecordingMaster(
+            backend=str(config.per_pair_backend), tie_break=False,
+            params={"time_sec_limit": 300.0} if str(config.per_pair_backend) == "cupdlpx" else None)
         single = solve_inverse_ot_regret(
             problem,
             objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"),

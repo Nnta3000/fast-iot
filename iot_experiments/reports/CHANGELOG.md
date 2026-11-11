@@ -3,6 +3,24 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (final) — four objectives on one hypothesis class (FAUST)
+
+New `studies/real/faust/arms.py`: same cost family, same standardised 13 descriptors, same training pair, only
+the objective differs. `tau` / `rel_eps` chosen on training-subject validation pairs. 8 held-out test pairs,
+n=1500.
+
+  uniform 0.4125, entropic_iot 0.3838, row_softmax 0.2323, rowcol_softmax 0.2231,
+  relaxed_lp 0.1972   (miss@5%)
+
+Paired bootstrap: LP beats uniform by −0.215 [−0.295,−0.147] 8/8, but beats `row_softmax` by only **−0.035**
+[−0.050,−0.017] 7/8 and `rowcol_softmax` by **−0.026** [−0.059,**+0.001**] 5/8 — the CI includes zero against
+the two-sided loss. So on this data most of the gain is reweighting; the structured term adds ~0.03 miss@5 %
+and is not distinguishable from the Sinkhorn arm. The entropic iOT master is the *worst* learned arm (0.384,
+barely above uniform), consistent with the EOT line's own bias result.
+
+`nn_*` is uniformly worse than its OT counterpart by 0.22–0.33 miss@5 %, so the coupling is real but cheap
+relative to a well-fit supervised cost.
+
 ## 2026-11-11 (latest) — support-matched control, averaged θ, three seeds
 
 `correspondence.py` gains two derived weight vectors, evaluated on the same held-out pairs:

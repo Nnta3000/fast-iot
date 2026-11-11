@@ -1,0 +1,42 @@
+[13:40:43 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_arms/run.log
+[13:40:43 +    0.0s] preflight ok=True mem=9.7 GB
+[13:40:43 +    0.0s] train pair (0, 13); validation [(0, 16), (6, 21), (3, 35)]; test [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[13:40:44 +    0.5s] train fit: n=1500, K=13
+[13:40:44 +    0.5s] 
+--- hyperparameter selection on training-subject validation pairs ---
+[13:41:02 +   18.9s]    row_softmax      tau=0.01  val miss@5%=0.2484
+[13:41:16 +   33.0s]    row_softmax      tau=0.05  val miss@5%=0.3491
+[13:41:30 +   46.8s]    row_softmax      tau=0.1  val miss@5%=0.4122
+[13:43:45 +  182.0s]    rowcol_softmax   tau=0.01  val miss@5%=0.2618
+[13:45:07 +  263.5s]    rowcol_softmax   tau=0.05  val miss@5%=0.3738
+[13:46:28 +  344.4s]    rowcol_softmax   tau=0.1  val miss@5%=0.4204
+[13:46:50 +  367.2s]    entropic_iot     rel_eps=0.05  val miss@5%=0.4338
+[13:47:13 +  389.6s]    entropic_iot     rel_eps=0.1  val miss@5%=0.4571
+[13:47:36 +  412.4s]    entropic_iot     rel_eps=0.25  val miss@5%=0.4882
+[13:47:58 +  434.8s]    entropic_iot     rel_eps=0.5  val miss@5%=0.4842
+[13:47:58 +  434.8s] selected: tau(row)=0.01, tau(rowcol)=0.01, rel_eps=0.05
+[13:47:58 +  434.8s] 
+--- refit on the training pair ---
+[13:50:41 +  597.3s]    uniform          theta=[0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769]  L1-to-uniform=0.000
+[13:50:41 +  597.3s]    row_softmax      theta=[0.0279, 0.0053, 0.0019, 0.0347, 0.0017, 0.0062, 0.0065, 0.0073, 0.0103, 0.026, 0.1131, 0.1954, 0.5637]  L1-to-uniform=1.283
+[13:50:41 +  597.3s]    rowcol_softmax   theta=[0.0677, 0.0247, 0.0051, 0.0522, 0.0024, 0.0185, 0.0156, 0.0131, 0.0135, 0.0276, 0.1233, 0.1246, 0.5117]  L1-to-uniform=1.058
+[13:50:41 +  597.3s]    entropic_iot     theta=[0.1741, 0.055, 0.0, 0.1903, 0.0238, 0.2463, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1064, 0.2042]  L1-to-uniform=1.073
+[13:50:41 +  597.3s]    relaxed_lp       theta=[0.0163, 0.022, 0.0007, 0.0141, 0.0001, 0.0079, 0.0, 0.0, 0.0, 0.0, 0.048, 0.1372, 0.7538]  L1-to-uniform=1.474
+[13:50:41 +  597.3s] 
+--- evaluation on held-out test pairs ---
+[13:51:10 +  626.5s] 
+              arm  n_draws  mean_mean  miss_1pct_mean  miss_5pct_mean
+-----------------  -------  ---------  --------------  --------------
+           chosen        1          -               -               -
+     entropic_iot        8     0.0941          0.5729          0.3838
+  nn_entropic_iot        8     0.1373          0.7293          0.5228
+    nn_relaxed_lp        8     0.1034          0.6879          0.4183
+   nn_row_softmax        8     0.1048          0.6604          0.4250
+nn_rowcol_softmax        8     0.1106          0.6776          0.4403
+       nn_uniform        8     0.1641          0.7769          0.5894
+       relaxed_lp        8     0.0480          0.4048          0.1972
+      row_softmax        8     0.0588          0.4331          0.2323
+   rowcol_softmax        8     0.0546          0.4211          0.2231
+          uniform        8     0.1088          0.6262          0.4125
+[13:51:10 +  626.5s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_arms/records.json (81 rows)
+[13:51:10 +  626.5s] log closed after 626.5s
