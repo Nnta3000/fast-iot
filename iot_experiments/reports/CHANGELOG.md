@@ -3,6 +3,24 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (final++++) — the two go/no-go diagnostics: both GO, with a caveat that matters more
+
+New `studies/real/faust/face.py` (D1, n=4000) and `regional.py` (D2, n=2000), each pre-registered in
+`notes/FAUST_NEXT_STEPS.md` before being run.
+
+**D1 (admissible set):** 71 near-equally-good thetas (regret within 25% of the shipped reference) score
+miss@5% from 0.1833 to 0.2725 — **spread 0.0892**, ~9x the seed noise — and the max-margin point is only
+**rank 20/71**. GO: selecting inside the set is a real lever (0.1833 is test-selected, so an upper bound).
+
+**Prerequisite finding:** the fitted theta does NOT make the training plan optimal. Exact regret
+0.001038 vs R_uniform 0.1035 (1.0%) and the decoded training map is wrong at **2346/4000** vertices; every
+run reports converged=False. First measurement of what that means: the gap is reduced ~100x, never closed.
+So "max-margin theta" is a near-feasible point and the admissible set has to be defined relative to it.
+
+**D2 (regional theta):** regional L1 to the global fit 0.20-1.78, pairwise mean 1.08 — regions disagree as
+much as different *pairs* do (0.5-1.5 in 4h). GO. But the naive regional field is much worse than global
+(0.3559 vs 0.2006, 1/8), so direction B needs sharing/regularisation.
+
 ## 2026-11-11 (final+++) — shared FAUST primitives moved into the harness; next-steps plan
 
 Deduplication (no value change): `gates.py`, `heatmaps.py`, `arms.py` and `finalists.py` each had their own

@@ -646,6 +646,66 @@ same way, which is the pattern a real effect would not have.
 
 ---
 
+## 4k. Two go/no-go diagnostics for the next direction
+
+Both were pre-registered in `notes/FAUST_NEXT_STEPS.md` §1 **before** they were run, with explicit go/no-go
+thresholds, because the next direction costs days and the diagnostics cost minutes.
+
+### D1 — is the admissible set worth more than one point? (`face.py`, n = 4000)
+
+θ is identified only up to a set; the shipped solver returns the max-margin point by convention. This walks
+inside that set and scores every point it finds on the 8 held-out pairs. Admissibility is measured, and had to
+be defined **relative to the shipped reference** (`regret <= 1.25 × regret(reference)`) — see the finding below
+for why an absolute criterion is empty.
+
+| | `miss@5 %` |
+| --- | ---: |
+| best admitted θ | **0.1833** |
+| median admitted θ | 0.2197 |
+| **max-margin (shipped)** | **0.2028** — rank **20 / 71** |
+| worst admitted θ | 0.2725 |
+| **spread** | **0.0892** |
+
+70 of 150 proposals were admitted and all 71 points were scored. **Verdict: GO.** The spread is ~9× the
+seed-to-seed noise (~0.01), and the shipped max-margin point is ordinary — 19 of 70 near-equally-good θ
+generalise better. Caveat: the 0.1833 is selected **on the test pairs**, so it is an upper bound on what
+selection inside the set can buy; a validation-based selector would land somewhere between 0.20 and 0.18.
+
+**The prerequisite finding is more important than the verdict.** The fitted θ **does not make the training plan
+optimal**: its exact regret is 0.001038 against `R_uniform = 0.1035` (1.0 %), and the map decoded from its own
+cost **on the training pair** is wrong at **2346 of 4000 vertices**. Every run reports `converged=False`, and
+this is the first measurement of what that means: the loop reduces the duality gap ~100× and stops. The
+"certificate" therefore never certifies, and §2–§4's θ is a near-feasible point, not a proven one. It also
+explains the sparse/dense difference: the reference has **0 exact zeros** while the 71 admitted points average
+**3.3**.
+
+### D2 — do regions of the body want different weights? (`regional.py`, n = 2000)
+
+One simplex fit per region on that region's block of the identity plan, six spatial regions from k-means on
+the standardised xyz:
+
+| region | 0 | 1 | 2 | 3 | 4 | 5 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| size | 279 | 291 | 493 | 288 | 336 | 313 |
+| L1 to the global θ | 0.51 | 0.20 | **1.78** | 0.35 | 0.36 | **1.21** |
+
+Pairwise regional L1: **mean 1.08**, median 1.13, max 1.79, min 0.06.
+
+**Verdict: GO.** Regions disagree by as much as different *pairs* do (§4h measured 0.5–1.5 between pairs), so
+"one cost for the whole body" is a real limitation rather than a modelling convenience.
+
+**But the naive field fails, and the diagnostic says why it will not be easy.** Row `i` scored with its own
+region's θ gives **0.3559** against **0.2006** for the global θ, winning 1 of 8 pairs. Each regional fit sees
+~300 vertices, so it overfits its own block and transfers badly. Direction B therefore needs sharing or
+regularisation across regions, and it still needs the regional *supervised* control before any of it can be
+attributed to inverse OT.
+
+**What this changes.** Both diagnostics say go, so the next step is A (select inside the near-optimal set,
+using validation pairs, not test pairs) and then B (a regularised field). Neither needs a new solver. Neither
+is a submission.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

@@ -1,0 +1,564 @@
+{
+  "provenance": {
+    "question": "do spatial regions of the body require different descriptor weights? (go/no-go for a piecewise-constant cost field)",
+    "regions": "k-means (k-means++, 30 Lloyd iterations) on the standardised xyz of the subsampled training vertices; the same index set is used on both shapes, so one label field serves both",
+    "thetas": "one simplex-only inverse-OT fit per region on that region's sub-block of the identity plan, plus one global fit for reference",
+    "diagnostic": "pairwise L1 between the regional thetas, compared with the 0.5-1.5 L1 measured BETWEEN PAIRS in section 4h; within ~0.1 means regions do not disagree",
+    "secondary": "PRELIMINARY: the regional field (row i uses its region's theta) vs the global theta on 8 held-out pairs. Single seed, no regional supervised control -- direction B, not the result",
+    "memory": "one n x n cost and one n x n geodesic matrix; ~64 MB each at n=2000"
+  },
+  "records": [
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region0",
+      "k": 13,
+      "m": 279,
+      "draw": 0,
+      "metrics": {
+        "size": 279.0,
+        "l1_to_global": 0.5097029223222393,
+        "zeros": 0.0,
+        "max": 0.5287221899602608
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.04083322361814962,
+          1.5219273342373222e-08,
+          1.5219273342373222e-08,
+          0.009000842196851532,
+          0.0004848060635657348,
+          1.5219273342373222e-08,
+          1.5219273342373222e-08,
+          1.5219273342373222e-08,
+          1.5219273342373222e-08,
+          1.5219273342373222e-08,
+          0.09751089893642664,
+          0.32344793268983224,
+          0.5287221899602608
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region1",
+      "k": 13,
+      "m": 291,
+      "draw": 0,
+      "metrics": {
+        "size": 291.0,
+        "l1_to_global": 0.19753419178374748,
+        "zeros": 0.0,
+        "max": 0.745450034705357
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.08020532622519158,
+          3.0909790325028984e-08,
+          3.0909790325028984e-08,
+          0.03518748824426813,
+          0.00012775374345181208,
+          0.005465548312375819,
+          3.0909790325028984e-08,
+          3.0909790325028984e-08,
+          3.0909790325028984e-08,
+          3.0909790325028984e-08,
+          0.054072241566696766,
+          0.07949142174391702,
+          0.745450034705357
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region2",
+      "k": 13,
+      "m": 493,
+      "draw": 0,
+      "metrics": {
+        "size": 493.0,
+        "l1_to_global": 1.78366587693507,
+        "zeros": 0.0,
+        "max": 0.67727867354879
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.20761302555478017,
+          0.67727867354879,
+          0.03252785275879895,
+          0.028217973609382815,
+          1.5371668919758634e-08,
+          0.0003707578269460944,
+          4.336507093988607e-06,
+          1.4730380392600905e-06,
+          1.5371668919758634e-08,
+          1.5371668919758634e-08,
+          1.5371668919758634e-08,
+          1.5371668919758634e-08,
+          0.05398583029782423
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region3",
+      "k": 13,
+      "m": 288,
+      "draw": 0,
+      "metrics": {
+        "size": 288.0,
+        "l1_to_global": 0.347597437706052,
+        "zeros": 6.0,
+        "max": 0.8963966017292879
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.0073672021977421965,
+          0.04744597013178868,
+          0.002420022819280071,
+          0.003969858643974151,
+          3.416070845000482e-17,
+          0.0051731124355012485,
+          3.416070845000482e-17,
+          3.416070845000482e-17,
+          3.416070845000482e-17,
+          3.416070845000482e-17,
+          0.03722723204242542,
+          3.416070845000482e-17,
+          0.8963966017292879
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region4",
+      "k": 13,
+      "m": 336,
+      "draw": 0,
+      "metrics": {
+        "size": 336.0,
+        "l1_to_global": 0.35660380971033323,
+        "zeros": 0.0,
+        "max": 0.8740299311266687
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.008508625938083495,
+          0.07190204343788036,
+          0.0014842359387535482,
+          0.003193870826599075,
+          1.6988404667375791e-06,
+          0.009461780972051846,
+          1.584988481800188e-07,
+          1.584988481800188e-07,
+          1.584988481800188e-07,
+          1.584988481800188e-07,
+          0.0314170204252553,
+          1.584988481800188e-07,
+          0.8740299311266687
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "positions",
+      "arm": "region5",
+      "k": 13,
+      "m": 313,
+      "draw": 0,
+      "metrics": {
+        "size": 313.0,
+        "l1_to_global": 1.2064711878456738,
+        "zeros": 1.0,
+        "max": 0.4816777524161968
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "theta": [
+          0.0596451277218475,
+          0.4816777524161968,
+          0.024953473545116345,
+          0.00916691804129297,
+          0.0,
+          0.0019280122139572356,
+          0.0024398004384035723,
+          0.003727311241150485,
+          0.00737938906811156,
+          0.022279521167569292,
+          0.06530379804038003,
+          0.16871629045553768,
+          0.15278260565043664
+        ]
+      }
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "spread",
+      "arm": "regional_l1",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 1.0807724346862055,
+        "median": 1.1267262670074625,
+        "max": 1.792359902474509,
+        "min": 0.05977731383538193,
+        "mean_to_global": 0.7335959043838526
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "test",
+      "arm": "global",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "miss_5pct": 0.200625,
+        "mean_pairs": 0.200625
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_regional",
+      "geometry": "test",
+      "arm": "field",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "miss_5pct": 0.355875,
+        "mean_pairs": 0.355875
+      },
+      "config": {
+        "study": "faust_regional",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_regional",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "n_sub": 2000,
+        "regions": 6,
+        "max_iterations": 30,
+        "__section__": "faust_regional",
+        "__class__": "RegionalConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}

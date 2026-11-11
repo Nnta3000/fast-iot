@@ -1,6 +1,7 @@
 # FAUST — what to try next (plan, not results)
 
-**Status: PLAN. Nothing in this file has been run, and no number here may be cited as a result.**
+**Status: PLAN, partly executed. §1 (the two diagnostics) has been RUN — its numbers live in
+`../reports/current/FAUST_CORRESPONDENCE_REPORT.md` §4k and are **not** repeated here.**
 It records the decision made on 2026-11-11 after the current results in
 `../reports/current/FAUST_CORRESPONDENCE_REPORT.md`, so the next step does not have to be re-derived
 from the conversation.
@@ -31,7 +32,12 @@ returns a point. Adding another objective is not on the list.
 
 ---
 
-## 1. Go/no-go diagnostics (run these first, ~45 min together)
+## 1. Go/no-go diagnostics — RUN, both positive (see report §4k)
+
+Outcome in one line each: **D1** spread of `miss@5 %` across near-equally-good θ is ~0.09 and the shipped
+max-margin point ranks 20/71 → selecting inside the set is a real lever; **D2** regional L1 distances are as
+large as between-pair distances → regions genuinely disagree, but a naive regional field is much worse than the
+global one. The original protocol follows, as pre-registered.
 
 Both are cheap measurements that kill a direction before it costs a day.
 

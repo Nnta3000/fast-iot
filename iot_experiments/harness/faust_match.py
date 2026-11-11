@@ -40,8 +40,8 @@ __all__ = [
 ]
 
 
-def cost_matrix(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"],
-                theta: Float[np.ndarray, "k"]) -> Float[np.ndarray, "n n"]:
+def cost_matrix(a: Float[np.ndarray, "m k"], b: Float[np.ndarray, "n k"],
+                theta: Float[np.ndarray, "k"]) -> Float[np.ndarray, "m n"]:
     """
     EN: `c_ij = sum_k theta_k (a_ik - b_jk)^2` via the bilinear identity, so only `n x n` is materialised:
 

@@ -1,0 +1,24 @@
+[16:24:23 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_face/run.log
+[16:24:25 +    2.0s] preflight ok=True mem=7.8 GB
+[16:24:31 +    8.1s] train pair (0, 13), n=4000, K=13
+[16:26:06 +  103.0s] reference (max-margin) theta fitted in 94.9s; regret=0.001149 zeros=0
+[16:26:10 +  106.8s] R_uniform=0.1035 (decoded map wrong at 3453 vertices); R(reference)=0.001038 (wrong at 2346); reference admissible: False
+[16:26:10 +  106.8s] admission tolerance (relative): R <= 0.001297 = R(reference) * 1.25
+[16:30:25 +  361.6s] admitted 70/150 proposals (shell thickness); max admission regret 0.0013
+[16:30:25 +  361.6s] admitted thetas have 3 exact zeros on average, reference has 0
+[16:32:29 +  486.1s]    pair (50, 66): scored 71 thetas
+[16:34:49 +  625.9s]    pair (56, 71): scored 71 thetas
+[16:37:18 +  774.2s]    pair (53, 85): scored 71 thetas
+[16:38:59 +  875.7s]    pair (59, 99): scored 71 thetas
+[16:41:21 + 1017.3s]    pair (64, 72): scored 71 thetas
+[16:43:30 + 1146.5s]    pair (61, 86): scored 71 thetas
+[16:46:17 + 1313.5s]    pair (67, 91): scored 71 thetas
+[16:48:07 + 1423.9s]    pair (72, 85): scored 71 thetas
+[16:48:07 + 1423.9s] 
+miss@5% over admitted thetas: min 0.1833 | median 0.2197 | max 0.2725 | spread 0.0892
+[16:48:07 + 1423.9s] max-margin (reference) theta: 0.2028  (rank 20/71)
+[16:48:07 + 1423.9s] best admitted theta: 0.1833; worst: 0.2725
+[16:48:07 + 1423.9s] 
+[{'arm': 'admitted', 'n_draws': 1, 'spread_mean': 0.08915624999999999, 'spread_std': 0.0, 'reference_mean': 0.20278125000000002, 'reference_std': 0.0}]
+[16:48:07 + 1423.9s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_face/records.json (72 rows)
+[16:48:07 + 1423.9s] log closed after 1423.9s

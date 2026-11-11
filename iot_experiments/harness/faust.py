@@ -356,6 +356,30 @@ def standardise(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
     return (np.asarray(a, dtype=np.float64) - mu) / sd, (np.asarray(b, dtype=np.float64) - mu) / sd
 
 
+def pair_geometry(a_mesh: FaustMesh, b_mesh: FaustMesh, index: Int[np.ndarray, "n"]) -> tuple[
+        Float[np.ndarray, "n k"], Float[np.ndarray, "n k"], Float[np.ndarray, "n n"], float,
+        Int[np.ndarray, "n"]]:
+    """
+    EN: the four things every evaluation needs from one mesh pair: the standardised descriptors of both
+        shapes, the geodesic matrix among the subsampled target vertices, the normalising scale, and the
+        mirror map used for the left/right flip statistic.
+
+        Returned together because the geodesic matrix is the expensive part (an `n`-source Dijkstra) and must
+        be computed **once per pair**, then reused for every theta. Drivers that loop over thetas and recompute
+        it per theta were paying that cost repeatedly.
+
+    CN: 一对网格评估所需的四样东西：两侧标准化描述子、子采样目标顶点间的测地矩阵、归一化尺度、镜像映射。
+        测地矩阵是最贵的部分（n 个源点的 Dijkstra），必须**每对算一次**、对所有 θ 复用。
+    """
+    desc_a = descriptors(a_mesh)[index]
+    desc_b = descriptors(b_mesh)[index]
+    da, db = standardise(desc_a, desc_b)
+    geo = geodesic_matrix(b_mesh.vertices, b_mesh.faces, index)
+    norm = float(np.sqrt(surface_area(b_mesh.vertices, b_mesh.faces)))
+    mirror, _residual = mirror_indices(b_mesh.vertices, index)
+    return da, db, geo, norm, np.asarray(mirror, dtype=np.int64)
+
+
 def shared_index(mesh: FaustMesh, count: int, seed: int) -> Int[np.ndarray, "n"]:
     """
     EN: the same index subset on both shapes (sorted, so the bijection and the vertex order are preserved).
@@ -379,6 +403,7 @@ __all__ = [
     "heat_kernel_signature",
     "mirror_indices",
     "one_ring",
+    "pair_geometry",
     "read_ply",
     "shared_index",
     "spectral_basis",

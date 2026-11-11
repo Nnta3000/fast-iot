@@ -23,6 +23,8 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 | `deformation.py` | **deformation sweep**: twist about the vertical axis, vertex identity preserved, θ fitted once at σ=0 | `python -m iot_experiments.studies.real.faust.deformation --n-sub 1500` |
 | `abstention.py` | **where is it wrong?** label-free confidence scores (raw / relative cost margin, OT dual certificate, softmax margin) as risk–coverage | `python -m iot_experiments.studies.real.faust.abstention --n-sub 4000` |
 | `curriculum.py` | **iOT as a teacher**: hard negatives mined from the fitted cost, given to a cheap cross-entropy arm | `python -m iot_experiments.studies.real.faust.curriculum --n-sub 2000` |
+| `face.py` | **diagnostic D1**: does the admissible set matter? random walk inside the near-optimal set, every point scored on held-out pairs | `python -m iot_experiments.studies.real.faust.face --n-sub 4000` |
+| `regional.py` | **diagnostic D2**: do body regions want different weights? one fit per k-means region, plus a preliminary field evaluation | `python -m iot_experiments.studies.real.faust.regional --n-sub 2000` |
 | `finalists.py` | **the two finalists at full resolution** with the τ grid extended downward, 3 seeds, paired bootstrap (driver only — the Sinkhorn arm needs more VRAM than this machine has free) | `python -m iot_experiments.studies.real.faust.finalists --n-sub 6890` |
 
 Loader and descriptor primitives live in `iot_experiments/harness/faust.py` (`read_ply`, `vertex_areas`,

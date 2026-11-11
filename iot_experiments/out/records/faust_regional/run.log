@@ -1,0 +1,34 @@
+[16:48:10 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_regional/run.log
+[16:48:10 +    0.0s] preflight ok=True mem=7.7 GB
+[16:48:13 +    3.3s] train pair (0, 13), n=2000, K=13, regions=6
+[16:48:13 +    3.3s] region sizes: [279, 291, 493, 288, 336, 313]
+[16:48:40 +   30.4s] global theta fitted in 27.0s
+[16:48:45 +   35.3s]    region 0: n=  279  zeros= 0  L1-to-global=0.510  (5.0s)
+[16:48:55 +   45.2s]    region 1: n=  291  zeros= 0  L1-to-global=0.198  (9.9s)
+[16:49:01 +   50.8s]    region 2: n=  493  zeros= 0  L1-to-global=1.784  (5.6s)
+[16:49:03 +   53.5s]    region 3: n=  288  zeros= 6  L1-to-global=0.348  (2.7s)
+[16:49:05 +   55.5s]    region 4: n=  336  zeros= 0  L1-to-global=0.357  (2.0s)
+[16:49:06 +   55.8s]    region 5: n=  313  zeros= 1  L1-to-global=1.206  (0.3s)
+[16:49:06 +   55.8s] 
+pairwise regional L1: mean 1.081 | median 1.127 | max 1.792 | min 0.060
+[16:49:06 +   55.8s] per-region L1 to the global theta: 0.510, 0.198, 1.784, 0.348, 0.357, 1.206
+[16:49:06 +   55.8s] matrix:
+[16:49:06 +   55.8s]     0.000  0.576  1.792  0.845  0.856  1.127
+[16:49:06 +   55.8s]     0.576  0.000  1.674  0.402  0.412  1.286
+[16:49:06 +   55.8s]     1.792  1.674  0.000  1.769  1.721  0.740
+[16:49:06 +   55.8s]     0.845  0.402  1.769  0.000  0.060  1.494
+[16:49:06 +   55.8s]     0.856  0.412  1.721  0.060  0.000  1.458
+[16:49:06 +   55.8s]     1.127  1.286  0.740  1.494  1.458  0.000
+[16:49:06 +   55.8s] 
+--- preliminary: regional field vs global theta on held-out pairs ---
+[16:49:09 +   59.7s]    (50, 66): global 0.1535  field 0.5315
+[16:49:14 +   63.8s]    (56, 71): global 0.2705  field 0.4155
+[16:49:18 +   67.9s]    (53, 85): global 0.2065  field 0.3665
+[16:49:21 +   71.7s]    (59, 99): global 0.1005  field 0.0830
+[16:49:25 +   75.6s]    (64, 72): global 0.2075  field 0.3030
+[16:49:29 +   79.4s]    (61, 86): global 0.1875  field 0.3470
+[16:49:33 +   83.5s]    (67, 91): global 0.3270  field 0.5745
+[16:49:37 +   87.4s]    (72, 85): global 0.1520  field 0.2260
+[16:49:37 +   87.4s] field - global: mean +0.1552, wins 1/8
+[16:49:37 +   87.4s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_regional/records.json (9 rows)
+[16:49:37 +   87.4s] log closed after 87.4s
