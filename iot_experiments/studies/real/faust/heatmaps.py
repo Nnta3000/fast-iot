@@ -33,7 +33,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import ot
 from jaxtyping import Float, Int
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -61,6 +60,11 @@ from iot_experiments.harness.records import (  # noqa: E402
     format_table,
     summarise,
     write_records,
+)
+from iot_experiments.harness.faust_match import (  # noqa: E402
+    cost_matrix,
+    geodesic_errors,
+    match,
 )
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     descriptors,
@@ -116,41 +120,17 @@ class HeatmapConfig(RunConfig):
         parser.add_argument("--views", nargs="+", default=["front", "side"])
 
 
-def _cost(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], theta: Float[np.ndarray, "k"]
-          ) -> Float[np.ndarray, "n n"]:
-    """
-    CN: 双线性恒等式 `sum_k θ_k (a_ik - b_jk)^2 = |√θ⊙a_i|^2 + |√θ⊙b_j|^2 - 2(√θ⊙a_i)·(√θ⊙b_j)`，
-        只物化 n×n。EN: the bilinear identity, so only `n x n` is materialised.
-    """
-    root = np.sqrt(np.maximum(np.asarray(theta, dtype=np.float64), 0.0))
-    ax = np.asarray(a, dtype=np.float64) * root
-    bx = np.asarray(b, dtype=np.float64) * root
-    cost = (ax * ax).sum(1)[:, None] + (bx * bx).sum(1)[None, :] - 2.0 * (ax @ bx.T)
-    return np.ascontiguousarray(np.maximum(cost, 0.0), dtype=np.float64)
-
-
-def _match(cost: Float[np.ndarray, "n n"]) -> Int[np.ndarray, "n"]:
-    """CN: 精确 EMD。EN: exact EMD."""
-    n = int(cost.shape[0])
-    return np.argmax(ot.emd(np.ones(n) / n, np.ones(n) / n, cost, numItermax=20_000_000), axis=1)
-
-
 def _errors(pred: Int[np.ndarray, "n"], geo: Float[np.ndarray, "n n"], mirror: Int[np.ndarray, "n"],
             norm: float) -> dict[str, float]:
     """
-    CN: 每顶点的归一化测地误差（用于着色）与翻转统计。EN: per-vertex normalised geodesic error (for colouring)
-        plus the flip statistics.
+    EN: the heat-map subset of `geodesic_errors`: mean and miss@5 % for colouring, plus the flip statistics.
+        A thin wrapper, not a second implementation -- the keys are subsetted so the committed records keep
+        their exact schema.
+    CN: `geodesic_errors` 的热图子集（均值、miss@5% 与翻转统计）。只是薄包装，保留旧记录的确切字段。
     """
-    rows = np.arange(int(pred.size))
-    dist = np.asarray(geo)[rows, np.asarray(pred, dtype=np.int64)] / max(norm, 1e-12)
-    d_mir = np.asarray(geo)[rows, np.asarray(mirror, dtype=np.int64)] / max(norm, 1e-12)
-    err = dist > 0.01
-    distinct = np.asarray(mirror) != rows
-    mask = err & distinct
-    flipped = (d_mir < dist) & mask
-    return {"mean": float(dist.mean()), "miss_5pct": float(np.mean(dist > 0.05)),
-            "flip_rate": float(np.mean(flipped)),
-            "flip_share_of_errors": float(flipped.sum() / mask.sum()) if mask.any() else float("nan")}
+    full = geodesic_errors(pred, geo, norm, mirror)
+    return {"mean": full["mean"], "miss_5pct": full["miss_5pct"], "flip_rate": full["flip_rate"],
+            "flip_share_of_errors": full["flip_share_of_errors"]}
 
 
 def _render(mesh: FaustMesh, values: Float[np.ndarray, "n"], path: Path, *, title: str,
@@ -253,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         per_arm: dict[str, dict[str, float]] = {}
         values: dict[str, Float[np.ndarray, "n"]] = {}
         for arm, th in thetas.items():
-            pred = _match(_cost(da, db, th))
+            pred = match(cost_matrix(da, db, th), num_itermax=20_000_000)
             met = _errors(pred, geo, mirror, norm)
             per_arm[arm] = met
             rows_dist = np.asarray(geo)[np.arange(n), pred] / norm

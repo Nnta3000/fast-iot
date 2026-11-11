@@ -55,7 +55,6 @@ from iot.core.parameters import (  # noqa: E402
 from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
-from iot.relaxed.master_regret import RegretMasterSolver  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
@@ -66,7 +65,8 @@ from iot_experiments.harness.records import (  # noqa: E402
     summarise,
     write_records,
 )
-from iot_experiments.studies.real.faust.correspondence import descriptors, standardise  # noqa: E402
+from iot_experiments.harness.faust import descriptors, standardise  # noqa: E402
+from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
 
 DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
 
@@ -108,29 +108,10 @@ class CornerConfig(RunConfig):
         parser.add_argument("--eta-rel", type=float, default=1e-3)
 
 
-class _RecordingMaster(RegretMasterSolver):
-    """
-    CN: 记录最后一次被求解的边集 `F`，以及每轮的 `theta`。不改 `src/iot`，只在研究内包装。
-    EN: records the edge set `F` last handed to the master, and the per-round `theta`. A study-local wrapper;
-        nothing under `src/iot` is modified.
-    """
-
-    def __init__(self, **kwargs: object) -> None:
-        super().__init__(**kwargs)  # type: ignore[arg-type]
-        self.last_edges = None
-        self.thetas: list[np.ndarray] = []
-
-    def solve(self, problem: InverseOTProblem, edges):  # type: ignore[no-untyped-def]
-        self.last_edges = edges
-        out = super().solve(problem, edges)
-        self.thetas.append(np.asarray(out.theta_pre, dtype=np.float64).copy())
-        return out
-
-
 def _fit(problem: InverseOTProblem, backend: str, *, max_iterations: int, seed: int = 0
          ) -> tuple[dict[str, object], _RecordingMaster]:
     """CN: 用指定后端解一次松弛 master。EN: one relaxed solve with the requested backend."""
-    master = _RecordingMaster(backend=backend, tie_break=False,
+    master = RecordingMaster(backend=backend, tie_break=False,
                               params={"time_sec_limit": 300.0} if backend == "cupdlpx" else None)
     result = solve_inverse_ot_regret(
         problem,

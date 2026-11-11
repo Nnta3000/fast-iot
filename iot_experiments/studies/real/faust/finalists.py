@@ -66,12 +66,16 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     default_pairs,
     descriptors,
     fit_theta,
-    geodesic_errors,
-    match,
     mirror_indices,
     standardise,
 )
 from iot_experiments.harness.faust import geodesic_matrix, surface_area  # noqa: E402
+from iot_experiments.harness.faust_match import (  # noqa: E402
+    bootstrap_contrast,
+    fit_softmax,
+    free_vram_gb,
+    map_metrics,
+)
 
 DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
 
@@ -132,91 +136,6 @@ class FinalistsConfig(RunConfig):
         parser.add_argument("--fit-lp", type=int, default=1)
 
 
-def _free_vram_gb() -> float:
-    """EN: free VRAM in GB (0 when CUDA is absent). CN: 空闲显存（GB），无 CUDA 时为 0。"""
-    if not torch.cuda.is_available():
-        return 0.0
-    free, _total = torch.cuda.mem_get_info()
-    return float(free) / 2**30
-
-
-def _cost_torch(a: torch.Tensor, b: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
-    """EN: bilinear `c_ij = sum_k theta_k (a_ik - b_jk)^2`. CN: 双线性的平方差代价。"""
-    root = torch.sqrt(torch.clamp(theta, min=1e-12))
-    x = a * root
-    y = b * root
-    return (x * x).sum(1)[:, None] + (y * y).sum(1)[None, :] - 2.0 * (x @ y.t())
-
-
-def _sinkhorn_log(log_kernel: torch.Tensor, iterations: int) -> torch.Tensor:
-    """
-    EN: log-domain Sinkhorn, uniform marginals, returning the log-plan. Stable at small `tau` because every
-        step is a `logsumexp`; the plan itself is only formed implicitly.
-    CN: 对数域 Sinkhorn（均匀边缘），返回 log 方案。小 `tau` 下也稳定，因为每步都是 `logsumexp`。
-    """
-    log_kernel = log_kernel.clone()
-    for _ in range(int(iterations)):
-        log_kernel = log_kernel - torch.logsumexp(log_kernel, dim=1)[:, None]
-        log_kernel = log_kernel - torch.logsumexp(log_kernel, dim=0)[None, :]
-    return log_kernel
-
-
-def fit_softmax(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, tau: float,
-                two_sided: bool, steps: int, lr: float, sinkhorn_iterations: int, device: str
-                ) -> Float[np.ndarray, "k"]:
-    """
-    EN: fit `theta = softmax(u)` by torch autograd. `two_sided=False` is the one-sided row cross-entropy;
-        `True` is the cross-entropy on the Sinkhorn-normalised matrix, whose normalisation is wrapped in one
-        checkpoint segment so the backward pass recomputes instead of retaining every iteration.
-    CN: 用 torch 自动微调 `theta = softmax(u)`。`two_sided=False` 是单边行交叉熵；`True` 是 Sinkhorn 归一化矩阵
-        上的交叉熵，归一化用单段 checkpoint 包裹，反向时重算而不保留每一次迭代。
-    """
-    dtype = torch.float32 if device == "cuda" else torch.float64
-    xa = torch.tensor(np.asarray(a, dtype=np.float64), dtype=dtype, device=device)
-    xb = torch.tensor(np.asarray(b, dtype=np.float64), dtype=dtype, device=device)
-    n, k = int(xa.shape[0]), int(xa.shape[1])
-    u = torch.zeros(k, dtype=dtype, device=device, requires_grad=True)
-    optimiser = torch.optim.Adam([u], lr=float(lr))
-    target = torch.arange(n, device=device)
-    for _ in range(int(steps)):
-        theta = torch.softmax(u, dim=0)
-        cost = _cost_torch(xa, xb, theta)
-        log_kernel = -cost / float(tau)
-        if two_sided:
-            log_plan = torch.utils.checkpoint.checkpoint(
-                _sinkhorn_log, log_kernel, int(sinkhorn_iterations), use_reentrant=False)
-            loss = torch.nn.functional.nll_loss(torch.log_softmax(log_plan, dim=1), target)
-        else:
-            loss = torch.nn.functional.cross_entropy(log_kernel, target)
-        optimiser.zero_grad(set_to_none=True)
-        loss.backward()
-        optimiser.step()
-    with torch.no_grad():
-        theta = torch.softmax(u, dim=0).detach().to("cpu", torch.float64).numpy()
-    return np.asarray(theta, dtype=np.float64)
-
-
-def _cost_numpy(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"],
-                theta: Float[np.ndarray, "k"]) -> Float[np.ndarray, "n n"]:
-    """EN: the same bilinear cost on the host, in float64, for the exact-OT evaluation.
-        CN: 同一双线性代价在主机端的 float64 版本，供精确 OT 评估。"""
-    root = np.sqrt(np.clip(np.asarray(theta, dtype=np.float64), 1e-12, None))
-    x = np.asarray(a, dtype=np.float64) * root
-    y = np.asarray(b, dtype=np.float64) * root
-    return (x * x).sum(1)[:, None] + (y * y).sum(1)[None, :] - 2.0 * (x @ y.T)
-
-
-def _metrics_for(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"],
-                 theta: Float[np.ndarray, "k"],
-                 geo: Float[np.ndarray, "n n"], norm: float,
-                 mirror: Int[np.ndarray, "n"]) -> dict[str, float]:
-    """EN: exact EMD under `theta`, then geodesic error of the induced map.
-        CN: 在 `theta` 下解精确 EMD，再算诱导映射的测地误差。"""
-    cost = _cost_numpy(a, b, theta)
-    pred = match(cost)
-    return geodesic_errors(pred, geo, norm, mirror)
-
-
 def main(argv: list[str] | None = None) -> int:
     """CN: 入口。EN: entry point."""
     parser = build_parser(FinalistsConfig)
@@ -227,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     log = RunLog(run_dir / "run.log")
     pre = preflight_check(run_tiny=False, need_gpu=False)
     pre.write(run_dir / "preflight.json")
-    free = _free_vram_gb()
+    free = free_vram_gb()
     # CN: 单段 checkpoint 需要在显存里留一个 `n×n` 张量加工作区；低于 2.5 GB 就退回 CPU。
     # EN: the single checkpoint needs one `n x n` tensor plus workspace; below 2.5 GB free we use the CPU.
     device = "cuda" if free > 2.5 else "cpu"
@@ -272,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
             theta = fit_softmax(a0, b0, tau=float(tau), two_sided=two_sided, steps=int(config.steps),
                                 lr=float(config.lr), sinkhorn_iterations=int(config.sinkhorn_iterations),
                                 device=device)
-            scores = [float(_metrics_for(va, vb, theta, geo, norm, mirror)["miss_5pct"])
+            scores = [float(map_metrics(va, vb, theta, geo, norm, mirror)["miss_5pct"])
                       for va, vb, geo, norm, mirror in val_cache]
             mean = float(np.mean(scores))
             scored.append((float(tau), mean))
@@ -330,7 +249,7 @@ def main(argv: list[str] | None = None) -> int:
                                                                  "relaxed_lp") if (name, seed) in thetas}
             candidates["uniform"] = np.full(k, 1.0 / k)
             for name, theta in candidates.items():
-                metrics = _metrics_for(a_test, b_test, theta, geo, norm, mirror)
+                metrics = map_metrics(a_test, b_test, theta, geo, norm, mirror)
                 rows.append(RunRecord(study=str(config.study), geometry=geometry, arm=name, k=k,
                                       m=int(idx.size), draw=int(seed), metrics=metrics,
                                       config=config.to_dict()))
@@ -347,26 +266,15 @@ def main(argv: list[str] | None = None) -> int:
     for row in rows:
         per_pair.setdefault(row.geometry, {})[row.arm] = row.metrics["miss_5pct"]
     arms = sorted({arm for values in per_pair.values() for arm in values})
-    rng = np.random.default_rng(0)
-    log.line("\npaired bootstrap over the 8 held-out pairs (miss@5%, seeds averaged within a pair):")
-    for base in ("relaxed_lp",):
-        if base not in arms:
-            continue
-        for other in arms:
-            if other == base:
-                continue
-            diff = np.array([values[base] - values[other] for values in per_pair.values() if other in values])
-            boot = np.array([rng.choice(diff, size=diff.size, replace=True).mean() for _ in range(5000)])
-            log.line(f"   {base:<14} - {other:<16} mean {diff.mean():+.4f}  "
-                     f"95% CI [{np.percentile(boot, 2.5):+.4f}, {np.percentile(boot, 97.5):+.4f}]  "
-                     f"wins {int((diff < 0).sum())}/{diff.size}")
-            rows.append(RunRecord(study=str(config.study), geometry="contrast", arm=f"{base}_minus_{other}",
-                                  k=int(rows[0].k), m=int(config.n_sub), draw=-1,
-                                  metrics={"mean": float(diff.mean()),
-                                           "ci_low": float(np.percentile(boot, 2.5)),
-                                           "ci_high": float(np.percentile(boot, 97.5)),
-                                           "wins": float(int((diff < 0).sum())), "pairs": float(diff.size)},
-                                  config=config.to_dict()))
+    contrasts = bootstrap_contrast(per_pair, base="relaxed_lp",
+                                   others=[arm for arm in arms if arm != "relaxed_lp"])
+    for other, stats in contrasts.items():
+        log.line(f"   {'relaxed_lp':<14} - {other:<16} mean {stats['mean']:+.4f}  "
+                 f"95% CI [{stats['ci_low']:+.4f}, {stats['ci_high']:+.4f}]  "
+                 f"wins {int(stats['wins'])}/{int(stats['pairs'])}")
+        rows.append(RunRecord(study=str(config.study), geometry="contrast",
+                              arm=f"relaxed_lp_minus_{other}", k=int(rows[0].k), m=int(config.n_sub),
+                              draw=-1, metrics=stats, config=config.to_dict()))
 
     table = summarise(rows, group=("arm",), metrics=("mean", "miss_1pct", "miss_5pct"))
     log.line("\n" + format_table(table, ("arm", "n_draws", "mean_mean", "miss_1pct_mean", "miss_5pct_mean")))

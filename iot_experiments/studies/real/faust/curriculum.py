@@ -67,9 +67,10 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     mirror_indices,
     standardise,
 )
-from iot_experiments.studies.real.faust.finalists import (  # noqa: E402
-    _cost_numpy,
-    _cost_torch,
+from iot_experiments.harness.faust_match import (  # noqa: E402
+    bootstrap_contrast,
+    cost_matrix,
+    cost_matrix_torch,
     fit_softmax,
 )
 
@@ -169,7 +170,7 @@ def fit_masked(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, tau:
     target = torch.arange(n, device=device)
     for _ in range(int(steps)):
         theta = torch.softmax(u, dim=0)
-        logits = -_cost_torch(xa, xb, theta) / float(tau)
+        logits = -cost_matrix_torch(xa, xb, theta) / float(tau)
         if mask is not None:
             logits = logits.masked_fill(~mask, float("-inf"))
         loss = torch.nn.functional.cross_entropy(logits, target)
@@ -227,12 +228,12 @@ def main(argv: list[str] | None = None) -> int:
     # EN: the mask allows {diagonal, hard negatives (, random negatives)}; `plain` uses None (all classes).
     masks: dict[str, torch.Tensor | None] = {"plain": None}
     if theta_lp is not None:
-        masks["hard_lp"] = _hard_negative_mask(_cost_numpy(a, b, theta_lp), count=int(config.hard_negatives),
+        masks["hard_lp"] = _hard_negative_mask(cost_matrix(a, b, theta_lp), count=int(config.hard_negatives),
                                                seed=int(config.seed))
-        masks["mixed_lp"] = _hard_negative_mask(_cost_numpy(a, b, theta_lp), count=int(config.hard_negatives),
+        masks["mixed_lp"] = _hard_negative_mask(cost_matrix(a, b, theta_lp), count=int(config.hard_negatives),
                                                 seed=int(config.seed),
                                                 random_count=int(config.random_negatives))
-    masks["hard_self"] = _hard_negative_mask(_cost_numpy(a, b, theta_sm), count=int(config.hard_negatives),
+    masks["hard_self"] = _hard_negative_mask(cost_matrix(a, b, theta_sm), count=int(config.hard_negatives),
                                              seed=int(config.seed))
 
     val_cache: list[tuple[Float[np.ndarray, "n k"], Float[np.ndarray, "n k"],
@@ -256,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
                                allow=mask, device=device)
             scores = []
             for va, vb, geo, norm, mirror in val_cache:
-                pred = match(_cost_numpy(va, vb, theta))
+                pred = match(cost_matrix(va, vb, theta))
                 scores.append(geodesic_errors(pred, geo, norm, mirror)["miss_5pct"])
             scored.append((float(tau), float(np.mean(scores))))
             log.line(f"   {arm:<10} tau={tau:<8g} val miss@5%={np.mean(scores):.4f}")
@@ -283,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
         norm = float(np.sqrt(surface_area(tb.vertices, tb.faces)))
         mirror, _res = mirror_indices(tb.vertices, t_idx)
         for arm, theta in thetas.items():
-            pred = match(_cost_numpy(a_test, b_test, theta))
+            pred = match(cost_matrix(a_test, b_test, theta))
             metrics = geodesic_errors(pred, geo, norm, mirror)
             rows.append(RunRecord(study=str(config.study), geometry=geometry, arm=arm, k=k, m=int(t_idx.size),
                                   draw=int(config.seed), metrics=metrics, config=config.to_dict()))
@@ -294,23 +295,15 @@ def main(argv: list[str] | None = None) -> int:
     per_pair: dict[str, dict[str, float]] = {}
     for row in rows:
         per_pair.setdefault(row.geometry, {})[row.arm] = row.metrics["miss_5pct"]
-    rng = np.random.default_rng(0)
-    log.line("\npaired bootstrap over the held-out pairs (miss@5%):")
-    for other in ("plain", "hard_self", "uniform"):
-        if other not in {arm for values in per_pair.values() for arm in values}:
-            continue
-        diff = np.array([values["hard_lp"] - values[other] for values in per_pair.values() if other in values])
-        boot = np.array([rng.choice(diff, size=diff.size, replace=True).mean() for _ in range(5000)])
-        log.line(f"   hard_lp - {other:<10} mean {diff.mean():+.4f}  "
-                 f"95% CI [{np.percentile(boot, 2.5):+.4f}, {np.percentile(boot, 97.5):+.4f}]  "
-                 f"wins {int((diff < 0).sum())}/{diff.size}")
-        rows.append(RunRecord(study=str(config.study), geometry="contrast", arm=f"hard_lp_minus_{other}", k=k,
-                              m=int(config.n_sub), draw=-1,
-                              metrics={"mean": float(diff.mean()),
-                                       "ci_low": float(np.percentile(boot, 2.5)),
-                                       "ci_high": float(np.percentile(boot, 97.5)),
-                                       "wins": float(int((diff < 0).sum()))},
-                              config=config.to_dict()))
+    contrasts = bootstrap_contrast(per_pair, base="hard_lp",
+                                   others=[o for o in ("plain", "hard_self", "uniform")
+                                           if o in {arm for v in per_pair.values() for arm in v}])
+    for other, stats in contrasts.items():
+        log.line(f"   {'hard_lp':<10} - {other:<10} mean {stats['mean']:+.4f}  "
+                 f"95% CI [{stats['ci_low']:+.4f}, {stats['ci_high']:+.4f}]  "
+                 f"wins {int(stats['wins'])}/{int(stats['pairs'])}")
+        rows.append(RunRecord(study=str(config.study), geometry="contrast", arm=f"hard_lp_minus_{other}",
+                              k=k, m=int(config.n_sub), draw=-1, metrics=stats, config=config.to_dict()))
 
     table = summarise(rows, group=("arm",), metrics=("mean", "miss_5pct"))
     log.line("\n" + format_table(table, ("arm", "n_draws", "mean_mean", "miss_5pct_mean")))

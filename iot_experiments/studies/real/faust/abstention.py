@@ -66,7 +66,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     mirror_indices,
     standardise,
 )
-from iot_experiments.studies.real.faust.finalists import _cost_numpy, fit_softmax  # noqa: E402
+from iot_experiments.harness.faust_match import cost_matrix, fit_softmax  # noqa: E402
 
 DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
 
@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         mirror, _res = mirror_indices(tb.vertices, test_idx)
         ee = np.arange(int(test_idx.size))
         for name, theta in thetas.items():
-            cost = _cost_numpy(a_test, b_test, theta)
+            cost = cost_matrix(a_test, b_test, theta)
             mass = np.full(ee.size, 1.0 / ee.size)
             plan, pot_log = ot.emd(mass, mass, cost, numItermax=10_000_000, log=True)
             pred = np.argmax(plan, axis=1).astype(np.int64)

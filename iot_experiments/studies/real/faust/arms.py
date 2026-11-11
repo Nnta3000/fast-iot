@@ -37,7 +37,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import torch
 from jaxtyping import Float
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -55,6 +54,7 @@ from iot_experiments.harness.records import (  # noqa: E402
     summarise,
     write_records,
 )
+from iot_experiments.harness.faust_match import fit_softmax  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     _evaluate_pair,
     _sample_index,
@@ -119,62 +119,6 @@ class ArmsConfig(RunConfig):
         parser.add_argument("--tau-grid", type=float, nargs="+", default=[0.01, 0.05, 0.1, 0.5])
         parser.add_argument("--rel-eps-grid", type=float, nargs="+", default=[0.05, 0.1, 0.25, 0.5])
         parser.add_argument("--sinkhorn-iterations", type=int, default=50)
-
-
-def _cost_torch(a: torch.Tensor, b: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
-    """
-    CN: `c_ij = sum_k theta_k (a_ik - b_jk)^2` 的双线性形式（只物化 `n×n`，可微）。
-    EN: the bilinear form of `c_ij = sum_k theta_k (a_ik - b_jk)^2` (only `n x n`, differentiable).
-    """
-    root = torch.sqrt(torch.clamp(theta, min=1e-12))
-    x = a * root
-    y = b * root
-    return (x * x).sum(1)[:, None] + (y * y).sum(1)[None, :] - 2.0 * (x @ y.t())
-
-
-def _sinkhorn(log_kernel: torch.Tensor, iterations: int) -> torch.Tensor:
-    """
-    CN: 交替缩放到均匀边缘，返回双随机矩阵（对数域外做归一化，数值上足够稳）。
-    EN: alternating scaling to uniform marginals; returns a doubly stochastic matrix.
-    """
-    n = int(log_kernel.shape[0])
-    log_u = torch.zeros(n, dtype=log_kernel.dtype)
-    log_v = torch.zeros(n, dtype=log_kernel.dtype)
-    for _ in range(int(iterations)):
-        log_u = -torch.logsumexp(log_kernel + log_v[None, :], dim=1)
-        log_v = -torch.logsumexp(log_kernel + log_u[:, None], dim=0)
-    plan = torch.exp(log_kernel + log_u[:, None] + log_v[None, :])
-    return plan / plan.sum()
-
-
-def fit_softmax(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, tau: float,
-                two_sided: bool, steps: int, lr: float, sinkhorn_iterations: int
-                ) -> Float[np.ndarray, "k"]:
-    """
-    CN: 用 torch 自动微调 `theta = softmax(u)`。`two_sided=False` 是单边行 CE；`True` 是 Sinkhorn 双随机 CE。
-    EN: fit `theta = softmax(u)` with torch autograd. `two_sided=False` is one-sided row CE; `True` is
-        Sinkhorn doubly-stochastic CE.
-    """
-    xa = torch.tensor(np.asarray(a, dtype=np.float64), dtype=torch.float64)
-    xb = torch.tensor(np.asarray(b, dtype=np.float64), dtype=torch.float64)
-    n, k = int(xa.shape[0]), int(xa.shape[1])
-    u = torch.zeros(k, dtype=torch.float64, requires_grad=True)
-    optimiser = torch.optim.Adam([u], lr=float(lr))
-    target = torch.arange(n)
-    for _ in range(int(steps)):
-        theta = torch.softmax(u, dim=0)
-        cost = _cost_torch(xa, xb, theta)
-        if two_sided:
-            plan = _sinkhorn(-cost / float(tau), int(sinkhorn_iterations))
-            loss = torch.nn.functional.nll_loss(torch.log(plan + 1e-30), target)
-        else:
-            loss = torch.nn.functional.cross_entropy(-cost / float(tau), target)
-        optimiser.zero_grad()
-        loss.backward()
-        optimiser.step()
-    with torch.no_grad():
-        theta = torch.softmax(u, dim=0).cpu().numpy().astype(np.float64)
-    return np.asarray(theta, dtype=np.float64)
 
 
 def _fit_relaxed(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, max_iterations: int

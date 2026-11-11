@@ -310,18 +310,79 @@ def curvature(vertices: Float[np.ndarray, "vertices 3"], faces: Int[np.ndarray, 
                       dtype=np.float64)
 
 
+# CN: HKS 列使用的时间尺度。放在 harness 是因为描述子定义（下面）也要用它，而描述子是**一个**定义，
+#     不再由 `correspondence.py` 和 `gates.py` 各写一遍。
+# EN: the HKS time scales. It lives in the harness because the descriptor definition below needs it, and the
+#     descriptor is now defined **once** instead of separately in `correspondence.py` and `gates.py`.
+HKS_TIMES: tuple[float, ...] = (1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0)
+
+
+def descriptors(mesh: FaustMesh, *, with_hks: bool = True) -> Float[np.ndarray, "vertices k"]:
+    """
+    EN: per-vertex descriptors: centred/scaled xyz, log 1-ring area, log curvature, and (optionally) the 8
+        HKS columns. `with_hks=False` gives the 5-column family, which the pre-flight gate uses to show that
+        position alone fails.
+
+        Why one function: `correspondence.py` and `gates.py` had grown separate copies, and the gate copy took a
+        flag -- so the two could silently drift apart while claiming to describe the same vertex.
+
+    CN: 顶点描述子：中心化缩放的 xyz、log 面积、log 曲率、可选 8 列 HKS。`with_hks=False` 是 5 列族（预检门
+        用它证明只用位置会失败）。统一一份定义，避免两个模块各写一遍后悄悄漂移。
+    """
+    v = np.asarray(mesh.vertices, dtype=np.float64)
+    centre = 0.5 * (v.min(axis=0) + v.max(axis=0))
+    scale = float(np.linalg.norm(v.max(axis=0) - v.min(axis=0)))
+    xyz = (v - centre) / max(scale, 1e-12)
+    area = np.log1p(vertex_areas(mesh.vertices, mesh.faces))
+    curv = np.log1p(curvature(mesh.vertices, mesh.faces))
+    parts = [xyz, area[:, None], curv[:, None]]
+    if with_hks:
+        parts.append(heat_kernel_signature(mesh.vertices, mesh.faces, times=HKS_TIMES))
+    return np.ascontiguousarray(np.concatenate(parts, axis=1))
+
+
+def standardise(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
+                ) -> tuple[Float[np.ndarray, "n k"], Float[np.ndarray, "n k"]]:
+    """
+    EN: standardise with the mean/std of the **pooled** sample, the same constants for both shapes. Pooling
+        matters: the simplex budget is scale-dependent, so per-shape standardisation would change the problem.
+
+    CN: 用**合并样本**的均值/标准差标准化，两个形状用同一组常数（单纯形预算与尺度有关）。
+    """
+    pooled = np.concatenate([np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)], axis=0)
+    mu = pooled.mean(axis=0)
+    sd = pooled.std(axis=0)
+    sd = np.where(sd > 1e-12, sd, 1.0)
+    return (np.asarray(a, dtype=np.float64) - mu) / sd, (np.asarray(b, dtype=np.float64) - mu) / sd
+
+
+def shared_index(mesh: FaustMesh, count: int, seed: int) -> Int[np.ndarray, "n"]:
+    """
+    EN: the same index subset on both shapes (sorted, so the bijection and the vertex order are preserved).
+        `seed` selects which draw, which is how the study gets several vertex subsamples from one mesh pair.
+
+    CN: 两个形状共享的下标子集（排序后返回，双射与顶点顺序得以保留）；`seed` 决定抽哪一组。
+    """
+    order = np.random.default_rng(int(seed)).permutation(int(mesh.n_vertices))[: int(count)]
+    return np.sort(order)
+
+
 __all__ = [
+    "HKS_TIMES",
     "FaustError",
     "FaustMesh",
     "cotangent_laplacian",
     "curvature",
+    "descriptors",
     "edge_lengths",
     "geodesic_matrix",
     "heat_kernel_signature",
     "mirror_indices",
     "one_ring",
     "read_ply",
+    "shared_index",
     "spectral_basis",
+    "standardise",
     "surface_area",
     "training_registrations",
     "vertex_areas",

@@ -53,8 +53,9 @@ from iot.core.parameters import (  # noqa: E402
 from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
-from iot.relaxed.master_regret import RegretMasterSolver, regret_objective  # noqa: E402
+from iot.relaxed.master_regret import regret_objective  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
+from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
 from iot_experiments.harness.faust import read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
@@ -112,18 +113,6 @@ class MultiPairConfig(RunConfig):
         parser.add_argument("--n-sub", type=int, default=1500)
         parser.add_argument("--max-iterations", type=int, default=30)
         parser.add_argument("--per-pair-backend", default="cupdlpx", choices=["cupdlpx", "highs"])
-
-
-class _RecordingMaster(RegretMasterSolver):
-    """CN: 记录最后一次求解用的边集（研究内包装，不改 `src/iot`）。EN: records the last edge set used."""
-
-    def __init__(self, **kwargs: object) -> None:
-        super().__init__(**kwargs)  # type: ignore[arg-type]
-        self.last_edges: EdgeSet | None = None
-
-    def solve(self, problem: InverseOTProblem, edges: EdgeSet):  # type: ignore[no-untyped-def]
-        self.last_edges = edges
-        return super().solve(problem, edges)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -286,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         plan = sparse.csr_matrix((np.full(n, 1.0 / n), (np.arange(n), np.arange(n))), shape=(n, n))
         family = SquaredDifferenceFeatures(da, db)
         problem = InverseOTProblem(features=family, theta_set=SimplexTheta(int(da.shape[1])), plan=plan)
-        master = _RecordingMaster(
+        master = RecordingMaster(
             backend=str(config.per_pair_backend), tie_break=False,
             params={"time_sec_limit": 300.0} if str(config.per_pair_backend) == "cupdlpx" else None)
         single = solve_inverse_ot_regret(

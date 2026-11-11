@@ -606,6 +606,15 @@ Four readings, and the first is the one that matters for the method:
 ordering is stable across the three θ (cost < dual < rel < softmax in every column), so the qualitative
 conclusion does not rest on one draw.
 
+**Reproducibility, measured.** The HKS block is **not bit-reproducible**: `spectral_basis` calls ARPACK with
+a random start vector, so eigenvectors inside a degenerate eigenspace rotate between processes (the same
+mesh hashes differently every run at fixed total magnitude, ~1e-13 relative). Consequences, both measured:
+a rerun at n = 4000 reproduces `cost_margin`, `rel_cost_margin` and `softmax_margin` **exactly** (and the
+refactor that moved these helpers into the harness changed them by 0.0), while `dual_margin` — a difference
+of optima that are themselves non-unique — moves by 0.002–0.006 in AUC and can flip a coverage decile on a
+degenerate instance. The at-chance conclusion for the certificate is unchanged; the dual-margin *ranking*
+should not be trusted below ~0.01.
+
 ---
 
 ## 4j. Inverse OT as a *teacher* for a cheap arm (n = 2000)

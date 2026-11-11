@@ -38,7 +38,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import ot
 import scipy.sparse as sparse
 from jaxtyping import Float, Int
 
@@ -54,13 +53,18 @@ from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
     FaustMesh,
-    curvature,
+    descriptors,
     geodesic_matrix,
-    heat_kernel_signature,
     mirror_indices,
     read_ply,
+    shared_index,
+    standardise,
     surface_area,
-    vertex_areas,
+)
+from iot_experiments.harness.faust_match import (  # noqa: E402
+    cost_matrix as _cost_matrix,
+    geodesic_errors,
+    match,
 )
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
@@ -73,7 +77,6 @@ from iot_experiments.harness.records import (  # noqa: E402
 from iot_experiments.harness.solver import box_simplex  # noqa: E402
 
 DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
-HKS_TIMES: tuple[float, ...] = (1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0)
 GROUPS: dict[str, slice] = {"sparse": slice(0, 3), "area": slice(3, 4), "curv": slice(4, 5),
                             "hks": slice(5, 13)}
 # CN: HKS 列在 13 维描述子里的位置。`LATE` 取 t = 32/64/128，正是拟合出的 θ 加载的那几列——
@@ -262,62 +265,6 @@ def check_split(train_subjects: tuple[int, ...], test_subjects: tuple[int, ...],
                 raise SystemExit(f"test pair id {vid} has subject {subject_of(vid)}, not in {sorted(te)}")
 
 
-def descriptors(mesh: FaustMesh) -> Float[np.ndarray, "vertices 13"]:
-    """
-    CN: 每个顶点的 13 维描述子。HKS 是最关键的一组（见预检报告 §3）。
-    EN: the 13-dimensional per-vertex descriptor; HKS is the block the pre-flight gates showed to be
-        load-bearing.
-    """
-    v = np.asarray(mesh.vertices, dtype=np.float64)
-    centre = 0.5 * (v.min(axis=0) + v.max(axis=0))
-    scale = float(np.linalg.norm(v.max(axis=0) - v.min(axis=0)))
-    xyz = (v - centre) / max(scale, 1e-12)
-    area = np.log1p(vertex_areas(mesh.vertices, mesh.faces))
-    curv = np.log1p(curvature(mesh.vertices, mesh.faces))
-    hks = heat_kernel_signature(mesh.vertices, mesh.faces, times=HKS_TIMES)
-    return np.ascontiguousarray(np.concatenate([xyz, area[:, None], curv[:, None], hks], axis=1))
-
-
-def standardise(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
-                ) -> tuple[Float[np.ndarray, "n k"], Float[np.ndarray, "n k"]]:
-    """CN: 合并样本标准化，两形状同常数。EN: pooled standardisation, same constants for both shapes."""
-    pooled = np.concatenate([a, b], axis=0)
-    mu = pooled.mean(axis=0)
-    sd = pooled.std(axis=0)
-    return (a - mu) / np.where(sd > 1e-12, sd, 1.0), (b - mu) / np.where(sd > 1e-12, sd, 1.0)
-
-
-def cost_tensor(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
-                ) -> Float[np.ndarray, "n n k"]:
-    """
-    CN: `Phi_ij,k = (a_ik - b_jk)^2`，**显式张量**。只在需要整张矩阵的地方用（评估时逐臂算 `n×n` 代价），
-        拟合路径**不再使用它**——那是 4.9 GB 量级的分配。保留是因为评估口径要与旧记录一致。
-
-        CN: 注意它会**短暂占用两份**：`diff` 在 `diff*diff` 期间仍存活。
-
-    EN: `Phi_ij,k = (a_ik - b_jk)^2` as an **explicit tensor**. Only for places that need the whole matrix
-        (building one arm's `n x n` cost at evaluation). The fit path **no longer uses it** -- that is the
-        4.9 GB allocation. Kept so the evaluation stays numerically identical to the existing records.
-
-        Note it transiently holds **two** copies: `diff` stays alive while `diff*diff` is computed.
-    """
-    diff = a[:, None, :] - b[None, :, :]
-    return np.asarray(diff * diff, dtype=np.float64)
-
-
-def _cost_matrix(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"],
-                 theta: Float[np.ndarray, "k"]) -> Float[np.ndarray, "n n"]:
-    """
-    CN: 一次只算 `n×n` 的加权代价（双线性恒等式），不物化 `(n, n, K)`。
-    EN: one weighted `n x n` cost via the bilinear identity; never materialises `(n, n, K)`.
-    """
-    root = np.sqrt(np.maximum(np.asarray(theta, dtype=np.float64), 0.0))
-    ax = np.asarray(a, dtype=np.float64) * root
-    bx = np.asarray(b, dtype=np.float64) * root
-    out = (ax * ax).sum(1)[:, None] + (bx * bx).sum(1)[None, :] - 2.0 * (ax @ bx.T)
-    return np.ascontiguousarray(np.maximum(out, 0.0), dtype=np.float64)
-
-
 def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_iterations: int
               ) -> dict[str, object]:
     """
@@ -350,51 +297,13 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
             "rel": rel}
 
 
-def match(cost: Float[np.ndarray, "n n"]) -> Int[np.ndarray, "n"]:
-    """CN: 精确 EMD（均匀边缘）。EN: exact EMD with uniform marginals."""
-    n = int(cost.shape[0])
-    plan = ot.emd(np.ones(n) / n, np.ones(n) / n, np.asarray(cost, dtype=np.float64),
-                  numItermax=10_000_000)
-    return np.argmax(plan, axis=1).astype(np.int64)
-
-
-def geodesic_errors(pred: Int[np.ndarray, "n"], geo: Float[np.ndarray, "n n"], norm: float,
-                    mirror: Int[np.ndarray, "n"] | None = None) -> dict[str, float]:
-    """
-    CN: 预测顶点到真值顶点的**测地**距离（归一化），以及 1%/5% 的未命中比例；若给出 `mirror`，
-        再给出**左右翻转**的比例：预测更接近镜像顶点而不是真值顶点。
-    EN: **geodesic** distance from the predicted vertex to the true one (normalised), the miss rates at 1 %
-        and 5 %, and -- when `mirror` is given -- the **left/right flip** rate: the prediction is closer to the
-        mirrored vertex than to the true one.
-    """
-    rows = np.arange(int(pred.size))
-    pred_idx = np.asarray(pred, dtype=np.int64)
-    dist = np.asarray(geo)[rows, pred_idx] / max(norm, 1e-12)
-    out = {"mean": float(dist.mean()), "median": float(np.median(dist)),
-           "miss_1pct": float(np.mean(dist > 0.01)), "miss_5pct": float(np.mean(dist > 0.05))}
-    if mirror is not None:
-        mir = np.asarray(mirror, dtype=np.int64)
-        d_mirror = np.asarray(geo)[rows, mir] / max(norm, 1e-12)
-        # CN: 只在实际出错（误差 > 1%）且镜像不是自身的位置上统计翻转，否则精确命中会被算成翻转。
-        # EN: count only where there IS an error (> 1 %) and the mirror is a different vertex, so exact hits
-        #     are not miscounted.
-        err = dist > 0.01
-        distinct = mir != rows
-        mask = err & distinct
-        flipped = (d_mirror < dist) & mask
-        out["flip_rate"] = float(np.mean(flipped))
-        out["flip_share_of_errors"] = float(flipped.sum() / mask.sum()) if mask.any() else float("nan")
-        out["mirror_error_mean"] = float(d_mirror.mean())
-    return out
-
-
 def _sample_index(mesh: FaustMesh, config: CorrespondenceConfig, seed: int) -> Int[np.ndarray, "n"]:
     """
     CN: 共享指标子集（两形状同一组下标，双射得以保留）。`seed` 决定抽哪一组，因此可以抽多组。
     EN: the shared index subsample (the same index set on both shapes, so the bijection survives). `seed`
-        selects which draw, so several can be taken.
+        selects which draw, so several can be taken. Thin wrapper over `harness.faust.shared_index`.
     """
-    return np.sort(np.random.default_rng(int(seed)).permutation(mesh.n_vertices)[: int(config.n_sub)])
+    return shared_index(mesh, int(config.n_sub), int(seed))
 
 
 def _evaluate_pair(a_mesh: FaustMesh, b_mesh: FaustMesh, *, config: CorrespondenceConfig,

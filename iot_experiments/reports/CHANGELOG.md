@@ -3,6 +3,25 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (final+++) — shared FAUST primitives moved into the harness; next-steps plan
+
+Deduplication (no value change): `gates.py`, `heatmaps.py`, `arms.py` and `finalists.py` each had their own
+`_cost` / `_match` / `_errors` / `fit_softmax`, and `abstention.py` + `curriculum.py` imported private helpers
+out of `finalists.py`. Now:
+
+  `harness/faust.py`        + `descriptors`, `standardise`, `shared_index` (were duplicated in `gates.py`)
+  `harness/faust_match.py`  new: `cost_matrix` (numpy + torch), `cost_tensor`, `match`, `geodesic_errors`,
+                            `map_metrics`, `fit_softmax`, `free_vram_gb`, `bootstrap_contrast`
+  `harness/master_probe.py` new: `RecordingMaster` (two drifted copies in `corner.py` and `multi_pair.py`)
+
+Verified value-preserving: tiny reruns before/after give max |Δmetric| = 0.0 on correspondence (113 rows),
+curriculum (13), finalists (11), gates (8), heatmaps (4), and on the cost-margin / rel-cost-margin /
+softmax-margin rows of abstention. The only drift is `dual_margin`, which reproduces on identical code
+(POT dual degeneracy) — documented in report §4i with the measured reproducibility of each score.
+
+New `notes/FAUST_NEXT_STEPS.md`: the two go/no-go diagnostics (face sampling; regional θ) and the four
+ranked directions, plus the VRAM/resource note about the TTS container.
+
 ## 2026-11-11 (final++) — two applications of iOT tested on FAUST: confidence and teaching
 
 New `studies/real/faust/abstention.py` (n=4000, 8 held-out pairs): four label-free confidence scores ranked

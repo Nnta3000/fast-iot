@@ -13,6 +13,7 @@ experiment, it moves to `studies/<axis>/<name>/` with a driver and a record, and
 | `PLAN_EVALUATION_AND_APPLICATIONS.md` | metric change, the user's levers 1–8 and P1–P4, ordered, with what is done | PLAN |
 | `APPLICATIONS.md` | what iOT is for beyond paired data → cost → pair; boundaries; picture projects | NOTES |
 | **`FAUST_CORRESPONDENCE_GUIDELINE.md`** | **the shape-correspondence plan that replaces the photomosaic: data, instance, descriptor family, solver use, evaluation, baselines, pre-flight gates** | **DESIGN ONLY** |
+| `FAUST_NEXT_STEPS.md` | what to try next after the current FAUST results: two go/no-go diagnostics, four ranked directions, and what not to do; plus the VRAM/resource note | PLAN |
 | `../legacy/pictures/README.md` | the **retired** photomosaic study: why it was retired, and six reusable pitfalls | RETIRED |
 
 **Current direction.** Image mosaics are retired (`../legacy/pictures/`). The active design is

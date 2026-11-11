@@ -37,7 +37,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import ot
 import scipy.sparse as sparse
 from jaxtyping import Float, Int
 
@@ -50,13 +49,8 @@ from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import (  # noqa: E402
-    FaustMesh,
-    curvature,
-    heat_kernel_signature,
-    read_ply,
-    vertex_areas,
-)
+from iot_experiments.harness.faust import descriptors, read_ply, standardise  # noqa: E402
+from iot_experiments.harness.faust_match import cost_tensor, match  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
     RunRecord,
@@ -115,55 +109,6 @@ class GateConfig(RunConfig):
         parser.add_argument("--with-hks", type=int, default=1)
 
 
-HKS_TIMES: tuple[float, ...] = (1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0)
-
-
-def _descriptors(mesh: FaustMesh, *, with_hks: bool) -> Float[np.ndarray, "vertices k"]:
-    """
-    CN: 顶点描述子。`with_hks=False` 时只有 5 列（xyz、面积、曲率）；`True` 时再加 8 列 HKS（K=13）。
-        HKS 需要拉普拉斯特征基（每网格约 0.3 s）。
-    EN: per-vertex descriptors. `with_hks=False` gives 5 columns (xyz, area, curvature); `True` adds 8 HKS
-        columns (K = 13). HKS needs the Laplace-Beltrami eigenbasis (~0.3 s per mesh).
-    """
-    v = np.asarray(mesh.vertices, dtype=np.float64)
-    centre = 0.5 * (v.min(axis=0) + v.max(axis=0))
-    scale = float(np.linalg.norm(v.max(axis=0) - v.min(axis=0)))
-    xyz = (v - centre) / max(scale, 1e-12)
-    area = np.log1p(vertex_areas(mesh.vertices, mesh.faces))
-    curv = np.log1p(curvature(mesh.vertices, mesh.faces))
-    parts = [xyz, area[:, None], curv[:, None]]
-    if with_hks:
-        parts.append(heat_kernel_signature(mesh.vertices, mesh.faces, times=HKS_TIMES))
-    return np.ascontiguousarray(np.concatenate(parts, axis=1))
-
-
-def _standardise(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
-                 ) -> tuple[Float[np.ndarray, "n k"], Float[np.ndarray, "n k"]]:
-    """
-    CN: 用**合并样本**的均值/标准差标准化，两个形状用同一组常数（单纯形预算与尺度有关）。
-    EN: standardise with the mean/std of the **pooled** sample, the same constants for both shapes (the
-        simplex budget is scale-dependent).
-    """
-    pooled = np.concatenate([a, b], axis=0)
-    mu = pooled.mean(axis=0)
-    sd = pooled.std(axis=0)
-    sd = np.where(sd > 1e-12, sd, 1.0)
-    return (a - mu) / sd, (b - mu) / sd
-
-
-def _cost_tensor(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"]
-                 ) -> Float[np.ndarray, "n n k"]:
-    """CN: 对角族张量 `Phi_ij,k = (a_ik - b_jk)^2`。EN: `Phi_ij,k = (a_ik - b_jk)^2`."""
-    diff = a[:, None, :] - b[None, :, :]
-    return np.asarray(diff * diff, dtype=np.float64)
-
-
-def _match(cost: Float[np.ndarray, "n n"]) -> Int[np.ndarray, "n"]:
-    """CN: 均匀边缘的精确 EMD，返回每源的匹配目标。EN: exact EMD with uniform marginals; per-source match."""
-    n = int(cost.shape[0])
-    plan = ot.emd(np.ones(n) / n, np.ones(n) / n, np.asarray(cost, dtype=np.float64),
-                  numItermax=10_000_000)
-    return np.argmax(plan, axis=1).astype(np.int64)
 
 
 def _errors(pred: Int[np.ndarray, "n"], target: Float[np.ndarray, "n 3"], norm: float
@@ -184,23 +129,23 @@ def _run_pair(pair: tuple[int, int], config: GateConfig, log: RunLog, root: Path
     log.line(f"pair {pair}: {src.n_vertices} / {dst.n_vertices} vertices")
     rng = np.random.default_rng(int(config.seed))
     idx = np.sort(rng.permutation(src.n_vertices)[: int(config.n_sub)])
-    a_all = _descriptors(src, with_hks=bool(config.with_hks))
-    b_all = _descriptors(dst, with_hks=bool(config.with_hks))
-    a, b = _standardise(a_all[idx], b_all[idx])
+    a_all = descriptors(src, with_hks=bool(config.with_hks))
+    b_all = descriptors(dst, with_hks=bool(config.with_hks))
+    a, b = standardise(a_all[idx], b_all[idx])
     log.line(f"subsample n={idx.size}, descriptors K={a.shape[1]}")
 
     target = np.asarray(dst.vertices, dtype=np.float64)[idx]
     norm = float(np.linalg.norm(dst.vertices.max(axis=0) - dst.vertices.min(axis=0)))
     truth = np.arange(idx.size, dtype=np.int64)
 
-    tensor = _cost_tensor(a, b)
+    tensor = cost_tensor(a, b)
     position_only = tensor[:, :, :3].mean(axis=2)
     uniform = tensor.mean(axis=2)
 
     rows: list[RunRecord] = []
     for arm, cost in (("position_only", position_only), ("uniform_theta", uniform),
                       ("nn_uniform", uniform)):
-        pred = np.argmin(cost, axis=1).astype(np.int64) if arm.startswith("nn") else _match(cost)
+        pred = np.argmin(cost, axis=1).astype(np.int64) if arm.startswith("nn") else match(cost)
         met = _errors(pred, target, norm)
         rows.append(RunRecord(study=str(config.study), geometry=f"pair{pair[0]}-{pair[1]}", arm=arm,
                               k=int(a.shape[1]), m=int(idx.size), draw=int(config.seed),
@@ -224,7 +169,7 @@ def _run_pair(pair: tuple[int, int], config: GateConfig, log: RunLog, root: Path
              f"converged={result.converged} F={result.finite_edges} iters={result.n_iterations}")
     oracle_cost = np.einsum("ijk,k->ij", tensor, theta)
     for arm, cost in (("oracle_theta", oracle_cost), ("nn_oracle", oracle_cost)):
-        pred = np.argmin(cost, axis=1).astype(np.int64) if arm.startswith("nn") else _match(cost)
+        pred = np.argmin(cost, axis=1).astype(np.int64) if arm.startswith("nn") else match(cost)
         met = _errors(pred, target, norm)
         rows.append(RunRecord(study=str(config.study), geometry=f"pair{pair[0]}-{pair[1]}", arm=arm,
                               k=int(a.shape[1]), m=int(idx.size), draw=int(config.seed),
