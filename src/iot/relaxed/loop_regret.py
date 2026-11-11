@@ -43,7 +43,7 @@ from ..core.edges_advance import advance_edges, keep_by_tightness, slack_toward_
 from ..core.parameters import RelaxedObjective, SolverParameters
 from ..core.problem import InverseOTProblem
 from ..core.pruning import HysteresisPruner
-from ..core.scan import maximum_slack, scan_for_violations
+from ..core.scan import maximum_slack_grid, scan_for_violations
 from ..exact.components import mandatory_edges
 from ..exact.master import MasterSolution
 from .diagnostics import (IDENTITY_RTOL, assert_regret_identity, fingerprint,
@@ -207,8 +207,6 @@ class _Baseline:
     eps_r: float
     tol_eff: float
     total_mass: float
-    all_rows: Int[np.ndarray, "edges"]
-    all_cols: Int[np.ndarray, "edges"]
     identity_rtol: float
 
 
@@ -256,20 +254,19 @@ def _compute_baseline(problem: InverseOTProblem, params: SolverParameters,
                   TOL_SCALE_FRACTION * max(cost_scale, 1e-30),
                   SOLVER_FLOOR_FRACTION * max(cost_scale, 1e-30))
 
-    r_idx, c_idx = np.meshgrid(np.arange(m), np.arange(n), indexing="ij")
-    all_rows: Int[np.ndarray, "edges"] = r_idx.reshape(-1)
-    all_cols: Int[np.ndarray, "edges"] = c_idx.reshape(-1)
-    del r_idx, c_idx
-
+    # CN: 原来在这里 `meshgrid` 出全部 m*n 条边的索引（2*8 字节/边，n=6890 时 760 MB，且整个求解期间保留）。
+    #     现在 `maximum_slack_grid` 按行块**生成**索引，只访问同一组边，取值不变。
+    # EN: this used to `meshgrid` the indices of all m*n edges (2*8 bytes/edge -- 760 MB at n=6890 -- kept for
+    #     the whole solve). `maximum_slack_grid` now **generates** them per row block; same edges, same value.
     total_mass = float(np.sum(support_values))
     f_u, g_u = _best_dual_for(problem, uni)
-    su = max(0.0, maximum_slack(problem, uni, f_u, g_u, all_rows, all_cols))
+    su = max(0.0, maximum_slack_grid(problem, uni, f_u, g_u))
     # CN: uniform θ 也是一个候选点：`U = R_uniform + s*|pi_hat|`。
     # EN: uniform theta is also a candidate: `U = R_uniform + s*|pi_hat|`.
     uniform_upper: float = r0 + su * total_mass
     return _Baseline(uniform_theta=uni, uniform_upper=uniform_upper, eps_r=eps_r,
-                     tol_eff=float(tol_eff), total_mass=total_mass, all_rows=all_rows,
-                     all_cols=all_cols, identity_rtol=_identity_rtol(objective, solver))
+                     tol_eff=float(tol_eff), total_mass=total_mass,
+                     identity_rtol=_identity_rtol(objective, solver))
 
 
 def _run_round(problem: InverseOTProblem, finite: EdgeSet, mandatory: EdgeSet, *,
@@ -320,8 +317,7 @@ def _run_round(problem: InverseOTProblem, finite: EdgeSet, mandatory: EdgeSet, *
                                gamma=params.gamma, scan_backend=params.scan.backend,
                                scan_device=params.scan.device,
                                scan_max_tile_bytes=params.scan.max_tile_bytes)
-    s_pre = max(0.0, maximum_slack(problem, theta_pre, f_pre, g_pre, baseline.all_rows,
-                                   baseline.all_cols))
+    s_pre = max(0.0, maximum_slack_grid(problem, theta_pre, f_pre, g_pre))
     r_pre = float(solution.regret_pre)
     upper = r_pre + s_pre * baseline.total_mass
     lower = r_pre

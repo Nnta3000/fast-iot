@@ -127,4 +127,47 @@ def maximum_slack(
     return float(worst)
 
 
-__all__ = ["ScanBackend", "maximum_slack", "scan_for_violations"]
+def maximum_slack_grid(
+    problem: InverseOTProblem,
+    theta: Float[np.ndarray, "k"],
+    source_dual: Float[np.ndarray, "m"],
+    target_dual: Float[np.ndarray, "n"],
+    *,
+    block: int = 2_000_000,
+) -> float:
+    """
+    CN: **整张网格上的 `max sigma`，不物化索引进数组**。按行块生成 `(i, j)`，所以内存上界是
+        `block * K`（加上 `costs` 内部的临时量），与网格大小无关。
+
+        CN: 与 `maximum_slack(problem, ..., rows, cols)` **取值完全相同**：命中同一组边，`max` 与顺序无关。
+            存在的唯一理由是内存——`rows/cols` 两个 int64 数组是 `2*8` 字节/边，n=6890 时是 760 MB，
+            而且会被保存整个求解过程。
+
+    EN: `max sigma` over the **whole grid**, without materialising the index arrays. Row blocks of `(i, j)`
+        are generated, so the bound is `block * K` (plus the temporaries inside `costs`), independent of the
+        grid size.
+
+        The value is **identical** to `maximum_slack(problem, ..., rows, cols)`: the same set of edges is
+        visited and `max` does not depend on order. The only reason this exists is memory -- the two int64
+        index arrays cost `2*8` bytes per edge (760 MB at n=6890) and used to be kept for the whole solve.
+    """
+    n_source = int(problem.n_source)
+    n_target = int(problem.n_target)
+    if n_source < 1 or n_target < 1:
+        return -np.inf
+    rows_per_block = max(1, min(n_source, int(block) // max(1, n_target)))
+    worst = -np.inf
+    for row_start in range(0, n_source, rows_per_block):
+        row_stop = min(n_source, row_start + rows_per_block)
+        rows = np.arange(row_start, row_stop, dtype=np.int64)
+        grid_rows = np.repeat(rows, n_target)
+        grid_cols = np.tile(np.arange(n_target, dtype=np.int64), rows.size)
+        cost = np.asarray(problem.features.costs(theta, grid_rows, grid_cols), dtype=np.float64)
+        value = (np.asarray(source_dual, dtype=np.float64)[grid_rows]
+                 + np.asarray(target_dual, dtype=np.float64)[grid_cols] - cost)
+        if value.size:
+            worst = max(worst, float(value.max()))
+    return worst
+
+
+__all__ = ["ScanBackend", "maximum_slack", "maximum_slack_grid", "scan_for_violations"]

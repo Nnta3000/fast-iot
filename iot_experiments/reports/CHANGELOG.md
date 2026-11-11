@@ -3,6 +3,27 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 — `loop_regret`: no more full-grid index arrays
+
+`_compute_baseline` used to `meshgrid` the indices of all `m·n` edges and keep them for the whole solve
+(16 B/edge: 64 MB at `n=2000`, **760 MB at `n=6890`**), purely to feed a blockwise `max`. New
+`core.scan.maximum_slack_grid` **generates** them per row block; `_baseline` no longer stores them.
+
+**Only this change was applied**, because it is the only one that is provably value-identical: the same edges
+are visited and `max` does not depend on order. The tempting second change — replacing the pass with
+`max(0, scan.max_violation)` — was **rejected**: on `F` the master's inequalities hold only to the solver
+residual (this solver reports `converged=False` routinely), so an under-stated `s` would make the certificate's
+upper bound `U` too small. That is exactly the kind of short-cut that could invalidate a bound.
+
+**Verified**, not assumed (`studies/real/faust/baseline.py`, run before and after, then `diff`):
+`exact.delta`, `is_optimal`, `relative_gap`, relaxed `theta`/`regret`/`lower`/`upper`/`max_sigma_all`, and the
+FAUST fit `theta`/`regret` are **bit-identical**; only the memory lines moved (peak `n=2000` 2142.8 → 2112.6 MB;
+`n=3000` 3561.8 → 3423.9 MB, i.e. −137.9 MB, matching the two 144 MB arrays).
+
+**Tests**: `tests/iot_maximum_slack_test.py` (4 tests) — equality across block sizes 1…1000, a case with the
+maximum on the **last row** (the "scanned only the first block" failure), a `1 x 1` grid, and an end-to-end
+planted exact-iOT certificate check.
+
 ## 2026-11-09 (final) — memory: the `(n, n, K)` tensor is gone
 
 **New** `SquaredDifferenceFeatures` in `src/iot/core/features.py`: coordinate-wise weighted squared difference

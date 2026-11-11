@@ -55,16 +55,24 @@ Measured on this machine, not estimated.
 | `(n, n, K)` feature tensor | **4.94 GB** at `n=6890, K=13`, and **×2 transiently** (`diff * diff` keeps `diff` alive) | **removed** — the fit now uses `SquaredDifferenceFeatures`, which computes `(E, K)` only for the edges the solver requests |
 | geodesic matrix `(n, n)` | 380 MB | unavoidable; only at evaluation, one pair at a time |
 | EMD cost + POT internals + plan | ~1.1 GB at `n=6890` | unavoidable with exact EMD; this is why the heat maps solve one arm at a time |
-| library baseline (`all_rows`, `all_cols` over the full grid) | +490 MB at `n=2000`, ~1.5 GB at `n=6890` | **still there** — it is in `loop_regret._compute_baseline`, not in this study |
+| library full-grid index arrays (`all_rows`/`all_cols`) | 16 B/edge — 64 MB at `n=2000`, **760 MB at `n=6890`**, kept for the whole solve | **removed** — `_compute_baseline` / `_run_round` now call `maximum_slack_grid`, which generates the indices per row block. Verified value-identical (§ below) |
 | first round (scan + LP assembly) | +897 MB at `n=2000` | scales with `|F|`; ~75 kB per edge |
 
 **What is fixed**: `fit_theta` no longer builds `(n, n, K)`. Verified: the whole box-width sweep re-ran and every
 shared metric is **identical to 1e-12** (bootstrap rows bit-identical), so the change is memory-only.
 
-**What is not**: fitting at the full 6890 vertices still needs ~75 kB per `|F|` edge, and `|F| ≈ 12·n` there, so
-it lands near the machine's limit. The subsample (`--n-sub`, default 800) is therefore not a convenience — it is
-what makes the fit fit. The heat map itself still evaluates at full resolution, because that path only ever holds
-`n × n`.
+**Also fixed (library)**: `loop_regret` no longer materialises the indices of all `m·n` edges. Measured at
+`n = 3000`: peak **3561.8 → 3423.9 MB** (−137.9 MB, matching the two 144 MB int64 arrays), with the fitted
+`regret` **identical to the last digit** (`0.234810725563`) and the exact-iOT certificate unchanged
+(`delta = 0.009580575581`, `is_optimal = True`). `tests/iot_maximum_slack_test.py` pins the equality, including a
+case where the maximum sits on the **last row** — the failure mode that would silently under-state the
+certificate's upper bound `U`.
+
+**What is not**: memory is **independent of `|F|`** (measured: tripling `|F|` at fixed `n` left the peak flat), but
+it still grows with `n` — the remaining terms are the `n²` geodesic/cost matrices in the evaluation and one
+~1 GB transient inside the relaxed loop that I could not attribute with `VmRSS` instrumentation. The subsample
+(`--n-sub`, default 800) is therefore not a convenience — it is what makes the fit fit. The heat map itself still
+evaluates at full resolution, because that path only ever holds `n × n`.
 
 ## What is not done
 
