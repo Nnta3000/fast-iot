@@ -525,8 +525,10 @@ next step, and until it exists this row must be read as **"an unnormalised multi
   headline is not seed-sensitive; but 800 vertices is 12 % of the mesh.
 - **One training pair** `(0,13)`. The subject-level generalisation is exactly what is tested, but a single
   pair is a single draw of "what one pair teaches". Multi-pair shared-`θ` is not implemented.
-- **All evaluation pairs are inter-subject by construction** (that is the point of the split). Intra-subject
-  is untested and is expected to be easier — it may leave no room to show a gain.
+- **All evaluation pairs are inter-subject by construction** (that is the point of the split).
+  **Intra-subject is implemented but not run** (`--pairing intra`: same subject, two poses). Its generator is
+  unit-tested (`tests/iot_faust_test.py`), but no experiment uses it — it is expected to be easier and would
+  likely leave less headroom, and no current claim depends on it. Deliberately skipped.
 - **Not comparable to published FAUST errors.** Geodesic error normalised by `sqrt(area)` on a 12 %
   subsample, using training-set registrations only (the 200 test scans have no published registrations; that
   set is scored by the website).

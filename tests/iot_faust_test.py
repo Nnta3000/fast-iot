@@ -227,3 +227,39 @@ def test_squared_difference_features_reject_mismatched_dimensions() -> None:
         SquaredDifferenceFeatures(np.zeros((3, 4)), np.zeros((3, 5)))
     with pytest.raises(ValueError):
         SquaredDifferenceFeatures(np.zeros(3), np.zeros(3))
+
+
+def test_intra_pairs_are_same_subject_and_distinct_pose() -> None:
+    """
+    CN: `--pairing intra` 的配对生成器必须给出**同一受试者、不同姿态**的对，且都落在给定受试者集合内。
+        这条存在只是因为该代码路径已经提交但从未运行——未测试的配对生成器是静默错误的典型来源。
+    EN: the `--pairing intra` generator must yield **same subject, different pose** pairs, all within the
+        requested subject set. It exists only because that code path is committed but never run -- an untested
+        pair generator is a classic silent-error source.
+    """
+    from iot_experiments.studies.real.faust.correspondence import intra_pairs, subject_of
+
+    subjects = (5, 6, 7)
+    pairs = intra_pairs(subjects, 4)
+    assert len(pairs) == 4
+    assert len(set(pairs)) == 4
+    for first, second in pairs:
+        assert subject_of(first) == subject_of(second), f"{first},{second} are not the same subject"
+        assert first != second, "a pair must use two different poses"
+        assert subject_of(first) in subjects
+        assert first // 10 == second // 10
+
+
+def test_intra_and_inter_generators_differ() -> None:
+    """
+    CN: 两个生成器不能意外相同（那会让 `--pairing intra` 变成无操作）。
+    EN: the two generators must not coincide, or `--pairing intra` would be a no-op.
+    """
+    from iot_experiments.studies.real.faust.correspondence import default_pairs, intra_pairs, subject_of
+
+    subjects = (5, 6, 7, 8, 9)
+    intra = intra_pairs(subjects, 4)
+    inter = default_pairs(subjects, 4)
+    assert intra != inter
+    assert all(subject_of(a) == subject_of(b) for a, b in intra)
+    assert any(subject_of(a) != subject_of(b) for a, b in inter)
