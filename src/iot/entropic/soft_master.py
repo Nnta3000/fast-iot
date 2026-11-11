@@ -1,15 +1,15 @@
 """
-EN: **T3's soft master** -- minimise, on a given edge set `F`,
+EN: **EOT's soft master** -- minimise, on a given edge set `F`,
 
         `Psi_F(theta,f,g) = <phi_bar, theta> - a.f - b.g + eps * sum_{e in F} exp(sigma_e/eps)`
 
     with `sigma_e = f_i + g_j - theta.phi_e`.
 
-    **NOTE, and it matters:** this is the NESTED formulation, not T3 proper. It runs two levels --
-    `theta` by SLSQP, and an ordinary entropic OT solve for `(f, g)` at every `theta`. T3 is a
+    **NOTE, and it matters:** this is the NESTED formulation, not EOT proper. It runs two levels --
+    `theta` by SLSQP, and an ordinary entropic OT solve for `(f, g)` at every `theta`. EOT is a
     SINGLE joint solve over `(theta, f, g)` (see `joint_hvp`), where the plan falls out of the
     converged potentials instead of being recomputed per `theta`. Keep this for the P1 reference
-    comparison; do not cite its cost as T3's cost.
+    comparison; do not cite its cost as EOT's cost.
 
     Two levels:
       - **inner** (theta fixed): `f` is eliminated in closed form by a per-row segment log-sum-exp,
@@ -21,15 +21,15 @@ EN: **T3's soft master** -- minimise, on a given edge set `F`,
     `Psi_F` is **convex** in `(theta, f, g)`, so any converged point is a global minimiser of the
     nested objective.
 
-CN: **T3 的软 master** —— 在给定边集 `F` 上最小化
+CN: **EOT 的软 master** —— 在给定边集 `F` 上最小化
 
         `Ψ_F(θ,f,g) = <φ̄, θ> − a·f − b·g + ε Σ_{e∈F} exp(σ_e/ε)`
 
     其中 `σ_e = f_i + g_j − θ·φ_e`。
 
-    注意：这是**嵌套**形式，不是 T3 本身。两级：内层（给定 θ）用 `inner_f.solve_inner_on_f`
+    注意：这是**嵌套**形式，不是 EOT 本身。两级：内层（给定 θ）用 `inner_f.solve_inner_on_f`
     解 `(f,g)`；外层 `θ` 用 SLSQP，停止判据 `Frank–Wolfe gap ≤ 1e-4·ε`。
-    T3 是 `(θ,f,g)` 的**单次联合**求解（见 `joint_hvp`）。`Ψ_F` 对三者凸，收敛点即全局最优。
+    EOT 是 `(θ,f,g)` 的**单次联合**求解（见 `joint_hvp`）。`Ψ_F` 对三者凸，收敛点即全局最优。
 """
 from __future__ import annotations
 

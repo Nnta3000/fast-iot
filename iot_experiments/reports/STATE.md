@@ -2,6 +2,11 @@
 
 **Last updated: 2026-10-28.** This file is the durable state. If context is lost, read this first.
 
+> **Scope (2026-11-05).** This file covers the **SynthRAD pairing study and the T1/T2 pool work**. It
+> does **not** cover the EOT (entropic inverse-OT master, formerly "T3") line, which is newer and lives
+> in `current/eot/README.md`. For "where is everything", use `README.md` §2; for the experiment list,
+> `EXPERIMENTS.md`.
+
 ---
 
 ## 1. Goal

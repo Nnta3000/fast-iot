@@ -1,5 +1,5 @@
 """
-EN: acceptance tests for `iot.entropic.joint_master` -- the joint Newton-CG that IS T3.
+EN: acceptance tests for `iot.entropic.joint_master` -- the joint Newton-CG that IS EOT.
 
     These are gates, not demonstrations. Each one fails loudly if the corresponding piece is wrong:
       1. connectivity is REFUSED, not silently solved, on a disconnected edge set;
@@ -10,7 +10,7 @@ EN: acceptance tests for `iot.entropic.joint_master` -- the joint Newton-CG that
       5. the active set holds the simplex exactly (no negative theta, sum == 1) and the KKT
          multipliers on pinned coordinates have the correct sign.
 
-CN: `iot.entropic.joint_master` 的验收测试（联合 Newton-CG，即 T3 本体）。以上每条都是硬性门槛。
+CN: `iot.entropic.joint_master` 的验收测试（联合 Newton-CG，即 EOT 本体）。以上每条都是硬性门槛。
 """
 
 from __future__ import annotations

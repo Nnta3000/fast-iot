@@ -1,0 +1,453 @@
+{
+  "provenance": {
+    "question": "do the FAUST training registrations share one vertex ordering, so that pi_hat = I/n is the true correspondence?",
+    "gate": "6.0 of notes/FAUST_CORRESPONDENCE_GUIDELINE.md -- stop if this fails",
+    "data": "MPI-FAUST.zip -> training/registrations/tr_reg_{000..099}.ply (100 files, binary PLY)",
+    "test_1": "vertex and face counts identical across all registrations",
+    "test_2": "FACE ARRAYS identical (topology), not merely the same counts",
+    "test_3": "per-vertex 1-ring area: pairwise Pearson correlation across registrations. A scrambled vertex order would give ~0; the observed value is the evidence that vertex i is the same point",
+    "test_4": "per-edge length correlation, an independent fingerprint of the same claim",
+    "test_5": "id -> (subject, pose) recovered from the area-correlation matrix, not assumed from a convention",
+    "gt_files": "training/ground_truth_vertices/tr_gt_XXX.txt has one line per SCAN vertex (the scan has far more vertices than the 6890-vertex registration), so it indexes scans, not registrations",
+    "no_geodesics": "no geodesic solver is installed; this check needs none (areas and edge lengths only)"
+  },
+  "records": [
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "counts",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "distinct_vertex_face_pairs": 1.0,
+        "n_vertices": 6890.0,
+        "n_faces": 13776.0
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "pairs": [
+          [
+            6890,
+            13776
+          ]
+        ]
+      }
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "topology",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "faces_identical": 1.0
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "area_corr",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.9652691728869124,
+        "min": 0.9416951468795325
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "pairs": [
+          [
+            85,
+            63
+          ],
+          [
+            51,
+            26
+          ],
+          [
+            30,
+            4
+          ],
+          [
+            7,
+            1
+          ],
+          [
+            17,
+            81
+          ],
+          [
+            64,
+            91
+          ],
+          [
+            50,
+            60
+          ],
+          [
+            97,
+            72
+          ],
+          [
+            63,
+            54
+          ],
+          [
+            55,
+            93
+          ],
+          [
+            27,
+            81
+          ],
+          [
+            67,
+            0
+          ],
+          [
+            39,
+            85
+          ],
+          [
+            55,
+            3
+          ],
+          [
+            76,
+            72
+          ],
+          [
+            84,
+            17
+          ],
+          [
+            8,
+            86
+          ],
+          [
+            2,
+            54
+          ],
+          [
+            8,
+            29
+          ],
+          [
+            48,
+            42
+          ],
+          [
+            40,
+            2
+          ],
+          [
+            0,
+            12
+          ],
+          [
+            0,
+            67
+          ],
+          [
+            52,
+            64
+          ],
+          [
+            25,
+            61
+          ],
+          [
+            76,
+            38
+          ],
+          [
+            46,
+            99
+          ],
+          [
+            80,
+            98
+          ],
+          [
+            37,
+            68
+          ],
+          [
+            95,
+            65
+          ],
+          [
+            84,
+            68
+          ],
+          [
+            70,
+            38
+          ],
+          [
+            87,
+            13
+          ],
+          [
+            57,
+            72
+          ],
+          [
+            84,
+            52
+          ],
+          [
+            37,
+            31
+          ],
+          [
+            42,
+            48
+          ],
+          [
+            71,
+            88
+          ],
+          [
+            7,
+            93
+          ],
+          [
+            53,
+            35
+          ]
+        ]
+      }
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "edge_corr",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.9564051623367963,
+        "min": 0.9346795282045808
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "structure",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "within_subject_major": 0.9842768980226793
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "structure": {
+          "subject_major": {
+            "within": 0.9842768980226793,
+            "between": 0.9652447206035479
+          },
+          "pose_major": {
+            "within": 0.9739096246239302,
+            "between": 0.9662814479434225
+          },
+          "chosen": "subject_major"
+        }
+      }
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "ground_truth",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {},
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "present": true,
+        "n_files": 100,
+        "first_len": 176387,
+        "unique_values": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "study": "faust_data_check",
+      "geometry": "dataset",
+      "arm": "gate_6.0",
+      "k": 0,
+      "m": 100,
+      "draw": 0,
+      "metrics": {
+        "passed": 1.0
+      },
+      "config": {
+        "study": "faust_data_check",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_data_check",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training",
+        "limit": 0,
+        "pairs": 40,
+        "__section__": "faust_data_check",
+        "__class__": "DataCheckConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}

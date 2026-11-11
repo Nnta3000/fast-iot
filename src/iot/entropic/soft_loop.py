@@ -1,5 +1,5 @@
 """
-CN: **T3 的循环** —— 软 master + 分离扫描 + 剪枝 + 边集推进，停在**逐点超出质量**上。
+CN: **EOT 的循环** —— 软 master + 分离扫描 + 剪枝 + 边集推进，停在**逐点超出质量**上。
 
     CN: 每一轮：
         1. `soft_master(problem, F)` 解出 `(θ, f, g)` 与 `Ψ_F`；
@@ -12,7 +12,7 @@ CN: **T3 的循环** —— 软 master + 分离扫描 + 剪枝 + 边集推进，
 
     CN: `B = S ∪ R` 由 `exact/components.mandatory_edges` 给出，永不被剪——缺了它 `Ψ_F` 会无下界。
 
-EN: **T3's loop** -- soft master, separation scan, prune, edge advance, stopping on **per-node excess mass**.
+EN: **EOT's loop** -- soft master, separation scan, prune, edge advance, stopping on **per-node excess mass**.
 
     Each round: solve the soft master on `F`; scan `U∖F` for `σ`, the **per-node** excess mass, and the
     top-γ candidates ranked by `σ` with **no threshold** (mass is `e^(σ/eps)`, so `σ` ranks it); form the
@@ -29,7 +29,7 @@ import dataclasses
 import time
 
 import numpy as np
-from jaxtyping import Float, Int
+from jaxtyping import Float
 
 from ..core.edges import EdgeSet
 from ..core.edges_advance import advance_edges
@@ -74,8 +74,8 @@ def solve_entropic_soft(problem: InverseOTProblem, *, epsilon_absolute: float,
                         inner_tolerance: float = 1e-8,
                         scan_backend: str = "numpy") -> SoftLoopResult:
     """
-    CN: 跑 T3 循环。`epsilon_absolute` 由调用方冻结（不做相对量换算）。
-    EN: run the T3 loop. `epsilon_absolute` is frozen by the caller (no relative scaling here).
+    CN: 跑 EOT 循环。`epsilon_absolute` 由调用方冻结（不做相对量换算）。
+    EN: run the EOT loop. `epsilon_absolute` is frozen by the caller (no relative scaling here).
     """
     m = int(problem.n_source)
     n = int(problem.n_target)
@@ -93,8 +93,8 @@ def solve_entropic_soft(problem: InverseOTProblem, *, epsilon_absolute: float,
         master = soft_master(problem, finite, epsilon=epsilon_absolute, warm=warm,
                              max_outer=int(max_outer), inner_tolerance=float(inner_tolerance))
         warm = master
-        # CN: 扫描把 `(θ,f,g)` 当成 master 解；`delta=0`，因为 T3 没有 delta 列。
-        # EN: present `(theta,f,g)` as the master solution; `delta=0`, since T3 has no delta column.
+        # CN: 扫描把 `(θ,f,g)` 当成 master 解；`delta=0`，因为 EOT 没有 delta 列。
+        # EN: present `(theta,f,g)` as the master solution; `delta=0`, since EOT has no delta column.
         as_master = MasterSolution(delta=0.0, theta=master.theta, source_dual=master.source_dual,
                                    target_dual=master.target_dual, status="ok")
         scan = scan_for_violations(problem, as_master, excluded=finite, tol=-np.inf,

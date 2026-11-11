@@ -1,16 +1,18 @@
 # CuPDLPx as an inverse-OT master backend — built and measured
 
-> **Status: PARTIAL.** The **adapter** described here is current (it is the master on the target
-> path). The **measurements** were taken against **HiGHS** and with the old `tie_break="none"`
-> framing; treat the numbers as historical. For current GPU-path results see
-> `current/SERVER_TESTS_REPORT.md`.
+**Status: PARTIAL.** The adapter is **CURRENT** (it is the master on the target path, and HiGHS is no
+longer the default — see `AGENTS.md` §6). The **measurements** in this file were taken against **HiGHS**
+and with the old `tie_break="none"` framing, so every timing and ratio below is **HISTORICAL**; read
+them as "CuPDLPx was slower than HiGHS on 2026-10-09", nothing more. For current GPU-path results see
+`current/SERVER_TESTS_REPORT.md`.
 
-**Status: CURRENT, empirical (2026-10-09, local CUDA-13.4 build).** The adapter, the native
+**Historical statement (2026-10-09, local CUDA-13.4 build):** the adapter, the native
 extension, and the in-loop comparison all execute. CuPDLPx returns valid optima
-(`is_optimal_plan=True`, `delta` matching HiGHS to ~1e-4) but is **slower than HiGHS at the
-current sizes**, with the relative gap shrinking as `K` grows (36× at `K=4` → 1.3× at `K=256`).
+(`is_optimal_plan=True`, `delta` matching HiGHS to ~1e-4) but was **slower than HiGHS at those
+sizes**, with the relative gap shrinking as `K` grows (36× at `K=4` → 1.3× at `K=256`).
 
-Method label: `master=cupdlpx` (optional, non-default; HiGHS stays the default).
+Method label: `master=cupdlpx`. At the time this was optional and non-default; **it is now the
+production master and HiGHS is retired from the production path** (`AGENTS.md` §6).
 
 ## 1. Build (and the CUDA-13 compatibility shim)
 

@@ -1,0 +1,134 @@
+# faust — shape correspondence with a learned inverse-OT cost
+
+**Status: PRELIMINARY TESTS DONE (2026-11-09).** Gates 6.0–6.3 of
+`reports/current/FAUST_PRELIMINARY_REPORT.md` pass. The full experiment is **not** built yet: no training
+loop over poses, no held-out evaluation, no baselines beyond the gate set.
+
+**Question.** On registered 3D human shapes, can a cost **learned** by inverse OT over per-vertex descriptors
+recover the true vertex correspondence better than **hand-weighted** descriptor costs?
+
+**Why this task** (rationale in `../../notes/FAUST_CORRESPONDENCE_GUIDELINE.md`): the observed plan is free
+and exact — registered meshes share one vertex ordering, so `π̂ = I/n` *is* the ground truth — the natural
+cost fails visibly across poses, and a standard evaluation protocol already exists.
+
+| file | what it does | run |
+| --- | --- | --- |
+| `data_check.py` | **gate 6.0**: do all 100 registrations share one topology and one vertex order? | `python -m iot_experiments.studies.real.faust.data_check` |
+| `gates.py` | **gates 6.1–6.3**: does position-only fail, does uniform-weight leave room, does an oracle `θ` beat uniform? | `python -m iot_experiments.studies.real.faust.gates --pairs 17 65 1 94 23 74` |
+| `correspondence.py` | **the experiment**: subject-disjoint split, box-width chosen on validation pairs, per-row-argmin control, per-vertex flips | see *Reproduce* below |
+| `heatmaps.py` | **error heat maps** at full 6890-vertex resolution, plus left/right flip counts | `--pairs 50 66 56 71` |
+| `analyse.py` | **tables and figure captions from the saved records only** (§7.3 / §7.2) | `--study correspondence` or `--study heatmaps` |
+
+Loader and descriptor primitives live in `iot_experiments/harness/faust.py`
+(`read_ply`, `vertex_areas`, `cotangent_laplacian`, `spectral_basis`, `heat_kernel_signature`), because no
+mesh library is installed — `trimesh`, `potpourri3d`, `robust_laplacian`, `igl` and `open3d` are all absent.
+
+## Data
+
+`data/MPI-FAUST.zip` (1.35 GB) → extracted to `data/faust_extract/MPI-FAUST/`. Only
+`training/registrations/` (100 PLY, 6890 vertices, 13776 faces) and `training/ground_truth_vertices/` are
+needed so far; the 200 test scans are withheld for the website, so **all evaluation here uses training
+registrations split by pose**.
+
+`data/` is git-ignored; the loader refuses a missing or unexpected file rather than silently substituting.
+
+## What is established (2026-11-09)
+
+- **Gate 6.0 PASS on all 100 registrations**: identical vertex/face counts, **identical face arrays**, and
+  per-vertex area correlation mean 0.965 (min 0.942) with edge-length correlation mean 0.956 (min 0.935).
+  A scrambled vertex order would give ≈0. So `π̂ = I/n` is the true correspondence.
+- **Gates 6.1–6.3 PASS on all three pairs** (`n = 800` subsample): position-only fails visibly
+  (miss@5 % 0.86 / 0.55 / 0.89), uniform-weight leaves room (0.19–0.52), and the oracle `θ` — fitted on the
+  same pair — more than halves the miss rate on every pair (0.43 → 0.21, 0.19 → 0.04, 0.52 → 0.26).
+- **HKS is load-bearing.** With only 5 cheap descriptors (xyz, area, curvature) gate 6.3 **failed**
+  (0.755 → 0.729). Adding 8 heat-kernel-signature columns made it pass (0.431 → 0.207). The cheap
+  descriptors alone have no room.
+- **OT beats nearest-neighbour** once the weights are decent: with the oracle `θ`, EMD scores 0.039 mean
+  vs 0.078 for per-row argmin. With uniform weights the gap is smaller (0.083 vs 0.101).
+
+## Memory: what actually costs, and what was fixed
+
+Measured on this machine, not estimated.
+
+| item | size | status |
+| --- | ---: | --- |
+| `(n, n, K)` feature tensor | **4.94 GB** at `n=6890, K=13`, and **×2 transiently** (`diff * diff` keeps `diff` alive) | **removed** — the fit now uses `SquaredDifferenceFeatures`, which computes `(E, K)` only for the edges the solver requests |
+| geodesic matrix `(n, n)` | 380 MB | unavoidable; only at evaluation, one pair at a time |
+| EMD cost + POT internals + plan | ~1.1 GB at `n=6890` | unavoidable with exact EMD; this is why the heat maps solve one arm at a time |
+| library baseline (`all_rows`, `all_cols` over the full grid) | +490 MB at `n=2000`, ~1.5 GB at `n=6890` | **still there** — it is in `loop_regret._compute_baseline`, not in this study |
+| first round (scan + LP assembly) | +897 MB at `n=2000` | scales with `|F|`; ~75 kB per edge |
+
+**What is fixed**: `fit_theta` no longer builds `(n, n, K)`. Verified: the whole box-width sweep re-ran and every
+shared metric is **identical to 1e-12** (bootstrap rows bit-identical), so the change is memory-only.
+
+**What is not**: fitting at the full 6890 vertices still needs ~75 kB per `|F|` edge, and `|F| ≈ 12·n` there, so
+it lands near the machine's limit. The subsample (`--n-sub`, default 800) is therefore not a convenience — it is
+what makes the fit fit. The heat map itself still evaluates at full resolution, because that path only ever holds
+`n × n`.
+
+## What is not done
+
+- One draw of the subsample, «800 of 6890 vertices», three pairs. Not a held-out evaluation.
+- No `θ` learned on one pair and tested on another — the only `θ` so far is the oracle ceiling.
+- No Gromov–Wasserstein baseline, no pose-distance stratification, no accuracy-vs-deformation curve.
+- **Error is Euclidean, not geodesic**, normalised by the bounding-box diameter. No geodesic solver is
+  installed; this is a proxy, and it is optimistic.
+- No multi-pair shared-`θ` solver (block-restricted scanning is a code change that has not been made).
+
+## Reproduce
+
+**Every run goes through `iot_experiments/scripts/run_job.sh`** (AGENTS.md §0.2 / `scripts/README.md`): it
+records the exit code, refuses to repeat a failed command, checks `MemAvailable` against a declared budget
+plus a 2 GB reserve, and runs at `nice 19 / ionice idle`.
+
+**Threads are capped.** `OMP_NUM_THREADS`, `MKL_NUM_THREADS` and `OPENBLAS_NUM_THREADS` are set to **4** in
+every command below. This machine has 16 cores and is shared: an uncapped `6890 x 6890` matrix product inside
+the heat-map renderer will take all of them.
+
+```bash
+cd /home/agent/Documents/fast-iot
+export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4
+
+# gate 6.0 -- topology and vertex order (~3 s, < 1 GB)
+scripts/run_job.sh --name faust-data-check --budget-gb 2 -- \
+  .venv/bin/python -u -m iot_experiments.studies.real.faust.data_check
+
+# gates 6.1-6.3 -- headroom (~20 s, < 2 GB)
+scripts/run_job.sh --name faust-gates --budget-gb 3 -- \
+  .venv/bin/python -u -m iot_experiments.studies.real.faust.gates --n-sub 800 --pairs 17 65 1 94 23 74
+
+# the experiment -- subject-disjoint transfer, 3 vertex subsamples (~6 min, < 4 GB)
+scripts/run_job.sh --name faust-corr --budget-gb 5 -- \
+  .venv/bin/python -u -m iot_experiments.studies.real.faust.correspondence \
+  --train-subjects 0 1 2 3 4 --test-subjects 5 6 7 8 9 --train-pair 0 13 --seeds 0 1 2 --n-sub 800
+
+# box width chosen on held-out validation pairs (~7 min, < 4 GB)
+scripts/run_job.sh --name faust-box --budget-gb 5 -- \
+  .venv/bin/python -u -m iot_experiments.studies.real.faust.correspondence \
+  --study faust_correspondence_box --rels 0.05 0.1 0.25 0.5 0.9 --simplex 1 --seeds 0 1 2 --n-sub 800
+
+# heat maps at full 6890-vertex resolution + left/right flip counts (~10 min, < 6 GB)
+scripts/run_job.sh --name faust-heat --budget-gb 7 -- \
+  .venv/bin/python -u -m iot_experiments.studies.real.faust.heatmaps --pairs 0 66 1 36
+```
+
+`scripts/run_job.sh --skip-preflight` is only for a repeat after a confirmed environment check.
+
+Records: `out/faust_*/records.json` with `run.log` and `preflight.json`, and **copied into
+`out/records/faust_*/`** so a report number reproduces from a clone (the `out/` tree is otherwise git-ignored).
+
+**Figures.** `out/faust_heatmaps/pair*-<arm>-<view>.png` plus a sibling `.caption.md` for every one, written by
+`analyse.py`. They are diagnostic images, not published figures.
+
+**Tests.** `tests/iot_faust_test.py` — PLY round-trip, truncated-file rejection, area/Laplacian invariants,
+geodesic invariants (a surface path is never shorter than the straight line), the mirror map on an exactly
+symmetric mesh, and the subsample-index convention of `mirror_indices` (the failure mode that would silently
+corrupt a flip count).
+
+## Next
+
+1. A `θ` **fitted on pair (a, b)** and evaluated on held-out pairs — the actual experiment.
+2. A geodesic error (needs `potpourri3d` or a Dijkstra approximation, and the convention stated).
+3. `K` sweep: cheap descriptors vs +HKS vs +WKS, since the HKS result shows capacity is the binding term.
+4. The synthetic distortion layer (bends/twists with fixed vertex identity) for an accuracy-vs-deformation
+   curve.

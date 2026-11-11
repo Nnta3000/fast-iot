@@ -1,0 +1,63 @@
+[13:54:02 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_correspondence_rev/run.log
+[13:54:02 +    0.0s] preflight ok=True mem=5.4 GB
+[13:54:02 +    0.0s] train subjects (5, 6, 7, 8, 9)  |  test subjects (0, 1, 2, 3, 4)  (disjoint: PASS)
+[13:54:02 +    0.0s] train pair (50, 63) (subjects 5, 6)
+[13:54:02 +    0.0s] 8 held-out pairs, all from test subjects: [(0, 16), (6, 21), (3, 35), (9, 49), (14, 22), (11, 36), (17, 41), (22, 35)]
+[13:54:02 +    0.0s] vertex subsamples: seeds (0, 1, 2), n_sub=800
+[13:54:06 +    3.4s] [seed 0] learned theta=[0.0192, 0.0192, 0.0192, 0.0931, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.2089, 0.2173, 0.3077] regret=0.01285 converged=False F=6247
+[13:54:14 +   11.6s] [seed 0] pair000-016    uniform=0.516 learned=0.335 oracle=0.240
+[13:54:21 +   18.7s] [seed 0] pair006-021    uniform=0.420 learned=0.269 oracle=0.229
+[13:54:28 +   25.5s] [seed 0] pair003-035    uniform=0.586 learned=0.361 oracle=0.239
+[13:54:34 +   31.6s] [seed 0] pair009-049    uniform=0.230 learned=0.211 oracle=0.075
+[13:54:42 +   39.5s] [seed 0] pair014-022    uniform=0.247 learned=0.250 oracle=0.105
+[13:54:51 +   49.3s] [seed 0] pair011-036    uniform=0.340 learned=0.233 oracle=0.184
+[13:54:59 +   57.4s] [seed 0] pair017-041    uniform=0.385 learned=0.225 oracle=0.205
+[13:55:10 +   67.8s] [seed 0] pair022-035    uniform=0.154 learned=0.091 oracle=0.039
+[13:55:17 +   74.7s] [seed 1] learned theta=[0.0192, 0.0192, 0.0192, 0.1128, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.3077, 0.0987, 0.3077] regret=0.0128 converged=False F=6844
+[13:55:30 +   88.0s] [seed 1] pair000-016    uniform=0.544 learned=0.301 oracle=0.239
+[13:55:39 +   96.5s] [seed 1] pair006-021    uniform=0.434 learned=0.276 oracle=0.258
+[13:55:45 +  102.7s] [seed 1] pair003-035    uniform=0.640 learned=0.356 oracle=0.264
+[13:55:50 +  108.1s] [seed 1] pair009-049    uniform=0.259 learned=0.220 oracle=0.076
+[13:55:59 +  116.8s] [seed 1] pair014-022    uniform=0.268 learned=0.242 oracle=0.106
+[13:56:06 +  124.2s] [seed 1] pair011-036    uniform=0.311 learned=0.253 oracle=0.169
+[13:56:12 +  130.3s] [seed 1] pair017-041    uniform=0.453 learned=0.246 oracle=0.251
+[13:56:18 +  135.9s] [seed 1] pair022-035    uniform=0.145 learned=0.107 oracle=0.035
+[13:56:22 +  139.8s] [seed 2] learned theta=[0.0192, 0.0192, 0.0192, 0.1021, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.1579, 0.2593, 0.3077] regret=0.01251 converged=False F=6206
+[13:56:30 +  148.1s] [seed 2] pair000-016    uniform=0.578 learned=0.320 oracle=0.251
+[13:56:38 +  155.8s] [seed 2] pair006-021    uniform=0.431 learned=0.271 oracle=0.224
+[13:56:47 +  164.7s] [seed 2] pair003-035    uniform=0.626 learned=0.357 oracle=0.259
+[13:56:52 +  169.6s] [seed 2] pair009-049    uniform=0.278 learned=0.231 oracle=0.085
+[13:57:00 +  177.4s] [seed 2] pair014-022    uniform=0.284 learned=0.269 oracle=0.110
+[13:57:08 +  186.3s] [seed 2] pair011-036    uniform=0.324 learned=0.255 oracle=0.198
+[13:57:14 +  192.3s] [seed 2] pair017-041    uniform=0.414 learned=0.269 oracle=0.258
+[13:57:20 +  197.8s] [seed 2] pair022-035    uniform=0.128 learned=0.105 oracle=0.056
+[13:57:20 +  197.8s] 
+[13:57:20 +  197.8s] learned - uniform_theta      miss@5%: mean -0.1224 95% CI [-0.1844, -0.0669]  wins 8/8
+[13:57:20 +  197.8s] learned - grouped_uniform    miss@5%: mean -0.2108 95% CI [-0.2735, -0.1498]  wins 8/8
+[13:57:20 +  197.8s] learned - uniform_hks        miss@5%: mean -0.3714 95% CI [-0.4085, -0.3324]  wins 8/8
+[13:57:20 +  197.8s] learned - uniform_late_hks   miss@5%: mean -0.3212 95% CI [-0.3621, -0.2723]  wins 8/8
+[13:57:20 +  197.8s] learned - position_only      miss@5%: mean -0.3417 95% CI [-0.4972, -0.1616]  wins 7/8
+[13:57:20 +  197.8s] 
+                           arm  n_draws  mean_mean  miss_1pct_mean  miss_5pct_mean
+------------------------------  -------  ---------  --------------  --------------
+               grouped_uniform       24     0.1238          0.6195          0.4631
+                       learned       24     0.0606          0.3990          0.2523
+ learned_minus_grouped_uniform        1    -0.2108               -               -
+   learned_minus_position_only        1    -0.3417               -               -
+     learned_minus_uniform_hks        1    -0.3714               -               -
+learned_minus_uniform_late_hks        1    -0.3212               -               -
+   learned_minus_uniform_theta        1    -0.1224               -               -
+            nn_grouped_uniform       24     0.1863          0.7485          0.6076
+                    nn_learned       24     0.1164          0.5811          0.4047
+               nn_oracle_theta       24     0.1236          0.6277          0.4296
+              nn_position_only       24     0.2267          0.9490          0.7776
+                nn_uniform_hks       24     0.3028          0.7315          0.6112
+           nn_uniform_late_hks       24     0.3071          0.7403          0.6151
+              nn_uniform_theta       24     0.1644          0.6989          0.5423
+                  oracle_theta       24     0.0436          0.3385          0.1730
+                 position_only       24     0.2034          0.7422          0.5940
+                   uniform_hks       24     0.3067          0.7323          0.6236
+              uniform_late_hks       24     0.2696          0.6874          0.5735
+                 uniform_theta       24     0.1019          0.5328          0.3747
+[13:57:20 +  197.8s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_correspondence_rev/records.json (341 rows)
+[13:57:20 +  197.8s] log closed after 197.8s

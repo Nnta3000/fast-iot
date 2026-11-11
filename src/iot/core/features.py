@@ -125,6 +125,66 @@ class DiagonalWeightFeatures:
 
 
 @dataclass(frozen=True)
+class SquaredDifferenceFeatures:
+    """
+    CN: 逐坐标加权平方差 —— 两个**点集**（不是同一组点）之间的特征族：
+
+        `c_ij(theta) = sum_k theta_k (a_ik - b_jk)^2`,  `Phi_ij,k = (a_ik - b_jk)^2`
+
+        CN: 与 `DiagonalWeightFeatures` 的**唯一**区别：源点与目标点是两组不同的点（描述子），
+            而不是同一组点的自配对。它存在的理由是**内存**：特征按需计算 `(E, K)`，从不物化
+            `(m, n, K)`。对角族在完整网格上需要 `m*n*K*8` 字节（6890 顶点、K=13 时是 4.9 GB），
+            而这个类在任何规模下只物化被请求的边（`|S|` 或 `|F|`，几千条）。
+
+    EN: Coordinate-wise weighted squared difference between two **different point sets**:
+
+        `c_ij(theta) = sum_k theta_k (a_ik - b_jk)^2`,  `Phi_ij,k = (a_ik - b_jk)^2`
+
+        The only difference from `DiagonalWeightFeatures` is that source and target are *two different*
+        descriptor sets rather than one set paired with itself. It exists for **memory**: features are
+        computed on demand as `(E, K)` and `(m, n, K)` is never materialised. The full grid costs
+        `m*n*K*8` bytes (4.9 GB at 6890 vertices with K = 13); this class materialises only the requested
+        edges (`|S|` or `|F|`, a few thousand) at any scale.
+    """
+
+    source_points: np.ndarray
+    target_points: np.ndarray
+
+    def __post_init__(self) -> None:
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2:
+            raise ValueError("source_points and target_points must be 2D")
+        if source.shape[1] != target.shape[1]:
+            raise ValueError("source_points and target_points must share a feature dimension")
+        if source.shape[0] < 1 or target.shape[0] < 1:
+            raise ValueError("source_points and target_points must be non-empty")
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+
+    @property
+    def n_source(self) -> int:
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        return int(self.source_points.shape[1])
+
+    def features(self, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
+        row_index = _index_array(rows, name="rows")
+        col_index = _index_array(cols, name="cols")
+        difference = self.source_points[row_index] - self.target_points[col_index]
+        return np.ascontiguousarray(difference * difference, dtype=np.float64)
+
+    def costs(self, theta: np.ndarray, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
+        return _linear_costs(self.features(rows, cols), theta)
+
+
+@dataclass(frozen=True)
 class DenseFeatureTensor:
     """
     CN: 显式 (m, n, K) 特征张量，仅用于小规模测试与交叉验证。
@@ -371,6 +431,7 @@ def dense_cost_matrix(
 
 __all__ = [
     "BilinearPSDFeatures",
+    "SquaredDifferenceFeatures",
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
     "FeatureMap",

@@ -55,7 +55,7 @@ def scan_for_violations(
         All three return the same type, so callers do not care which one ran.
 
     CN: `mass_epsilon` 只由 **numpy** 后端实现（逐点超出质量）；其他后端会忽略它并返回 `None`，
-        调用方必须检查。加这个参数是为了 T3 的停止判据。
+        调用方必须检查。加这个参数是为了 EOT 的停止判据。
     CN: `scan_backend` 只接受 `numpy` / `hello` / `torch`；非法值抛 `ValueError`，**绝不**静默回退——
         静默回退会让"我在 GPU 上"变成一句谎话。
     EN: `scan_backend` accepts only `numpy` / `hello` / `torch`; anything else raises `ValueError` and

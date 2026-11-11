@@ -1,5 +1,10 @@
 # SynthRAD brain: pairing gate (Phase 2)
 
+**Status: HISTORICAL — do NOT cite as current.** Superseded by `current/synthrad_recovery.md`. It is
+retained only for its data findings (the centre-B gadolinium signature, the preprocessing audit); its
+"GATE 1 FAILS" verdict is about a protocol that excluded the true partner from the pool, so it measured
+compatibility rather than recovery.
+
 **Status: CURRENT (2026-10-27). Result: GATE 1 FAILS.** Data: `data/Task1/brain`, probe patients only.
 
 This file states plainly what was run, because the shorthand arm names are not self-explanatory.

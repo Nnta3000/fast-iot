@@ -1,0 +1,461 @@
+{
+  "provenance": {
+    "question": "where on the body are the errors, and how often is the mistake a left/right flip?",
+    "resolution": "FULL 6890 vertices: the cost is built with the bilinear identity so only an n x n matrix is materialised; EMD on 6890x6890 is ~10 s",
+    "arms": "position_only, uniform_theta, learned (simplex, fitted on the training pair), oracle (fitted on the evaluated pair)",
+    "flip_definition": "prediction geodesically closer to the MIRRORED vertex than to the true one, counted only where error > 1% of sqrt(area) and the mirror is a different vertex",
+    "mirror": "reflection across the estimated sagittal plane (x = mean x), then nearest neighbour; FAUST poses are not symmetric so this is a PROXY, and the reflection residual is recorded per figure",
+    "colours": "one fixed colour scale per pair across arms, so panels are comparable; grey = no data",
+    "memory": "theta is FITTED on an 800-vertex subsample; the heat map itself is evaluated at full 6890 resolution through the bilinear identity. A full-resolution feature tensor is 4.94 GB and OOM-killed this job once (exit 137)"
+  },
+  "records": [
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair050-066",
+      "arm": "position_only",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.4049637222427257,
+        "miss_5pct": 0.8709724238026125,
+        "flip_rate": 0.48548621190130625,
+        "flip_share_of_errors": 0.5610533378061053
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.012714803628750646,
+        "self_mirror_fraction": 0.04644412191582003
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair050-066",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.19505396991997362,
+        "miss_5pct": 0.5200290275761974,
+        "flip_rate": 0.2290275761973875,
+        "flip_share_of_errors": 0.32820299500831945
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.012714803628750646,
+        "self_mirror_fraction": 0.04644412191582003
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair050-066",
+      "arm": "learned",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.05952058595883317,
+        "miss_5pct": 0.19100145137880986,
+        "flip_rate": 0.08055152394775036,
+        "flip_share_of_errors": 0.18232588699080157
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.012714803628750646,
+        "self_mirror_fraction": 0.04644412191582003
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair050-066",
+      "arm": "oracle",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.05622600206280689,
+        "miss_5pct": 0.16269956458635704,
+        "flip_rate": 0.07721335268505079,
+        "flip_share_of_errors": 0.19157364061937343
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.012714803628750646,
+        "self_mirror_fraction": 0.04644412191582003
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair056-071",
+      "arm": "position_only",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.20235020521922056,
+        "miss_5pct": 0.7660377358490567,
+        "flip_rate": 0.29854862119013065,
+        "flip_share_of_errors": 0.32619727243894703
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.014871897281704521,
+        "self_mirror_fraction": 0.014949201741654572
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair056-071",
+      "arm": "uniform_theta",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.14398829816257086,
+        "miss_5pct": 0.49898403483309145,
+        "flip_rate": 0.15805515239477502,
+        "flip_share_of_errors": 0.20922190201729107
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.014871897281704521,
+        "self_mirror_fraction": 0.014949201741654572
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair056-071",
+      "arm": "learned",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.08997603594467243,
+        "miss_5pct": 0.27213352685050796,
+        "flip_rate": 0.08359941944847606,
+        "flip_share_of_errors": 0.13626685592618878
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.014871897281704521,
+        "self_mirror_fraction": 0.014949201741654572
+      }
+    },
+    {
+      "study": "faust_heatmaps",
+      "geometry": "pair056-071",
+      "arm": "oracle",
+      "k": 13,
+      "m": 6890,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06914270864941968,
+        "miss_5pct": 0.19622641509433963,
+        "flip_rate": 0.0509433962264151,
+        "flip_share_of_errors": 0.09491617090319092
+      },
+      "config": {
+        "study": "faust_heatmaps",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_heatmaps",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "pairs": [
+          50,
+          66,
+          56,
+          71
+        ],
+        "rel": -1.0,
+        "n_sub": 800,
+        "max_iterations": 30,
+        "views": [
+          "front",
+          "side"
+        ],
+        "__section__": "faust_heatmaps",
+        "__class__": "HeatmapConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {
+        "mirror_residual_median": 0.014871897281704521,
+        "self_mirror_fraction": 0.014949201741654572
+      }
+    }
+  ]
+}

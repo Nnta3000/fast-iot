@@ -1,5 +1,5 @@
 """
-CN: **T3 内层求解器的验证测试** —— 稀疏段运算、`g`-only HVP、以及 `(θ,g)` 联合 HVP。
+CN: **EOT 内层求解器的验证测试** —— 稀疏段运算、`g`-only HVP、以及 `(θ,g)` 联合 HVP。
 
     CN: 这些测试的存在理由很具体：这一轮里**检查代码本身**错了五次（相对误差除以 ~0、二阶差分参数写错、
         "稠密 Hessian 不对称"其实是构造错误），每次看起来都像被测代码坏了。固定下来的检查能立刻分辨
@@ -7,7 +7,7 @@ CN: **T3 内层求解器的验证测试** —— 稀疏段运算、`g`-only HVP�
 
     CN: 约定：Hessian 的比较一律用**绝对误差**。`θ` 分量的真值可以是 ~0，相对误差在那里没有意义。
 
-EN: **Verification tests for T3's inner solver** -- sparse segment ops, the `g`-only HVP, and the joint
+EN: **Verification tests for EOT's inner solver** -- sparse segment ops, the `g`-only HVP, and the joint
     `(theta, g)` HVP.
 
     Why these exist: in this round the **checking code itself** was wrong five times (a relative error divided

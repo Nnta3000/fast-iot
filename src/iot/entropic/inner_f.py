@@ -1,5 +1,5 @@
 """
-EN: **T3's soft master -- the inner `(f, g)` solve on a SPARSE edge set `F`.**
+EN: **EOT's soft master -- the inner `(f, g)` solve on a SPARSE edge set `F`.**
 
     Objective (the `(f, g)` part of `Psi`, theta fixed):
         `sum_{e in F} exp(sigma_e / eps) - a.f - b.g`,   `sigma_e = f_i + g_j - theta.phi_e`
@@ -24,7 +24,7 @@ EN: **T3's soft master -- the inner `(f, g)` solve on a SPARSE edge set `F`.**
     shift `f -> f + lam, g -> g - lam` that `Psi` is invariant to on a CONNECTED `F`. A
     disconnected `F` has one such shift per component, so callers must check connectivity.
 
-CN: **T3 的软 master —— 内层 `(f, g)` 求解，在稀疏边集 `F` 上。**
+CN: **EOT 的软 master —— 内层 `(f, g)` 求解，在稀疏边集 `F` 上。**
 
     目标（`Ψ` 里与 `(f,g)` 有关的部分，固定 θ）：
         `Σ_{e∈F} exp(σ_e/ε) − a·f − b·g`，  `σ_e = f_i + g_j − θ·φ_e`

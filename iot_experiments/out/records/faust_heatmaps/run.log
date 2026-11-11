@@ -1,0 +1,23 @@
+[15:19:21 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_heatmaps/run.log
+[15:19:21 +    0.0s] train pair (0, 13); heat-map pairs [(50, 66), (56, 71)]; rel=None
+[15:19:29 +    8.5s] learned theta=[0.0214, 0.0183, 0.001, 0.0187, 0.0001, 0.0086, 0.0, 0.0, 0.0, 0.0, 0.0569, 0.1051, 0.77] regret=0.0005696
+[15:19:29 +    8.5s] theta mass by block: xyz 0.041 area 0.019 curv 0.000 hks 0.941
+[15:20:07 +   45.7s] [050-066] position_only  mean=0.4050 miss5%=0.871 flip=0.485 flip|err=0.561
+[15:20:15 +   53.6s] [050-066] uniform_theta  mean=0.1951 miss5%=0.520 flip=0.229 flip|err=0.328
+[15:20:21 +   60.0s] [050-066] learned        mean=0.0595 miss5%=0.191 flip=0.081 flip|err=0.182
+[15:20:27 +   66.0s] [050-066] oracle         mean=0.0562 miss5%=0.163 flip=0.077 flip|err=0.192
+[15:20:28 +   67.1s]    wrote 8 panels for this pair (colour scale 0..0.9891)
+[15:21:04 +  102.9s] [056-071] position_only  mean=0.2024 miss5%=0.766 flip=0.299 flip|err=0.326
+[15:21:12 +  110.7s] [056-071] uniform_theta  mean=0.1440 miss5%=0.499 flip=0.158 flip|err=0.209
+[15:21:19 +  118.2s] [056-071] learned        mean=0.0900 miss5%=0.272 flip=0.084 flip|err=0.136
+[15:21:27 +  126.1s] [056-071] oracle         mean=0.0691 miss5%=0.196 flip=0.051 flip|err=0.095
+[15:21:28 +  127.2s]    wrote 8 panels for this pair (colour scale 0..1.0353)
+[15:21:28 +  127.2s] 
+          arm  n_draws  mean_mean  miss_5pct_mean  flip_rate_mean  flip_share_of_errors_mean
+-------------  -------  ---------  --------------  --------------  -------------------------
+      learned        2     0.0747          0.2316          0.0821                     0.1593
+       oracle        2     0.0627          0.1795          0.0641                     0.1432
+position_only        2     0.3037          0.8185          0.3920                     0.4436
+uniform_theta        2     0.1695          0.5095          0.1935                     0.2687
+[15:21:28 +  127.2s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_heatmaps/records.json (8 rows)
+[15:21:28 +  127.2s] log closed after 127.2s

@@ -1,11 +1,15 @@
 # What is under `reports/`
 
-An inventory of `iot_experiments/reports/` — what each file is, what it is for, and what is wrong
-with the current layout. Read this together with `EXPERIMENTS.md` (the list of experiments).
+A housekeeping view: what files exist, what each one is for, and what is still wrong. The **single
+source of truth for "what is where"** is `README.md` §2 — this file does not repeat the table, it
+counts and audits it.
 
 The rule this folder exists to enforce: **a number belongs in a report only if its config
-(instance, `K`, seed, budget, code path) is stated in the same report.** Raw data belongs in
-`iot_experiments/out/` (git-ignored); what is here is what we are prepared to defend.
+(instance, `K`, seed, budget, code path) is stated in the same report, and its record exists.**
+Raw data belongs in `iot_experiments/out/` (git-ignored) — what is here is what we are prepared to
+defend.
+
+**Last audited 2026-11-05.**
 
 ---
 
@@ -13,143 +17,122 @@ The rule this folder exists to enforce: **a number belongs in a report only if i
 
 | kind | count | where |
 |---|---|---|
-| Orientation | 4 | `reports/{README,STATE,EXPERIMENTS,INVENTORY}.md` |
-| Current result reports | 6 | `reports/current/` |
+| Orientation | 5 | `reports/{README,STATE,EXPERIMENTS,INVENTORY,CHANGELOG}.md` + `GLOSSARY.md` |
+| Current result reports | 3 | `reports/current/*.md` (T1/T2 + SynthRAD) |
+| **EOT reports** | 6 + plan | `reports/current/eot/` |
+| Other current | 1 | `reports/current/hierarchy_warm_start.md` |
 | Component reports | 3 | `reports/components/` |
-| Superseded reports | 6 | `reports/superseded/` |
+| Superseded reports | 6 | `reports/superseded/` (all banner-carrying) |
 | **Committed data records** | 7 files, ~540 kB | `iot_experiments/out/records/` (**not** this folder) |
 | Retired reports | 12+ | `iot_experiments/legacy/reports/` |
 
-`reports/` is Markdown only. Data was moved out on 2026-10-30.
+`reports/` is Markdown only. Data was moved out on 2026-10-30. The five `T3_*.md` / `HIERARCHY_*`
+files that used to sit at the top of this folder were moved into `current/` on 2026-11-05
+(`CHANGELOG.md`).
 
 ## 2. The files, grouped by role
 
-### 2.1 Orientation — read these first
+### 2.1 Orientation
 
 | file | role |
 |---|---|
-| `README.md` | the index: which reports are current, which are historical, and why. Written before the latest work; **does not yet list `EXPERIMENTS.md`** |
-| `STATE.md` | durable state: goal, split, verified results with paths, decisions, backlog, resource rules. The most important file in the folder |
-| `EXPERIMENTS.md` | **new**: the flat list of every experiment, with status |
-| `INVENTORY.md` | **new**: this file |
+| `README.md` | **the index** — every report once, with question, state, record, supersession. Start here |
+| `STATE.md` | durable state: goal, split, verified results with paths, decisions, backlog, resource rules |
+| `EXPERIMENTS.md` | the flat list of every experiment (41 items), with its status |
+| `CHANGELOG.md` | organisational changes, newest first |
+| `GLOSSARY.md` | definitions of `EOT`, `relaxed iOT`, `rel`, `rel_eps`, `F`, `S`, `B`, `hit`, … |
+| `INVENTORY.md` | this file |
 
 ### 2.2 Current result reports
 
 | file | data | question |
 |---|---|---|
-| `current/SERVER_TESTS_REPORT.md` (377 lines) | synthetic | consolidated A100 runs of the GPU-only path — the largest report here |
-| `current/REAL_PAIRS_REPORT.md` (177) | real | T1/T2 pool recovery, controls, baselines. **Source of F3, and it is Markdown-only: the generating JSON was never committed** |
-| `current/NMI_PAIRING_REPORT.md` (144) | real | NMI + Hungarian vs cosine/OT vs the learned cost, all 1,000 pairs |
-| `current/synthrad_recovery.md` (128) | real | SynthRAD pair recovery against ground truth — **source of F4's report side** |
-| `current/synthrad_plan_v2.md` (88) | real | the agreed evaluation protocol (yardstick = ground-truth `(patient, z)`) |
-| `current/E5_SCOPE.md` (77) | real | scope only; the experiment was never run |
+| `current/SERVER_TESTS_REPORT.md` | synthetic | consolidated A100 runs of the GPU-only path. Driver paths inside are stale — `README.md` §4 |
+| `current/REAL_PAIRS_REPORT.md` | real | T1/T2 pool recovery, controls, baselines — **markdown only, no record** |
+| `current/NMI_PAIRING_REPORT.md` | real | NMI + Hungarian vs cosine/OT vs the learned cost — **record absent** |
+| `current/synthrad_recovery.md` | real | SynthRAD pair recovery against ground truth |
+| `current/synthrad_plan_v2.md` | real | the agreed evaluation protocol |
+| `current/E5_SCOPE.md` | real | scope only; never run |
+| `current/hierarchy_warm_start.md` | real | coarse-to-fine warming — negative for the relaxed variant |
+| `current/eot/*.md` | synthetic | the EOT family — index in `current/eot/README.md` |
 
 ### 2.3 Component / backend reports
 
-`components/CUPDLPX_MASTER_REPORT.md` (master LP on GPU, partial — measurements were vs HiGHS),
-`components/HELLO_SCAN_REPORT.md` (GPU separation scan, diagonal-only scope), `components/HELLO_SOLVER_REPORT.md`
-(HELLO as inner OT solver, historical), `superseded/BENCHMARK_EXACT_REPORT.md` (frozen `PROTOCOL.md`
-instances, historical), `superseded/MEASUREMENT_NOTES.md` (RSS hygiene, historical).
+`components/CUPDLPX_MASTER_REPORT.md` (adapter current, measurements historical vs HiGHS),
+`components/HELLO_SCAN_REPORT.md` (diagonal-only scope), `components/HELLO_SOLVER_REPORT.md`
+(historical).
 
 ### 2.4 Superseded but retained
 
-`superseded/synthrad_gate.md` — the earlier compatibility test, superseded by `current/synthrad_recovery.md`.
-`superseded/SCALING_REPORT.md`, `superseded/MARGINAL_REPORT.md`, `superseded/FAMILY_REPORT.md` — synthetic studies on the retired
-CPU path (NumPy scan + HiGHS master + POT truth). Each carries a `Status:` banner.
+`superseded/SCALING_REPORT.md`, `MARGINAL_REPORT.md`, `FAMILY_REPORT.md`, `BENCHMARK_EXACT_REPORT.md`,
+`MEASUREMENT_NOTES.md` (retired CPU path), `synthrad_gate.md` (replaced by `current/synthrad_recovery.md`).
+All six now carry a `Status: HISTORICAL` banner.
 
 ### 2.5 Committed data records
 
-Users often assume `reports/` is Markdown only. It is not:
-
 | path | contents | used by |
 |---|---|---|
-| `out/records/metric_learning/records.json` | **189 rows**, arms `cosine/infonce/sinkhorn/cca/iot/residual16/residual64`, `k ∈ {64,128,256}`, `m ∈ {50,100,300}`, 3 draws | **F2** |
-| `out/records/metric_learning/run.log` | the run's own log | provenance |
-| `out/records/synthrad_probe/records.json` | **168 rows**, arms `cosine_ot/learned/nmi/pixel/random/oracle/mask_iou/z_only` | `STATE.md`, `current/synthrad_recovery.md` |
-| `out/records/synthrad_probe/split_manifest.json` | the FIT/DEV/TEST split | the SynthRAD studies |
-| `out/records/synthrad_probe/metric_gate_{soft,bone}.json` | pixel-baseline gate readings | `STATE.md` §3.5 |
-| `out/records/synthrad_probe/run.log` | probe log | provenance |
+| `out/records/metric_learning/records.json` | 189 rows, 7 arms, `k ∈ {64,128,256}`, `m ∈ {50,100,300}`, 3 draws | F2 |
+| `out/records/metric_learning/run.log` | provenance | — |
+| `out/records/synthrad_probe/records.json` | 168 rows | `STATE.md`, `current/synthrad_recovery.md` |
+| `out/records/synthrad_probe/split_manifest.json` | the FIT/DEV/TEST split | SynthRAD studies |
+| `out/records/synthrad_probe/metric_gate_{soft,bone}.json` | pixel-baseline readings | `STATE.md` §3.5 |
+| `out/records/synthrad_probe/run.log` | provenance | — |
 
-## 3. What is wrong with the current layout
+**The EOT records are not committed.** `out/eot_*/` is git-ignored, so every EOT number reproduces only
+on the machine that ran it. Committing them is the single highest-value fix below.
 
-1. **Two kinds of file in one folder.** Reports (prose, hand-written) and data records
-   (`records.json`, machine-written) sit side by side. Nothing distinguishes them except the
-   extension, and `README.md` does not mention the data files at all.
-2. **`README.md` is stale.** It lists `metric_learning/` and `synthrad_probe/` as if they were
-   reports; it does not list `EXPERIMENTS.md`, `STATE.md` is described only as "START HERE", and
-   the "Regenerating" block references drivers that have since moved.
-3. **Mixed lifecycle in one flat namespace.** Current, historical and superseded `.md` files are
-   interleaved. The `Status:` banner convention exists but is applied inconsistently — e.g.
-   `current/REAL_PAIRS_REPORT.md` has no banner but its source JSON is missing.
-4. **A figure can depend on a file that is not here.** F4's records live in `iot_experiments/out/`
-   and are **git-ignored**; F3's generating JSON is **gone entirely**. A fresh clone can regenerate
-   F2 but not F3 or F4.
-5. **`synthrad_probe/records.json` contains dropped arms.** It still holds `mask_iou`, `z_only` and
-   `oracle`, which were retired as tautological or non-competitors. Nothing marks them as retired
-   inside the file, so a reader can still pick them up.
+## 3. What is still wrong
+
+1. **Two reports have no record at all** (`current/REAL_PAIRS_REPORT.md`, `current/NMI_PAIRING_REPORT.md`)
+   and one has a git-ignored one (`current/synthrad_recovery.md`). Their numbers cannot be reproduced
+   from a clone.
+2. **No EOT record is committed**, so the newest results are the least reproducible.
+3. **Three EOT drivers have no output and no report**: `eot_planted.py`, `eot_p1_reference.py`,
+   and `eot_edge_fraction.py` (record exists, report does not). P1 in `current/eot/PLAN.md` depends on
+   the first two.
+4. **Two entropic-vs-relaxed runs stopped mid-grid** (`out/entropic_vs_relaxed*`); no report.
+5. **No figure has a `.caption.md`** (§`AGENTS.md` 7.2), and F3/F4's sources are missing or ignored.
+6. **`synthrad_probe/records.json` still holds retired arms** (`mask_iou`, `z_only`, `oracle`); nothing
+   inside the file marks them as retired.
+7. **`STATE.md` is stale on the EOT side** — it does not mention EOT at all (it predates it). It is
+   still the best document for SynthRAD/T1-T2 state.
 
 ## 4. Organisation
 
-**Done on 2026-10-30.** `reports/` is now Markdown only, split into `current/`, `components/`,
-`superseded/`; the data moved to `iot_experiments/out/records/`.
-
 ```
 reports/
-├── README.md              # index only: what is current, what is historical, one line each
-├── EXPERIMENTS.md         # the experiment list (this folder's table of contents by question)
-├── INVENTORY.md           # this file
-├── current/               # reports we will cite
-│   ├── SERVER_TESTS_REPORT.md
-│   ├── REAL_PAIRS_REPORT.md
-│   ├── NMI_PAIRING_REPORT.md
-│   ├── synthrad_recovery.md
-│   ├── synthrad_plan_v2.md
-│   └── E5_SCOPE.md
+├── README.md              # the index: every report once
+├── STATE.md  EXPERIMENTS.md  CHANGELOG.md  GLOSSARY.md  INVENTORY.md
+├── current/
+│   ├── SERVER_TESTS_REPORT.md  REAL_PAIRS_REPORT.md  NMI_PAIRING_REPORT.md
+│   ├── synthrad_recovery.md  synthrad_plan_v2.md  E5_SCOPE.md
+│   ├── hierarchy_warm_start.md
+│   └── eot/               # EOT family (formerly "T3")
+│       ├── README.md      #   index + P1/P2/P3 status + order of authority
+│       ├── PLAN.md        #   the user's binding P1/P2/P3 order
+│       ├── eot_gate_b.md  eot_solver_compare.md  eot_scaling_slsqp.md
+│       ├── eot_restricted_edges.md  eot_inner_observations.md
 ├── components/            # one backend / one algorithm each
-│   ├── CUPDLPX_MASTER_REPORT.md
-│   ├── HELLO_SCAN_REPORT.md
-│   └── HELLO_SOLVER_REPORT.md
-├── superseded/            # kept, banner required, never cited
-│   ├── synthrad_gate.md
-│   ├── SCALING_REPORT.md
-│   ├── MARGINAL_REPORT.md
-│   ├── FAMILY_REPORT.md
-│   ├── BENCHMARK_EXACT_REPORT.md
-│   └── MEASUREMENT_NOTES.md
+└── superseded/            # banner required, never cited
 ```
-
-**Data does not live here.** Machine-written records are in `iot_experiments/out/records/`, which
-`.gitignore` tracks as an exception to the otherwise ignored `out/` tree:
-
-```
-iot_experiments/out/records/
-├── metric_learning/{records.json,run.log}
-└── synthrad_probe/{records.json,run.log,split_manifest.json,metric_gate_*.json}
-```
-
-Launchers are documented in `iot_experiments/scripts/README.md` (local `run_job.sh` / `safe_run.sh` /
-`wipe_cache.sh`, and the A100 `legacy/gpu_bench/` set, **which does not currently import**).
 
 **Rules that go with it:**
 
-- `README.md` becomes a pure index: one line per current report, no tables of results, no stale
-  regeneration commands.
-- Every file under `current/` states its config, its source record path, and how to regenerate it.
-- Every file under `superseded/` carries a `Status: HISTORICAL` banner and the name of the current
-  report that replaced it.
-- `data/` holds only records that are committed and cited. Records that a figure needs must be
-  copied here from `out/` before the figure is built — otherwise the figure is not reproducible
-  from a clone (F3 and F4 both fail this today).
+- `README.md` is a pure index: one row per report, no tables of results, no regeneration recipes
+  beyond one line.
+- Every report states `Status:`, its driver, its record path, and `Supersedes` / `superseded by`.
+- Every file under `superseded/` carries the banner and the name of its replacement.
+- A record a figure needs must be copied to `out/records/` before the figure is built.
 - Retiring an arm inside a record means recording the retirement next to the data, not only in prose.
 
 ## 5. Remaining actions, in order of value
 
-1. **Restore `legacy/gpu_bench/` to a runnable state.** It is the only path to the A100 results and
-   it cannot be imported at all today (`ModuleNotFoundError: iot_experiments.gpu_bench`). See
-   `../scripts/README.md` §2.
-2. **Commit a `records.json` for F3** (or regenerate it) — the only figure whose numbers cannot be
-   reproduced at all.
-3. **Copy F4's records** out of `out/synthrad_v2/` and `out/synthrad_cheap/` into `out/records/`.
-4. **Relabel F2 and F4's iOT arms** as `fit_full_lp`-computed until loop versions exist (see
-   `EXPERIMENTS.md`, caveat 1).
-5. **Add `Status: HISTORICAL` banners** to the six files now in `superseded/` that lack one.
+1. **Commit the EOT records** (`out/eot_*/*.json`, ~0.3 MB total) into `out/records/eot_*/`.
+2. **Commit a `records.json` for F3** (or regenerate it) and for `NMI_PAIRING_REPORT.md`.
+3. **Write `eot_p1_reference.md` and `eot_edge_fraction.md`**, or mark them "run, not kept" in
+   `current/eot/README.md` (already done there) and delete the dead drivers.
+4. **Copy F4's records** out of `out/synthrad_v2/` and `out/synthrad_cheap/` into `out/records/`.
+5. **Add the four figure captions**, or drop F3/F4.
+6. **Add an EOT section to `STATE.md`** (or an explicit pointer that EOT state lives in
+   `current/eot/README.md`).

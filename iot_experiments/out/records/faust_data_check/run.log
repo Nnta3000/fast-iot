@@ -1,0 +1,26 @@
+[12:30:42 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_data_check/run.log
+[12:30:42 +    0.0s] preflight ok=True mem=6.4 GB
+[12:30:42 +    0.0s] registrations: /home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations
+[12:30:43 +    0.6s] loaded 100 registrations, ids 0..99
+[12:30:43 +    0.6s] 1. vertex/face counts: [(6890, 13776)]  -> PASS
+[12:30:43 +    0.6s] 2. face arrays identical: True -> PASS
+[12:30:44 +    2.4s] 3. per-vertex area matrix (100, 6890); per-edge length matrix (100, 20664)
+[12:30:44 +    2.4s] 3/4. area corr mean=0.9653 min=0.9417; edge corr mean=0.9564 min=0.9347
+[12:30:44 +    2.4s]    subject_major: within=0.9843 between=0.9652
+[12:30:44 +    2.4s]    pose_major: within=0.9739 between=0.9663
+[12:30:44 +    2.4s] 5. id structure: subject_major
+[12:30:44 +    2.4s] 6. ground-truth vertices: {'present': True, 'n_files': 100, 'first_len': 176387, 'unique_values': [0, 1]}
+[12:30:44 +    2.4s] 
+GATE 6.0: PASS (counts True, topology True, area>0.5 True, edge>0.5 True)
+[12:30:44 +    2.5s] 
+         arm  n_draws  mean_mean  min_mean  passed_mean
+------------  -------  ---------  --------  -----------
+   area_corr        1     0.9653    0.9417            -
+      counts        1          -         -            -
+   edge_corr        1     0.9564    0.9347            -
+    gate_6.0        1          -         -       1.0000
+ground_truth        1          -         -            -
+   structure        1          -         -            -
+    topology        1          -         -            -
+[12:30:44 +    2.5s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_data_check/records.json (7 rows)
+[12:30:44 +    2.5s] log closed after 2.5s

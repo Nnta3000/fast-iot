@@ -84,5 +84,21 @@ exception is K=32 m=50, where R@1 drops 0.3500 → 0.3350).
 
 ## Status
 
-Exploratory. One draw, small `K`. Not a validated claim about T3; the sparse-edge and certificate
+Exploratory. One draw, small `K`. Not a validated claim about EOT; the sparse-edge and certificate
 questions are untouched.
+
+**Corrections (2026-11-05, checked against `iot_experiments/out/entropic_metric/records.json`).**
+
+1. **The cosine rows above are not in the committed record.** `records.json` holds 8 rows: 4 `entropic`
+   and 4 `n_params=0`. The latter are *not* cosine — cosine on this pool is label-free, so it must be
+   identical for every `m` and draw at a given `K`, and it is not (0.135 / 0.135 / 0.395 / 0.395). Their
+   `n_params=0` and R@1 == hit exactly, which is the signature of the **uniform-theta diagonal cost**, i.e.
+   the same numbers as the entropic rows at `K=16` (0.17 / 0.135 / 0.175 / 0.135 → hit / R@1). Treat the
+   cosine column as **missing from the record** until it is re-run with an explicit `arm="cosine"` row.
+2. **The K=16 cells are barely above an uninformative cost.** On a `50×50` square pool a *constant* cost
+   scores 0.04 / 0.00 on `matching_hit` (measured, `evaluate(np.zeros((n,n)), draw=0|1)`); the K=16 entropic
+   hits are 0.170 / 0.175. At `K=32` the hits are 0.410 / 0.490. So the K=16 gain is small in absolute terms
+   and only the K=32 cells are clearly above the floor.
+3. The R@1 column on the `n_params=0` rows equals `hit` exactly, which cannot happen for a learned cost with
+   distinct rows; it is another sign those rows are not cosine.
+

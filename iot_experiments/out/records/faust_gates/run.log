@@ -1,0 +1,56 @@
+[12:30:53 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_gates/run.log
+[12:30:53 +    0.0s] 3 pairs: [(17, 65), (1, 94), (23, 74)]
+[12:30:53 +    0.0s] pair (17, 65): 6890 / 6890 vertices
+[12:30:53 +    0.5s] subsample n=800, descriptors K=13
+[12:30:53 +    0.6s] position_only  mean=0.21541 med=0.20496 miss1%=0.965 miss5%=0.861
+[12:30:53 +    0.6s] uniform_theta  mean=0.10063 med=0.03880 miss1%=0.681 miss5%=0.431
+[12:30:53 +    0.6s] nn_uniform     mean=0.11523 med=0.04118 miss1%=0.726 miss5%=0.453
+[12:30:53 +    0.6s] fitting the ORACLE theta on this pair ...
+[12:30:58 +    5.8s] oracle theta=[0.0203, 0.0192, 0.0192, 0.0244, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.1861, 0.3077, 0.3077] regret=0.01026 converged=False F=6602 iters=11
+[12:30:58 +    5.9s] oracle_theta   mean=0.04931 med=0.00692 miss1%=0.472 miss5%=0.207
+[12:30:58 +    5.9s] nn_oracle      mean=0.09449 med=0.02985 miss1%=0.629 miss5%=0.366
+[12:30:58 +    5.9s] 
+GATE 6.1 position-only clearly fails: True (position mean 0.2154 miss5% 0.861; uniform mean 0.1006)
+[12:30:58 +    5.9s] GATE 6.2 uniform weights leave room: True (miss@5% 0.431)
+[12:30:58 +    5.9s] GATE 6.3 oracle beats uniform by >=5 pts at 5%: True (0.431 -> 0.207)
+[12:30:58 +    5.9s] pair (1, 94): 6890 / 6890 vertices
+[12:30:59 +    6.3s] subsample n=800, descriptors K=13
+[12:30:59 +    6.5s] position_only  mean=0.08284 med=0.05832 miss1%=0.782 miss5%=0.554
+[12:30:59 +    6.5s] uniform_theta  mean=0.03150 med=0.00450 miss1%=0.460 miss5%=0.190
+[12:30:59 +    6.5s] nn_uniform     mean=0.05453 med=0.03289 miss1%=0.669 miss5%=0.393
+[12:30:59 +    6.5s] fitting the ORACLE theta on this pair ...
+[12:31:05 +   12.9s] oracle theta=[0.1075, 0.2765, 0.0219, 0.0835, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.1247, 0.0325, 0.2381] regret=0.003606 converged=False F=6412 iters=9
+[12:31:06 +   12.9s] oracle_theta   mean=0.00892 med=0.00000 miss1%=0.246 miss5%=0.037
+[12:31:06 +   12.9s] nn_oracle      mean=0.04438 med=0.01785 miss1%=0.571 miss5%=0.259
+[12:31:06 +   12.9s] 
+GATE 6.1 position-only clearly fails: True (position mean 0.0828 miss5% 0.554; uniform mean 0.0315)
+[12:31:06 +   12.9s] GATE 6.2 uniform weights leave room: True (miss@5% 0.190)
+[12:31:06 +   12.9s] GATE 6.3 oracle beats uniform by >=5 pts at 5%: True (0.190 -> 0.037)
+[12:31:06 +   13.0s] pair (23, 74): 6890 / 6890 vertices
+[12:31:06 +   13.4s] subsample n=800, descriptors K=13
+[12:31:06 +   13.6s] position_only  mean=0.20574 med=0.19308 miss1%=0.961 miss5%=0.889
+[12:31:06 +   13.6s] uniform_theta  mean=0.11541 med=0.05299 miss1%=0.699 miss5%=0.517
+[12:31:06 +   13.6s] nn_uniform     mean=0.13208 med=0.08318 miss1%=0.807 miss5%=0.640
+[12:31:06 +   13.6s] fitting the ORACLE theta on this pair ...
+[12:31:09 +   16.7s] oracle theta=[0.0192, 0.0415, 0.0192, 0.0419, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.0192, 0.1908, 0.2642, 0.3077] regret=0.01027 converged=False F=5844 iters=9
+[12:31:09 +   16.8s] oracle_theta   mean=0.05936 med=0.00780 miss1%=0.484 miss5%=0.264
+[12:31:09 +   16.8s] nn_oracle      mean=0.09497 med=0.04100 miss1%=0.651 miss5%=0.446
+[12:31:09 +   16.8s] 
+GATE 6.1 position-only clearly fails: True (position mean 0.2057 miss5% 0.889; uniform mean 0.1154)
+[12:31:09 +   16.8s] GATE 6.2 uniform weights leave room: True (miss@5% 0.517)
+[12:31:09 +   16.8s] GATE 6.3 oracle beats uniform by >=5 pts at 5%: True (0.517 -> 0.264)
+[12:31:09 +   16.8s] 
+          arm  n_draws  mean_mean  miss_1pct_mean  miss_5pct_mean  passed_mean
+-------------  -------  ---------  --------------  --------------  -----------
+     gate_6.1        3          -               -               -       1.0000
+     gate_6.2        3          -               -               -       1.0000
+     gate_6.3        3          -               -               -       1.0000
+    nn_oracle        3     0.0779          0.6171          0.3571            -
+   nn_uniform        3     0.1006          0.7342          0.4950            -
+ oracle_theta        3     0.0392          0.4008          0.1696            -
+position_only        3     0.1680          0.9029          0.7679            -
+uniform_theta        3     0.0825          0.6133          0.3796            -
+[12:31:09 +   16.8s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_gates/records.json (24 rows)
+[12:31:09 +   16.8s] 
+ALL PAIRS: {'6.1': True, '6.2': True, '6.3': True} -> PASS
+[12:31:09 +   16.8s] log closed after 16.8s

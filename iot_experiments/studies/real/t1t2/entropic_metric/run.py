@@ -44,6 +44,7 @@ CN: **平滑熵正则联合 master 在 T1/T2 上能学到有用的度量权重�
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import sys
 import time
 from pathlib import Path
@@ -147,7 +148,8 @@ def kfold_indices(m: int, *, folds: int, seed: int) -> list[tuple[Int[np.ndarray
 
 
 def select_rel_eps(x: Float[np.ndarray, "m k"], y: Float[np.ndarray, "m k"], *, seed: int,
-                   max_iterations: int) -> tuple[float, dict[str, float]]:
+                   max_iterations: int, grid: tuple[float, ...] = REL_EPS_GRID
+                   ) -> tuple[float, dict[str, float]]:
     """
     EN: choose `rel_eps` by 5-fold CV **on the labelled pairs only**.
 
@@ -159,28 +161,56 @@ def select_rel_eps(x: Float[np.ndarray, "m k"], y: Float[np.ndarray, "m k"], *, 
     """
     folds = kfold_indices(int(x.shape[0]), folds=FOLDS, seed=int(seed))
     scores: dict[float, float] = {}
-    for rel_eps in REL_EPS_GRID:
+    # EN: record the fold iteration counts per candidate -- a step explosion at small eps shows here first.
+    # CN: 记录每个候选的折内迭代数；小 eps 的步数爆炸会最先在这里看出。
+    fold_iterations: dict[float, float] = {}
+    fold_failures: dict[float, float] = {}
+    for rel_eps in grid:
         fold_scores: list[float] = []
+        counts: list[float] = []
+        failures = 0
         for train, val in folds:
             theta, info = fit_entropic(x[train], y[train], rel_eps=float(rel_eps),
                                        max_iterations=int(max_iterations))
+            counts.append(float(info["iterations"]))
             if int(info["status"]) != 0:
+                failures += 1
                 fold_scores.append(float("nan"))
                 continue
             fold_scores.append(matching_hit(diagonal_cost(x[val], y[val], theta), seed=int(seed)))
         finite = [v for v in fold_scores if np.isfinite(v)]
+        fold_iterations[float(rel_eps)] = float(np.mean(counts)) if counts else float("nan")
+        fold_failures[float(rel_eps)] = float(failures)
         if finite:
             scores[float(rel_eps)] = float(np.mean(finite))
     if not scores:
         raise EntropicMetricError("every rel_eps candidate failed on every fold")
     best = max(scores.values())
     chosen = min([r for r, v in scores.items() if v >= best - 1e-12])
-    return float(chosen), {"cv_hit": scores[float(chosen)],
-                           **{f"cv_hit_rel{r:g}": v for r, v in scores.items()}}
+    diagnostics: dict[str, float] = {"cv_hit": scores[float(chosen)]}
+    for rel_eps_value in grid:
+        tag = f"{rel_eps_value:g}"
+        diagnostics[f"cv_hit_rel{tag}"] = scores.get(float(rel_eps_value), float("nan"))
+        diagnostics[f"cv_fold_iters_rel{tag}"] = fold_iterations.get(float(rel_eps_value),
+                                                                     float("nan"))
+        diagnostics[f"cv_fold_failures_rel{tag}"] = fold_failures.get(float(rel_eps_value),
+                                                                      float("nan"))
+    return float(chosen), diagnostics
 
 
+@dataclasses.dataclass(frozen=True)
 class EntropicMetricConfig(RunConfig):
-    """EN: knobs for the entropic metric-learning arm. CN: 熵正则度量学习臂的旋钮。"""
+    """
+    EN: knobs for the entropic metric-learning arm.
+
+        **These MUST be real dataclass fields.** `RunConfig.from_namespace` builds the config from
+        `dataclasses.fields(cls)`, so a flag that only exists in `add_study_arguments` is parsed and then
+        **silently discarded**. That happened here: `--ks 64 128 256` produced a run at K = 16, 32 with no
+        error. `main()` now asserts the parsed values reached the config.
+    CN: **必须是真正的 dataclass 字段。** `from_namespace` 按 `dataclasses.fields` 构造，只在
+        `add_study_arguments` 里声明的参数会被解析后**静默丢弃**（确实发生过：`--ks 64 128 256` 跑成了
+        K=16/32）。`main()` 现在会断言解析值已进入配置。
+    """
 
     section = "entropic_metric"
     study = "entropic_metric"
@@ -191,6 +221,18 @@ class EntropicMetricConfig(RunConfig):
     holdout_draw: int = 0
     max_iterations: int = 500
     rel_eps_grid: tuple[float, ...] = REL_EPS_GRID
+
+    def __post_init__(self) -> None:
+        """EN: normalise tuples and validate. CN: 归一化元组并校验。"""
+        object.__setattr__(self, "ks", tuple(int(v) for v in self.ks))
+        object.__setattr__(self, "ms", tuple(int(v) for v in self.ms))
+        object.__setattr__(self, "rel_eps_grid", tuple(float(v) for v in self.rel_eps_grid))
+        if not self.ks or not self.ms:
+            raise ValueError("ks and ms must be non-empty")
+        if not self.rel_eps_grid:
+            raise ValueError("rel_eps_grid must be non-empty")
+        if int(self.holdout_pairs) < 1 or int(self.max_iterations) < 1:
+            raise ValueError("holdout_pairs and max_iterations must be positive")
 
     @classmethod
     def add_study_arguments(cls, parser: argparse.ArgumentParser) -> None:
@@ -209,6 +251,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser(EntropicMetricConfig)
     args = parser.parse_args(list(argv) if argv is not None else None)
     config = EntropicMetricConfig.from_namespace(args, parser)
+    # EN: **guard against silently dropped flags.** `from_namespace` only sees dataclass fields; if a
+    #     study flag is added to `add_study_arguments` but not to the dataclass, the CLI value is parsed
+    #     and discarded. Compare the two and refuse to run rather than produce a mislabelled result.
+    # CN: **防止参数被静默丢弃**：若 CLI 值与配置不一致，直接拒绝运行，避免产出标签错误的记录。
+    for flag in ("ks", "ms", "holdout_pairs", "holdout_draw", "max_iterations"):
+        parsed = getattr(args, flag, None)
+        carried = getattr(config, flag, None)
+        if parsed is not None and carried is not None:
+            left = tuple(int(v) for v in parsed) if isinstance(parsed, (list, tuple)) else int(parsed)
+            right = tuple(int(v) for v in carried) if isinstance(carried, (list, tuple)) else int(carried)
+            if left != right:
+                raise SystemExit(
+                    f"flag --{flag}={parsed!r} did not reach the config ({carried!r}); "
+                    f"declare it as a dataclass field on {type(config).__name__}")
     run_dir = config.run_dir
     run_dir.mkdir(parents=True, exist_ok=True)
     log = RunLog(run_dir / "run.log")
@@ -243,7 +299,8 @@ def main(argv: list[str] | None = None) -> int:
                 started = time.perf_counter()
                 try:
                     rel_eps, sel = select_rel_eps(x_fit, y_fit, seed=int(draw),
-                                                  max_iterations=int(config.max_iterations))
+                                                  max_iterations=int(config.max_iterations),
+                                                  grid=tuple(float(v) for v in config.rel_eps_grid))
                     theta, info = fit_entropic(x_fit, y_fit, rel_eps=rel_eps,
                                                max_iterations=int(config.max_iterations))
                 except EntropicMetricError as error:

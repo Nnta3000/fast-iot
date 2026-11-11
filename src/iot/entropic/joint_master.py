@@ -1,8 +1,8 @@
 """
-EN: **T3's joint master -- Newton-CG on `(theta, g)` for `min Psi_F`, one solve, no inner OT.**
+EN: **EOT's joint master -- Newton-CG on `(theta, g)` for `min Psi_F`, one solve, no inner OT.**
 
-    This is the module that implements T3 proper. The nested form (`soft_master.py`: SLSQP on `theta`
-    with an ordinary entropic OT solve per `theta`) is NOT T3 and is kept only as a reference.
+    This is the module that implements EOT proper. The nested form (`soft_master.py`: SLSQP on `theta`
+    with an ordinary entropic OT solve per `theta`) is NOT EOT and is kept only as a reference.
 
     Objective, on a given edge set `F`:
 
@@ -35,9 +35,9 @@ EN: **T3's joint master -- Newton-CG on `(theta, g)` for `min Psi_F`, one solve,
     conditioning estimate, the number of line-search failures, and total Hessian-vector products. A run
     that stops with a large residual is reported as `converged=False`.
 
-CN: **T3 的联合 master —— 在 `(theta, g)` 上做 Newton-CG 解 `min Psi_F`，一次求解，没有内层 OT。**
+CN: **EOT 的联合 master —— 在 `(theta, g)` 上做 Newton-CG 解 `min Psi_F`，一次求解，没有内层 OT。**
 
-    这是 T3 本体。嵌套形式（`soft_master.py`：SLSQP 调 θ + 每个 θ 解一次 OT）**不是** T3，仅作参考。
+    这是 EOT 本体。嵌套形式（`soft_master.py`：SLSQP 调 θ + 每个 θ 解一次 OT）**不是** EOT，仅作参考。
     `f` 由行约束解析消去；plan 由收敛的 `(θ, g)` 自然给出，不再单独解 OT。
 
     规范：`Psi` 在**每个连通分量**上对 `f→f+λ, g→g−λ` 不变。`F` 连通时只有一个方向，用 `g[0]=0` 去掉；
