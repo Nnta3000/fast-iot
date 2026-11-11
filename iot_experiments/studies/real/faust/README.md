@@ -18,6 +18,12 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 | `correspondence.py` | **the experiment**: subject-disjoint split, box-width chosen on validation pairs, per-row-argmin control, per-vertex flips | see *Reproduce* below |
 | `heatmaps.py` | **error heat maps** at full 6890-vertex resolution, plus left/right flip counts | `--pairs 50 66 56 71` |
 | `analyse.py` | **tables and figure captions from the saved records only** (§7.3 / §7.2) | `--study correspondence` or `--study heatmaps` |
+| `arms.py` | **four objectives on one hypothesis class**: one-sided CE, Sinkhorn CE, entropic joint master, regret LP, plus uniform | `python -m iot_experiments.studies.real.faust.arms --n-sub 1500` |
+| `multi_pair.py` | **many plans, one θ**: block LP with a shared θ, per-pair normalisation, cross-regret matrix | `--n-sub 1200 --train-pairs 0 13 2 41 5 88 7 52` |
+| `deformation.py` | **deformation sweep**: twist about the vertical axis, vertex identity preserved, θ fitted once at σ=0 | `python -m iot_experiments.studies.real.faust.deformation --n-sub 1500` |
+| `abstention.py` | **where is it wrong?** label-free confidence scores (raw / relative cost margin, OT dual certificate, softmax margin) as risk–coverage | `python -m iot_experiments.studies.real.faust.abstention --n-sub 4000` |
+| `curriculum.py` | **iOT as a teacher**: hard negatives mined from the fitted cost, given to a cheap cross-entropy arm | `python -m iot_experiments.studies.real.faust.curriculum --n-sub 2000` |
+| `finalists.py` | **the two finalists at full resolution** with the τ grid extended downward, 3 seeds, paired bootstrap (driver only — the Sinkhorn arm needs more VRAM than this machine has free) | `python -m iot_experiments.studies.real.faust.finalists --n-sub 6890` |
 
 Loader and descriptor primitives live in `iot_experiments/harness/faust.py`
 (`read_ply`, `vertex_areas`, `cotangent_laplacian`, `spectral_basis`, `heat_kernel_signature`), because no

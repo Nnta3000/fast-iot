@@ -1,0 +1,55 @@
+[15:26:51 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_curriculum/run.log
+[15:26:52 +    0.1s] preflight ok=True mem=7.7 GB vram_free=3.4 GB -> fits on cuda
+[15:26:52 +    0.5s] train pair (0, 13), n=2000, K=13; validation [(0, 16), (6, 21)]; test [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[15:27:19 +   27.6s] negative miner 1: relaxed_lp regret=0.0009172 (27.1s)
+[15:27:21 +   29.2s] negative miner 2: row_softmax (1.6s, cuda)
+[15:27:21 +   29.2s]    relaxed_lp   theta=[0.0143, 0.025, 0.0006, 0.014, 0.0001, 0.0061, 0.0, 0.0, 0.0, 0.0, 0.0425, 0.1506, 0.7469]
+[15:27:21 +   29.2s]    row_softmax  theta=[0.0105, 0.0024, 0.0008, 0.0117, 0.0006, 0.0017, 0.0018, 0.002, 0.003, 0.008, 0.0424, 0.2223, 0.6927]
+[15:27:27 +   35.7s] 
+--- tau selection per arm (training-subject validation pairs) ---
+[15:27:28 +   37.1s]    plain      tau=0.001    val miss@5%=0.2780
+[15:27:30 +   38.5s]    plain      tau=0.003    val miss@5%=0.2552
+[15:27:31 +   40.0s]    plain      tau=0.01     val miss@5%=0.2727
+[15:27:33 +   41.6s]    hard_lp    tau=0.001    val miss@5%=0.2928
+[15:27:35 +   43.2s]    hard_lp    tau=0.003    val miss@5%=0.2710
+[15:27:36 +   44.8s]    hard_lp    tau=0.01     val miss@5%=0.2975
+[15:27:38 +   46.3s]    mixed_lp   tau=0.001    val miss@5%=0.2903
+[15:27:39 +   47.9s]    mixed_lp   tau=0.003    val miss@5%=0.2717
+[15:27:41 +   49.5s]    mixed_lp   tau=0.01     val miss@5%=0.2980
+[15:27:42 +   51.0s]    hard_self  tau=0.001    val miss@5%=0.2780
+[15:27:44 +   52.6s]    hard_self  tau=0.003    val miss@5%=0.2542
+[15:27:46 +   54.2s]    hard_self  tau=0.01     val miss@5%=0.2645
+[15:27:46 +   54.2s] selected: {'plain': 0.003, 'hard_lp': 0.003, 'mixed_lp': 0.003, 'hard_self': 0.003}
+[15:27:46 +   54.2s] 
+--- refit at the selected tau and evaluate on held-out pairs ---
+[15:27:49 +   57.8s]    plain      theta=[0.0105, 0.0024, 0.0008, 0.0117, 0.0006, 0.0017, 0.0018, 0.002, 0.003, 0.008, 0.0424, 0.2223, 0.6927]
+[15:27:49 +   57.8s]    hard_lp    theta=[0.0085, 0.0006, 0.0007, 0.0089, 0.0006, 0.0015, 0.0016, 0.0019, 0.0028, 0.0073, 0.0369, 0.2292, 0.6995]
+[15:27:49 +   57.8s]    mixed_lp   theta=[0.0085, 0.0005, 0.0008, 0.009, 0.0006, 0.0015, 0.0016, 0.0019, 0.0027, 0.0072, 0.0376, 0.2308, 0.6972]
+[15:27:49 +   57.8s]    hard_self  theta=[0.009, 0.0022, 0.0007, 0.0097, 0.0006, 0.0015, 0.0016, 0.0018, 0.0027, 0.0071, 0.0347, 0.226, 0.7024]
+[15:27:49 +   57.8s]    uniform    theta=[0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769, 0.0769]
+[15:27:54 +   62.7s]    pair050-066: plain=0.192  hard_lp=0.210  mixed_lp=0.213  hard_self=0.189  uniform=0.514
+[15:27:59 +   67.6s]    pair056-071: plain=0.353  hard_lp=0.384  mixed_lp=0.380  hard_self=0.364  uniform=0.504
+[15:28:04 +   72.6s]    pair053-085: plain=0.235  hard_lp=0.255  mixed_lp=0.253  hard_self=0.242  uniform=0.640
+[15:28:08 +   77.1s]    pair059-099: plain=0.141  hard_lp=0.163  mixed_lp=0.159  hard_self=0.148  uniform=0.188
+[15:28:14 +   82.3s]    pair064-072: plain=0.267  hard_lp=0.292  mixed_lp=0.293  hard_self=0.271  uniform=0.347
+[15:28:19 +   87.4s]    pair061-086: plain=0.247  hard_lp=0.268  mixed_lp=0.269  hard_self=0.255  uniform=0.353
+[15:28:24 +   92.5s]    pair067-091: plain=0.313  hard_lp=0.336  mixed_lp=0.336  hard_self=0.329  uniform=0.495
+[15:28:29 +   97.2s]    pair072-085: plain=0.214  hard_lp=0.231  mixed_lp=0.230  hard_self=0.217  uniform=0.305
+[15:28:29 +   97.2s] 
+paired bootstrap over the held-out pairs (miss@5%):
+[15:28:29 +   97.2s]    hard_lp - plain      mean +0.0218  95% CI [+0.0193, +0.0248]  wins 0/8
+[15:28:29 +   97.3s]    hard_lp - hard_self  mean +0.0154  95% CI [+0.0121, +0.0185]  wins 0/8
+[15:28:29 +   97.3s]    hard_lp - uniform    mean -0.1513  95% CI [-0.2397, -0.0737]  wins 8/8
+[15:28:29 +   97.3s] 
+                    arm  n_draws  mean_mean  miss_5pct_mean
+-----------------------  -------  ---------  --------------
+                hard_lp        8     0.0757          0.2671
+hard_lp_minus_hard_self        1     0.0154               -
+    hard_lp_minus_plain        1     0.0218               -
+  hard_lp_minus_uniform        1    -0.1513               -
+              hard_self        8     0.0662          0.2518
+               mixed_lp        8     0.0751          0.2664
+                  plain        8     0.0650          0.2453
+                uniform        8     0.1127          0.4184
+[15:28:29 +   97.3s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_curriculum/records.json (43 rows)
+[15:28:29 +   97.3s] log closed after 97.3s

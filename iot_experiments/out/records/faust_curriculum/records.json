@@ -1,0 +1,3014 @@
+{
+  "provenance": {
+    "question": "can the inverse-OT fit be spent once, as a hard-negative miner, and give a cheap supervised arm the LP's advantage?",
+    "hypothesis_class": "c_ij = sum_k theta_k (a_ik - b_jk)^2, theta on the simplex, the same standardised 13 descriptors in every arm",
+    "arms": "plain (all negatives), hard_lp (32 negatives by the inverse-OT cost), mixed_lp (32 LP negatives + 32 uniform), hard_self (32 negatives by the supervised arm's own cost -- the control)",
+    "selection": "tau per arm on validation pairs from the TRAINING subjects",
+    "solver": "negative miner: the relaxed LP (CuPDLPx) or a first supervised fit; deployed arm: torch autograd on a masked cross-entropy, Adam, 600 steps",
+    "metric": "geodesic error on the target, normalised by sqrt(surface area) -- identical to the main study",
+    "memory": "the masked loss keeps one n x n cost and one n x n bool mask; ~192 MB at n=2000 in float64"
+  },
+  "records": [
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair050-066",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06181100644971185,
+        "median": 0.0,
+        "miss_1pct": 0.382,
+        "miss_5pct": 0.1915,
+        "flip_rate": 0.0845,
+        "flip_share_of_errors": 0.2387005649717514,
+        "mirror_error_mean": 0.41695411291959317
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair050-066",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07950423124792659,
+        "median": 0.0,
+        "miss_1pct": 0.404,
+        "miss_5pct": 0.21,
+        "flip_rate": 0.104,
+        "flip_share_of_errors": 0.27807486631016043,
+        "mirror_error_mean": 0.41695411291959317
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair050-066",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07957888225466117,
+        "median": 0.0012508528768116936,
+        "miss_1pct": 0.408,
+        "miss_5pct": 0.2135,
+        "flip_rate": 0.1035,
+        "flip_share_of_errors": 0.2752659574468085,
+        "mirror_error_mean": 0.41695411291959317
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair050-066",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06136905337978438,
+        "median": 0.0,
+        "miss_1pct": 0.384,
+        "miss_5pct": 0.189,
+        "flip_rate": 0.0855,
+        "flip_share_of_errors": 0.23983169705469845,
+        "mirror_error_mean": 0.41695411291959317
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair050-066",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.1833746455653216,
+        "median": 0.056912826592241256,
+        "miss_1pct": 0.671,
+        "miss_5pct": 0.514,
+        "flip_rate": 0.1925,
+        "flip_share_of_errors": 0.308,
+        "mirror_error_mean": 0.41695411291959317
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair056-071",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.12306170635980274,
+        "median": 0.02315315967827277,
+        "miss_1pct": 0.6085,
+        "miss_5pct": 0.3535,
+        "flip_rate": 0.1375,
+        "flip_share_of_errors": 0.233446519524618,
+        "mirror_error_mean": 0.515068346878277
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair056-071",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.13425420266378768,
+        "median": 0.027344425100879585,
+        "miss_1pct": 0.633,
+        "miss_5pct": 0.3835,
+        "flip_rate": 0.155,
+        "flip_share_of_errors": 0.25223759153783565,
+        "mirror_error_mean": 0.515068346878277
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair056-071",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.13226813725195555,
+        "median": 0.02633461710534612,
+        "miss_1pct": 0.6295,
+        "miss_5pct": 0.3795,
+        "flip_rate": 0.1535,
+        "flip_share_of_errors": 0.25143325143325146,
+        "mirror_error_mean": 0.515068346878277
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair056-071",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.12510978352079655,
+        "median": 0.025139297322269175,
+        "miss_1pct": 0.6185,
+        "miss_5pct": 0.364,
+        "flip_rate": 0.14,
+        "flip_share_of_errors": 0.23333333333333334,
+        "mirror_error_mean": 0.515068346878277
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair056-071",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.13660958027208392,
+        "median": 0.05085388454155579,
+        "miss_1pct": 0.713,
+        "miss_5pct": 0.5045,
+        "flip_rate": 0.148,
+        "flip_share_of_errors": 0.214960058097313,
+        "mirror_error_mean": 0.515068346878277
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair053-085",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04426154820936877,
+        "median": 0.007830764013939288,
+        "miss_1pct": 0.479,
+        "miss_5pct": 0.2355,
+        "flip_rate": 0.0765,
+        "flip_share_of_errors": 0.1650485436893204,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair053-085",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.049886420220508314,
+        "median": 0.009225679356447428,
+        "miss_1pct": 0.4915,
+        "miss_5pct": 0.2545,
+        "flip_rate": 0.086,
+        "flip_share_of_errors": 0.18067226890756302,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair053-085",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04969327818376972,
+        "median": 0.009303407381613643,
+        "miss_1pct": 0.492,
+        "miss_5pct": 0.2525,
+        "flip_rate": 0.085,
+        "flip_share_of_errors": 0.17857142857142858,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair053-085",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04521986144874129,
+        "median": 0.00884128453561623,
+        "miss_1pct": 0.487,
+        "miss_5pct": 0.242,
+        "flip_rate": 0.078,
+        "flip_share_of_errors": 0.1652542372881356,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair053-085",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.16923676801465798,
+        "median": 0.09086201814892494,
+        "miss_1pct": 0.783,
+        "miss_5pct": 0.6405,
+        "flip_rate": 0.224,
+        "flip_share_of_errors": 0.29708222811671087,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair059-099",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0269573743201949,
+        "median": 0.0,
+        "miss_1pct": 0.3705,
+        "miss_5pct": 0.141,
+        "flip_rate": 0.0285,
+        "flip_share_of_errors": 0.07883817427385892,
+        "mirror_error_mean": 0.5288825781080894
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair059-099",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.0332303603003861,
+        "median": 0.001270524773904375,
+        "miss_1pct": 0.402,
+        "miss_5pct": 0.1625,
+        "flip_rate": 0.037,
+        "flip_share_of_errors": 0.09426751592356689,
+        "mirror_error_mean": 0.5288825781080894
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair059-099",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.03159267856305695,
+        "median": 0.0,
+        "miss_1pct": 0.3885,
+        "miss_5pct": 0.159,
+        "flip_rate": 0.0355,
+        "flip_share_of_errors": 0.09366754617414248,
+        "mirror_error_mean": 0.5288825781080894
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair059-099",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.027541730311524366,
+        "median": 0.0,
+        "miss_1pct": 0.386,
+        "miss_5pct": 0.148,
+        "flip_rate": 0.0315,
+        "flip_share_of_errors": 0.08366533864541832,
+        "mirror_error_mean": 0.5288825781080894
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair059-099",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.030718316549299674,
+        "median": 0.004257961638966353,
+        "miss_1pct": 0.4495,
+        "miss_5pct": 0.188,
+        "flip_rate": 0.052,
+        "flip_share_of_errors": 0.12064965197215777,
+        "mirror_error_mean": 0.5288825781080894
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair064-072",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.057784868949779765,
+        "median": 0.015485131539941419,
+        "miss_1pct": 0.558,
+        "miss_5pct": 0.267,
+        "flip_rate": 0.0825,
+        "flip_share_of_errors": 0.15391791044776118,
+        "mirror_error_mean": 0.5231406546758385
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair064-072",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06918782349845785,
+        "median": 0.01745598259556821,
+        "miss_1pct": 0.5775,
+        "miss_5pct": 0.2925,
+        "flip_rate": 0.102,
+        "flip_share_of_errors": 0.18361836183618363,
+        "mirror_error_mean": 0.5231406546758385
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair064-072",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06917435020603942,
+        "median": 0.017380009776327227,
+        "miss_1pct": 0.578,
+        "miss_5pct": 0.293,
+        "flip_rate": 0.102,
+        "flip_share_of_errors": 0.18345323741007194,
+        "mirror_error_mean": 0.5231406546758385
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair064-072",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.05888328480843087,
+        "median": 0.015415201256143905,
+        "miss_1pct": 0.5605,
+        "miss_5pct": 0.271,
+        "flip_rate": 0.0835,
+        "flip_share_of_errors": 0.15520446096654275,
+        "mirror_error_mean": 0.5231406546758385
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair064-072",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07754380217515026,
+        "median": 0.02556892631073412,
+        "miss_1pct": 0.65,
+        "miss_5pct": 0.347,
+        "flip_rate": 0.076,
+        "flip_share_of_errors": 0.12025316455696203,
+        "mirror_error_mean": 0.5231406546758385
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair061-086",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06663598035227994,
+        "median": 0.012671091013244842,
+        "miss_1pct": 0.5355,
+        "miss_5pct": 0.247,
+        "flip_rate": 0.086,
+        "flip_share_of_errors": 0.16912487708947885,
+        "mirror_error_mean": 0.4544877479565516
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair061-086",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07598743993112098,
+        "median": 0.01409051112284714,
+        "miss_1pct": 0.551,
+        "miss_5pct": 0.268,
+        "flip_rate": 0.1,
+        "flip_share_of_errors": 0.19047619047619047,
+        "mirror_error_mean": 0.4544877479565516
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair061-086",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07604158213102774,
+        "median": 0.014219764147938282,
+        "miss_1pct": 0.552,
+        "miss_5pct": 0.2685,
+        "flip_rate": 0.1015,
+        "flip_share_of_errors": 0.19314938154138916,
+        "mirror_error_mean": 0.4544877479565516
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair061-086",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.06913575286158799,
+        "median": 0.013533192729369313,
+        "miss_1pct": 0.543,
+        "miss_5pct": 0.2545,
+        "flip_rate": 0.0925,
+        "flip_share_of_errors": 0.17909002904162633,
+        "mirror_error_mean": 0.4544877479565516
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair061-086",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.07923532755484229,
+        "median": 0.02636842948860421,
+        "miss_1pct": 0.62,
+        "miss_5pct": 0.353,
+        "flip_rate": 0.115,
+        "flip_share_of_errors": 0.1934398654331371,
+        "mirror_error_mean": 0.4544877479565516
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair067-091",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10703335743168266,
+        "median": 0.01693950376682075,
+        "miss_1pct": 0.573,
+        "miss_5pct": 0.313,
+        "flip_rate": 0.1105,
+        "flip_share_of_errors": 0.19820627802690582,
+        "mirror_error_mean": 0.5390743575066752
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair067-091",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.12422670710682449,
+        "median": 0.018932324829950956,
+        "miss_1pct": 0.586,
+        "miss_5pct": 0.3355,
+        "flip_rate": 0.13,
+        "flip_share_of_errors": 0.228270412642669,
+        "mirror_error_mean": 0.5390743575066752
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair067-091",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.12382216385340572,
+        "median": 0.018599911412569538,
+        "miss_1pct": 0.5825,
+        "miss_5pct": 0.3355,
+        "flip_rate": 0.128,
+        "flip_share_of_errors": 0.22614840989399293,
+        "mirror_error_mean": 0.5390743575066752
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair067-091",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.10902512962308057,
+        "median": 0.017669097669392765,
+        "miss_1pct": 0.5815,
+        "miss_5pct": 0.3285,
+        "flip_rate": 0.112,
+        "flip_share_of_errors": 0.19805481874447392,
+        "mirror_error_mean": 0.5390743575066752
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair067-091",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.17972161947021192,
+        "median": 0.04892010718829497,
+        "miss_1pct": 0.7275,
+        "miss_5pct": 0.495,
+        "flip_rate": 0.172,
+        "flip_share_of_errors": 0.24225352112676057,
+        "mirror_error_mean": 0.5390743575066752
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair072-085",
+      "arm": "plain",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.03272997883453266,
+        "median": 0.0053935225418344,
+        "miss_1pct": 0.447,
+        "miss_5pct": 0.214,
+        "flip_rate": 0.0525,
+        "flip_share_of_errors": 0.12237762237762238,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair072-085",
+      "arm": "hard_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.039260682342813026,
+        "median": 0.007237201057671028,
+        "miss_1pct": 0.471,
+        "miss_5pct": 0.2305,
+        "flip_rate": 0.0675,
+        "flip_share_of_errors": 0.14917127071823205,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair072-085",
+      "arm": "mixed_lp",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.03864543506108142,
+        "median": 0.006889905066005399,
+        "miss_1pct": 0.4695,
+        "miss_5pct": 0.23,
+        "flip_rate": 0.0665,
+        "flip_share_of_errors": 0.14745011086474502,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair072-085",
+      "arm": "hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.033227837614547284,
+        "median": 0.005917020552945457,
+        "miss_1pct": 0.4505,
+        "miss_5pct": 0.217,
+        "flip_rate": 0.055,
+        "flip_share_of_errors": 0.12731481481481483,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "pair072-085",
+      "arm": "uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": 0,
+      "metrics": {
+        "mean": 0.04507041849639033,
+        "median": 0.019674363471976236,
+        "miss_1pct": 0.5985,
+        "miss_5pct": 0.3055,
+        "flip_rate": 0.0725,
+        "flip_share_of_errors": 0.12554112554112554,
+        "mirror_error_mean": 0.5054425583215458
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "contrast",
+      "arm": "hard_lp_minus_plain",
+      "k": 13,
+      "m": 2000,
+      "draw": -1,
+      "metrics": {
+        "mean": 0.02181250000000001,
+        "ci_low": 0.019250000000000014,
+        "ci_high": 0.02475,
+        "wins": 0.0
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "contrast",
+      "arm": "hard_lp_minus_hard_self",
+      "k": 13,
+      "m": 2000,
+      "draw": -1,
+      "metrics": {
+        "mean": 0.015375000000000003,
+        "ci_low": 0.01212500000000001,
+        "ci_high": 0.018500000000000003,
+        "wins": 0.0
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "faust_curriculum",
+      "geometry": "contrast",
+      "arm": "hard_lp_minus_uniform",
+      "k": 13,
+      "m": 2000,
+      "draw": -1,
+      "metrics": {
+        "mean": -0.1513125,
+        "ci_low": -0.23974999999999996,
+        "ci_high": -0.07374687500000005,
+        "wins": 8.0
+      },
+      "config": {
+        "study": "faust_curriculum",
+        "out": "/home/agent/Documents/fast-iot/iot_experiments/out",
+        "solver": "cupdlpx",
+        "inner_solver": "none",
+        "scan": "torch",
+        "device": "auto",
+        "draws": [
+          0
+        ],
+        "seed": 0,
+        "solve_limit_s": 300.0,
+        "resume": false,
+        "json_only": false,
+        "section": "faust_curriculum",
+        "root": "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations",
+        "train_pair": [
+          0,
+          13
+        ],
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_subjects": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "test_pair_count": 8,
+        "val_pair_count": 2,
+        "n_sub": 2000,
+        "hard_negatives": 32,
+        "random_negatives": 32,
+        "steps": 600,
+        "lr": 0.05,
+        "tau_grid": [
+          0.001,
+          0.003,
+          0.01
+        ],
+        "max_iterations": 30,
+        "__section__": "faust_curriculum",
+        "__class__": "CurriculumConfig"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}

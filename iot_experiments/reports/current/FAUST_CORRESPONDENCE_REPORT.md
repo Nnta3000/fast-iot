@@ -560,6 +560,83 @@ feasibility that the data does not support.
 
 ---
 
+## 4i. Can the fit tell you *where* it is wrong? (n = 4000)
+
+A correspondence that abstains on its uncertain vertices is more useful than one that is uniformly confident
+at the same mean error. Four **label-free** confidence scores, all computed from the same `theta` and the same
+`n x n` cost matrix, ranked against the true per-vertex geodesic error (AUROC of "this vertex is correct",
+so **0.5 = chance, higher = better**):
+
+| score | what it is | `relaxed_lp` | `row_softmax` | `uniform` |
+| --- | --- | ---: | ---: | ---: |
+| `cost_margin` | `c_(2nd) − c_(1st)`, raw | 0.464 | 0.487 | 0.489 |
+| `dual_margin` | **OT dual certificate**: tightest non-plan edge after removing the target's price `v_j` | 0.502 | 0.527 | 0.525 |
+| `rel_cost_margin` | the same raw gap, divided by `c_(2nd)` | **0.569** | 0.533 | 0.521 |
+| `softmax_margin` | `P_i,pred − max_{j≠pred} P_ij`, `P = softmax(−c/τ)`, `τ = 3e-3` | **0.632** | **0.609** | **0.597** |
+
+**Risk–coverage** (rank by confidence, keep the most confident fraction `q`, `miss@5 %` among them):
+
+| θ | score | q = 50 % | 70 % | 90 % | 100 % |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `relaxed_lp` | `softmax_margin` | **0.144** | 0.170 | 0.190 | 0.203 |
+| `relaxed_lp` | `cost_margin` | 0.223 | 0.214 | 0.206 | 0.203 |
+| `row_softmax` | `softmax_margin` | **0.195** | 0.217 | 0.239 | 0.253 |
+| `uniform` | `softmax_margin` | **0.365** | 0.394 | 0.412 | 0.422 |
+
+Four readings, and the first is the one that matters for the method:
+
+1. **The OT dual certificate is at chance.** 0.502–0.527. The quantity the optimality proof reasons about —
+   the slack of the tightest non-plan edge, with each target's own price removed — does **not** localise
+   correspondence errors on a new pair. A certificate about the plan you fitted is not an uncertainty
+   estimate about the plan you will produce. This is the direct answer to "can inverse OT tell you where it
+   is wrong": **not through its certificate.**
+2. **The raw cost margin is worse than chance** (0.464–0.489), and abstaining by it *increases* the error
+   (0.223 at 50 % coverage versus 0.203 at 100 %). It is dominated by per-vertex cost scale: dividing by
+   `c_(2nd)` recovers most of the signal (0.569 for the LP θ), which confirms the diagnosis rather than a
+   deeper failure.
+3. **The probability margin works** (0.60–0.63), and it works for the **uniform** θ too (0.597). So per-vertex
+   confidence is available from any cost's local landscape; it is not an inverse-OT property. The learned θ
+   improves the *ranking* (0.632 vs 0.597) more than it improves the *accuracy* — an interesting asymmetry:
+   the fit sharpens the cost exactly where the near-ties are.
+4. **Practically it is worth having.** At 50 % coverage the error falls 0.203 → 0.144 (a 29 % relative cut)
+   for the LP θ, 0.253 → 0.195 (23 %) for the supervised θ, 0.422 → 0.365 (13 %) for uniform. Better weights
+   buy better confidence, in roughly the same proportion as they buy accuracy.
+
+**Scope.** One vertex-subsample seed, 8 held-out pairs, one `tau` for the probability score. The AUROC
+ordering is stable across the three θ (cost < dual < rel < softmax in every column), so the qualitative
+conclusion does not rest on one draw.
+
+---
+
+## 4j. Inverse OT as a *teacher* for a cheap arm (n = 2000)
+
+If the LP's advantage is real but its machinery is heavy, could the machinery be spent **once** — as a
+hard-negative miner — and the deployed model be a plain softmax arm? The fitted cost certifies the true
+partner up to a margin, so the targets sitting just above it are exactly the confusions it cannot rule out;
+uniformly sampled negatives almost never land there. Four arms, same features, same training pair:
+
+| arm | negatives in the loss | mean error | miss@5 % |
+| --- | --- | ---: | ---: |
+| `plain` | all `n − 1` others | **0.0650** | **0.2453** |
+| `hard_self` | 32 chosen by the **supervised** arm's own cost (control) | 0.0662 | 0.2518 |
+| `mixed_lp` | 32 LP-chosen + 32 uniform | 0.0751 | 0.2664 |
+| `hard_lp` | 32 chosen by the **inverse-OT** cost | 0.0757 | 0.2671 |
+| `uniform` | — (no learning) | 0.1127 | 0.4184 |
+
+Paired bootstrap over the 8 held-out pairs: `hard_lp − plain` = **+0.0218 [+0.0193, +0.0248], 0/8** and
+`hard_lp − hard_self` = **+0.0154 [+0.0121, +0.0185], 0/8**.
+
+**Negative, and cleanly so.** Mining negatives from the fitted cost makes the cheap arm *worse* by ~0.02, and
+the LP's negatives are worse than the supervised arm's own — so inverse OT is not even the better miner.
+The `mixed` arm (65 classes instead of 33) is no better, so this is not merely a too-aggressive restriction:
+the model learns the miner's in-sample confusions and loses the broad negative distribution that generalises.
+
+**Scope.** n = 2000, one seed, one hard-negative count (32), one τ grid. It is a single configuration of the
+idea, not a sweep; but the effect is consistent across all 8 pairs and the control (`hard_self`) fails the
+same way, which is the pattern a real effect would not have.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

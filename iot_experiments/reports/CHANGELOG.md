@@ -3,6 +3,24 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (final++) — two applications of iOT tested on FAUST: confidence and teaching
+
+New `studies/real/faust/abstention.py` (n=4000, 8 held-out pairs): four label-free confidence scores ranked
+against the true per-vertex error.
+
+  AUROC (0.5 = chance): cost_margin 0.46 | dual_margin (OT certificate) 0.50 | rel_cost_margin 0.57 |
+  softmax_margin 0.63   (relaxed_lp theta; same ordering for row_softmax and uniform)
+
+**The OT dual certificate does not localise errors** (0.502; 0.527 for the supervised theta). The raw cost
+margin is worse than chance (0.46) because it is dominated by per-vertex cost scale. The probability margin
+works (0.60-0.63) and works for uniform theta too (0.597), so confidence is a property of the cost
+landscape, not of inverse OT. Practically: abstaining on 50% of vertices cuts miss@5% from 0.203 to 0.144.
+
+New `studies/real/faust/curriculum.py` (n=2000): use the fitted cost as a hard-negative miner for a cheap
+softmax arm. **Negative**: hard_lp 0.2671 vs plain 0.2453 (+0.0218, CI [+0.0193,+0.0248], 0/8 pairs), and
+the control `hard_self` (negatives from the supervised arm's own cost) is closer to plain at 0.2518 — so
+inverse OT is not even the better miner.
+
 ## 2026-11-11 (final+) — multi-pair: normalisation refuted, cross-regret matrix added
 
 `multi_pair.py` now normalises each pair's regret by its own `R_uniform,p` (scales differ 2.4×) and reports a
