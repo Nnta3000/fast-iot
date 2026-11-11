@@ -5,6 +5,13 @@ corrections live inside the report they correct.
 
 ## 2026-11-11 (later still) — memory: the master's full-grid arrays are gone; n=6890 fits
 
+**Full-resolution result**: the correspondence experiment now runs on all **6890 vertices**, 19.1 min, peak
+1.63 GB, exit 0 (it previously did not fit). `learned` 0.1996 miss@5 % vs `uniform` 0.4186 and
+`uniform_late_hks` 0.6899; 8/8 pairs against every baseline; Δ vs uniform **−0.219** [−0.304, −0.146].
+The n=800 → 4000 → 6890 sequence (0.186 → 0.203 → 0.200) shows the resolution axis has **saturated**, so
+n=4000 was already representative.
+
+
 `memray` located the peak, and it was **not** the LP matrix (which is sparse: `assemble_lp` at `|F|=7805`
 costs +5 MB). It was:
 

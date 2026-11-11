@@ -345,6 +345,39 @@ against a 10.7 GB ceiling).
 
 ---
 
+## 4d. The full `n = 6890` run
+
+After the memory fix (§ `README.md`), the fit runs at **full resolution** — all 6890 vertices, peak
+**1.63 GB** (it previously did not fit at all). Protocol identical to §4c: subject-disjoint, simplex-only,
+8 held-out test pairs, 1 seed, no oracle/validation pairs. Wall **19.1 min** (fits 313 s + 272 s, evaluation
+the rest).
+
+| arm | mean error | miss@1 % | miss@5 % |
+| --- | ---: | ---: | ---: |
+| `position_only` | 0.2149 | 0.886 | 0.649 |
+| `uniform_hks` | 0.3730 | 0.870 | 0.726 |
+| `uniform_late_hks` | 0.3517 | 0.850 | 0.690 |
+| `grouped_uniform` | 0.1305 | 0.760 | 0.491 |
+| `uniform_theta` | 0.1178 | 0.712 | 0.419 |
+| **`learned` (simplex)** | **0.0550** | **0.531** | **0.1996** |
+| `learned` (rel 0.25) | 0.0721 | 0.604 | 0.274 |
+
+| comparison | Δ on miss@5 % | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| vs `uniform_theta` | **−0.2190** | [−0.304, −0.146] | 8/8 |
+| vs `grouped_uniform` | −0.2915 | — | 8/8 |
+| vs `uniform_late_hks` | −0.4903 | — | 8/8 |
+| vs `uniform_hks` | −0.5267 | — | 8/8 |
+| vs `position_only` | −0.4490 | — | 8/8 |
+
+**The resolution axis has saturated.** n=800 → 4000 → 6890 gives, for the learned arm, miss@5 % of
+0.186 → 0.203 → **0.200**, and `Δ` vs uniform of −0.151 → −0.219 → **−0.219**. Going from 4000 to the full
+mesh changes nothing beyond noise, so **n=4000 was already representative** and the conclusion does not
+depend on subsampling. That also means the expensive full-resolution run was a one-off check, not the new
+default: n=4000 costs 6 min/fit, n=6890 costs 5.2 min/fit at 8× the EMD work.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the
