@@ -1,0 +1,55 @@
+[11:20:26 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_full4000/run.log
+[11:20:26 +    0.0s] preflight ok=True mem=10.0 GB
+[11:20:26 +    0.0s] train subjects (0, 1, 2, 3, 4)  |  test subjects (5, 6, 7, 8, 9)  (disjoint: PASS)
+[11:20:26 +    0.0s] train pair (0, 13); validation pairs (train subjects) []
+[11:20:26 +    0.0s] test pairs (test subjects) [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[11:20:26 +    0.0s] box widths ['learned_rel0.25', 'learned_simplex']; vertex subsamples seeds (0,)
+[11:26:13 +  346.8s] [seed 0] learned_rel0.25    regret=0.01522 converged=False min=0.0192 max=0.3077 at_min=7
+[11:32:10 +  704.2s] [seed 0] learned_simplex    regret=0.001149 converged=False min=0.0000 max=0.7617 at_min=4
+[11:35:00 +  874.3s] 
+validation miss@5% by box width (lower is better; this is the selection criterion):
+[11:35:00 +  874.3s] no validation pairs: box width not selected here; using learned_simplex
+[11:35:00 +  874.3s] selected by validation: learned_simplex
+[11:35:00 +  874.3s] 
+[11:35:00 +  874.3s] learned_selected     - uniform_theta      miss@5%: mean -0.2191 95% CI [-0.3007, -0.1486]  wins 8/8
+[11:35:00 +  874.3s] learned_selected     - grouped_uniform    miss@5%: mean -0.2939 95% CI [-0.3797, -0.2144]  wins 8/8
+[11:35:00 +  874.3s] learned_selected     - uniform_hks        miss@5%: mean -0.5190 95% CI [-0.5490, -0.4855]  wins 8/8
+[11:35:00 +  874.3s] learned_selected     - uniform_late_hks   miss@5%: mean -0.4701 95% CI [-0.5003, -0.4365]  wins 8/8
+[11:35:00 +  874.3s] learned_selected     - position_only      miss@5%: mean -0.4510 95% CI [-0.5783, -0.3058]  wins 8/8
+[11:35:00 +  874.4s] learned_rel0.25      - uniform_theta      miss@5%: mean -0.1490 95% CI [-0.2008, -0.1056]  wins 8/8
+[11:35:00 +  874.4s] learned_rel0.25      - grouped_uniform    miss@5%: mean -0.2238 95% CI [-0.2737, -0.1839]  wins 8/8
+[11:35:00 +  874.4s] learned_rel0.25      - uniform_hks        miss@5%: mean -0.4489 95% CI [-0.5013, -0.3879]  wins 8/8
+[11:35:00 +  874.4s] learned_rel0.25      - uniform_late_hks   miss@5%: mean -0.4000 95% CI [-0.4650, -0.3355]  wins 8/8
+[11:35:00 +  874.4s] learned_rel0.25      - position_only      miss@5%: mean -0.3809 95% CI [-0.4927, -0.2546]  wins 8/8
+[11:35:00 +  874.4s] learned_simplex      - uniform_theta      miss@5%: mean -0.2191 95% CI [-0.3034, -0.1446]  wins 8/8
+[11:35:00 +  874.4s] learned_simplex      - grouped_uniform    miss@5%: mean -0.2939 95% CI [-0.3808, -0.2188]  wins 8/8
+[11:35:01 +  874.4s] learned_simplex      - uniform_hks        miss@5%: mean -0.5190 95% CI [-0.5483, -0.4843]  wins 8/8
+[11:35:01 +  874.4s] learned_simplex      - uniform_late_hks   miss@5%: mean -0.4701 95% CI [-0.5004, -0.4359]  wins 8/8
+[11:35:01 +  874.4s] learned_simplex      - position_only      miss@5%: mean -0.4510 95% CI [-0.5846, -0.2984]  wins 8/8
+[11:35:01 +  874.5s] 
+                                    arm  n_draws  mean_mean  miss_1pct_mean  miss_5pct_mean
+---------------------------------------  -------  ---------  --------------  --------------
+                        grouped_uniform        8     0.1301          0.7445          0.4967
+                        learned_rel0.25        8     0.0693          0.5734          0.2729
+    learned_rel0.25_minus_uniform_theta        1    -0.1490               -               -
+                       learned_selected        8     0.0529          0.5031          0.2028
+ learned_selected_minus_grouped_uniform        1    -0.2939               -               -
+   learned_selected_minus_position_only        1    -0.4510               -               -
+     learned_selected_minus_uniform_hks        1    -0.5190               -               -
+learned_selected_minus_uniform_late_hks        1    -0.4701               -               -
+   learned_selected_minus_uniform_theta        1    -0.2191               -               -
+                        learned_simplex        8     0.0529          0.5031          0.2028
+    learned_simplex_minus_uniform_theta        1    -0.2191               -               -
+                     nn_grouped_uniform        8     0.1857          0.8645          0.6687
+                     nn_learned_rel0.25        8     0.1354          0.7701          0.5097
+                     nn_learned_simplex        8     0.1049          0.7577          0.4337
+                       nn_position_only        8     0.2314          0.9878          0.8237
+                         nn_uniform_hks        8     0.3526          0.8487          0.7024
+                    nn_uniform_late_hks        8     0.3615          0.8603          0.7141
+                       nn_uniform_theta        8     0.1750          0.8286          0.6103
+                          position_only        8     0.2126          0.8734          0.6538
+                            uniform_hks        8     0.3671          0.8602          0.7218
+                       uniform_late_hks        8     0.3363          0.8296          0.6728
+                          uniform_theta        8     0.1153          0.6907          0.4219
+[11:35:01 +  874.5s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_full4000/records.json (127 rows)
+[11:35:01 +  874.5s] log closed after 874.5s

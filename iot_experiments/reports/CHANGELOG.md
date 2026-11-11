@@ -3,6 +3,27 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-11 (later) — FAUST at n=4000, and the boundary-θ question
+
+**Resolution check**: the correspondence experiment re-run at **n = 4000** (5× the 800 used everywhere else),
+subject-disjoint, simplex-only, 8 held-out pairs. `learned` 0.2028 miss@5 % vs `uniform` 0.4219 and
+`uniform_late_hks` 0.6728; **8/8** pairs against every baseline; Δ vs uniform **−0.219** [−0.301, −0.149],
+i.e. the margin *grows* with `n` (it was −0.151 at n=800). Uniform late-HKS also has the **worst flip rate**
+(0.413 vs 0.058 for learned), so "just use the block" is the one shortcut that fails most clearly.
+
+**Boundary-θ question settled** (`corner.py`): CuPDLPx and HiGHS reach the **same vertex** to ~0.006, so the
+corner is the objective's (a linear objective over a polytope has a vertex optimum), not a solver defect.
+Across 5 vertex subsamples the **zero pattern is identical** (4 descriptors always exactly 0) but
+t=32/64/128 trade mass with std 0.019–0.028 — block-level weight claims are safe, per-coordinate ones are not.
+
+**Two failures reported in-process**: an LP-based identifiability range was degenerate (objective `±θ_k`
+leaves `(f,g)` cost-free) and HiGHS did not finish one cell in 18 min — killed (exit 143), replaced by
+resampling; and a seed bug made the first stability run report a fake `std = 0.0000`, caught because it was
+too good.
+
+**Not run**: full `n = 6890`. Measured peak 7.24 GB at n=5000 and ≈11 GB extrapolated at 6890, above the
+10.7 GB (70 %) ceiling; an n=5000 attempt was OOM-killed (exit 137) at 6.8 GB available.
+
 ## 2026-11-11 — `loop_regret`: no more full-grid index arrays
 
 `_compute_baseline` used to `meshgrid` the indices of all `m·n` edges and keep them for the whole solve

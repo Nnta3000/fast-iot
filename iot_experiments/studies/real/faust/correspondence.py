@@ -132,6 +132,8 @@ class CorrespondenceConfig(RunConfig):
     test_pairs: tuple[int, ...] = ()
     test_pair_count: int = 8
     seeds: tuple[int, ...] = (0, 1, 2)
+    oracle: int = 1            # refit theta on each evaluated pair (a ceiling, not a method)
+    validation: int = 1        # evaluate the validation pairs (used to choose the box width)
     rels: tuple[float, ...] = (0.05, 0.1, 0.25, 0.5, 0.9)
     simplex: int = 1
     val_pair_count: int = 4
@@ -150,6 +152,12 @@ class CorrespondenceConfig(RunConfig):
         parser.add_argument("--test-pairs", type=int, nargs="*", default=[])
         parser.add_argument("--test-pair-count", type=int, default=8)
         parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+        parser.add_argument("--oracle", type=int, default=1,
+                            help="0 skips the per-pair oracle refit (the ceiling); the headline arms are "
+                                 "unaffected")
+        parser.add_argument("--validation", type=int, default=1,
+                            help="0 skips the validation pairs (only meaningful when the box width is already "
+                                 "settled")
         parser.add_argument("--rels", type=float, nargs="+", default=[0.05, 0.1, 0.25, 0.5, 0.9])
         parser.add_argument("--simplex", type=int, default=1)
         parser.add_argument("--val-pair-count", type=int, default=4)
@@ -445,7 +453,8 @@ def main(argv: list[str] | None = None) -> int:
     # EN: build a large enough pool first (the training pair is filtered out), then take the first
     #     `val_pair_count` of them.
     pool = default_pairs(train_subjects, 4 * int(config.val_pair_count) + 16)
-    val_candidates = [p for p in pool if p != train_pair and p[::-1] != train_pair][: int(config.val_pair_count)]
+    val_candidates = ([p for p in pool if p != train_pair and p[::-1] != train_pair]
+                      [: int(config.val_pair_count)] if int(config.validation) else [])
     for pair in val_candidates:
         for vid in pair:
             if subject_of(vid) not in set(train_subjects):
@@ -495,13 +504,14 @@ def main(argv: list[str] | None = None) -> int:
         for pair in test_pairs:
             a_m = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
             b_m = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
-            o_idx = _sample_index(a_m, config, seed)
-            ao, bo = standardise(descriptors(a_m)[o_idx], descriptors(b_m)[o_idx])
-            oracle_fit = fit_theta(SquaredDifferenceFeatures(ao, bo), rel=0.25,
-                                   max_iterations=int(config.max_iterations))
             these = dict(thetas)
-            if oracle_fit["theta"] is not None:
-                these["oracle_theta"] = oracle_fit["theta"]
+            if int(config.oracle):
+                o_idx = _sample_index(a_m, config, seed)
+                ao, bo = standardise(descriptors(a_m)[o_idx], descriptors(b_m)[o_idx])
+                oracle_fit = fit_theta(SquaredDifferenceFeatures(ao, bo), rel=0.25,
+                                       max_iterations=int(config.max_iterations))
+                if oracle_fit["theta"] is not None:
+                    these["oracle_theta"] = oracle_fit["theta"]
             # CN: 测试行也打前缀，否则后面的"选中复制"和"去前缀"都匹配不到（上一版就是这个 bug）。
             # EN: tag test rows too, otherwise the later "copy the selected arm" and "strip prefix" steps match
             #     nothing (that was the bug in the previous revision).
@@ -517,7 +527,13 @@ def main(argv: list[str] | None = None) -> int:
     log.line("\nvalidation miss@5% by box width (lower is better; this is the selection criterion):")
     for arm, values in sorted(val_scores.items(), key=lambda kv: float(np.mean(kv[1]))):
         log.line(f"   {arm:<20} {float(np.mean(values)):.4f}  (n={len(values)})")
-    best_arm = min(val_scores, key=lambda k: float(np.mean(val_scores[k])))
+    if val_scores:
+        best_arm = min(val_scores, key=lambda k: float(np.mean(val_scores[k])))
+    else:
+        # CN: 没有验证对时不做选择，直接取 simplex（它是上一轮在验证对上选出的赢家）。
+        # EN: with no validation pairs there is no selection; use simplex, which won the previous sweep.
+        best_arm = arm_of(None)
+        log.line("no validation pairs: box width not selected here; using learned_simplex")
 
     # CN: **把选中的那个 θ 的测试读数复制成 `learned_selected`**，其余保留以便对照（它们没有参与选择）。
     # EN: **copy the selected theta's test readings as `learned_selected`**; the others are kept for contrast

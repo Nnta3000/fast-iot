@@ -271,6 +271,80 @@ diagnostic: it identifies "matched the other side of the body", not an exact sym
 
 ---
 
+## 4c. Resolution check at `n = 4000` (5× the main run)
+
+Every number in §2–§4 uses `n = 800` of 6890 vertices. This re-runs the same protocol at **`n = 4000`**
+(subject-disjoint, simplex-only, 8 held-out pairs, 1 seed, no oracle and no validation pairs — the box width
+was already settled in §2b), so the conclusion does not rest on 12 % of the mesh.
+
+Driver `correspondence.py --n-sub 4000 --oracle 0 --validation 0`, launched through `run_job.sh`,
+12 threads, peak RSS **≈4.7 GB** (budget 10.7 GB). Total wall **14.5 min**, of which the two fits are
+**11.7 min** (346 s + 358 s) and all eight pair evaluations only ~3 min.
+
+| arm | mean error | miss@1 % | miss@5 % |
+| --- | ---: | ---: | ---: |
+| `position_only` | 0.2126 | 0.873 | 0.654 |
+| `uniform_hks`, `nn_uniform_hks` | 0.3671 | 0.860 | 0.722 |
+| `uniform_late_hks` | 0.3363 | 0.830 | 0.673 |
+| `grouped_uniform` | 0.1301 | 0.745 | 0.497 |
+| `uniform_theta` | 0.1153 | 0.691 | 0.422 |
+| **`learned` (simplex)** | **0.0529** | **0.503** | **0.203** |
+| `learned` (rel 0.25) | 0.0693 | 0.573 | 0.273 |
+| `nn_learned` | 0.1049 | 0.758 | 0.434 |
+
+| comparison | Δ on miss@5 % | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| vs `uniform_theta` | **−0.219** | [−0.301, −0.149] | 8/8 |
+| vs `grouped_uniform` | −0.294 | [−0.380, −0.214] | 8/8 |
+| vs `uniform_late_hks` | **−0.470** | [−0.500, −0.437] | 8/8 |
+| vs `uniform_hks` | −0.519 | [−0.549, −0.486] | 8/8 |
+| vs `position_only` | −0.451 | [−0.578, −0.306] | 8/8 |
+
+**Per pair (miss@5 %), learned beats uniform on 8/8:**
+
+| pair | pos | grouped | 13-equal | late3 | **learned** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 050-066 | 0.872 | 0.622 | 0.519 | 0.607 | **0.159** |
+| 053-085 | 0.843 | 0.709 | 0.643 | 0.656 | **0.210** |
+| 056-071 | 0.772 | 0.591 | 0.512 | 0.717 | **0.266** |
+| 059-099 | 0.150 | 0.252 | 0.175 | 0.636 | **0.101** |
+| 061-086 | 0.710 | 0.439 | 0.360 | 0.680 | **0.180** |
+| 064-072 | 0.473 | 0.425 | 0.359 | 0.718 | **0.217** |
+| 067-091 | 0.928 | 0.548 | 0.504 | 0.720 | **0.339** |
+| 072-085 | 0.482 | 0.388 | 0.303 | 0.648 | **0.149** |
+
+**What the resolution check changes.**
+
+1. **The conclusion survives a 5× larger instance, and the margin over uniform grows** (−0.219 versus −0.151
+   at `n = 800`). It is not a subsampling artefact.
+2. **The block controls separate far more cleanly.** Uniform late-HKS is **0.470** worse at `n = 4000` versus
+   0.353 at `n = 800`: at higher resolution the "just use the late-HKS block" shortcut degrades badly
+   (0.673 miss@5 %) while the learned mixture holds at 0.203. The gap between "pick the block" and "learn the
+   weights inside it" is the thing that grows with `n`.
+3. **`learned` is slightly worse in absolute terms than at `n = 800`** (0.203 vs 0.186 miss@5 %). Not a
+   surprise: a 4000-vertex subsample is a different, harder instance, and this run has no oracle or
+   validation selection. The *relative* advantage is what the claim rests on, and it improved.
+
+**Left/right flips at n = 4000** (same definition as §4b, counted per vertex against the mirror proxy):
+
+| arm | flip rate | flip share of its errors |
+| --- | ---: | ---: |
+| `position_only` | 0.252 | — |
+| `uniform_theta` | 0.138 | — |
+| `uniform_late_hks` | **0.413** | — |
+| **`learned`** | **0.0575** | 0.115 |
+| `nn_learned` | 0.090 | 0.118 |
+
+The ordering is the same as at `n = 800`, and one number is worth noting: **uniform late-HKS has the *worst*
+flip rate of any arm (0.41)** even though it is a decent cost on other axes. Mirror confusion is exactly what
+late-HKS alone cannot resolve, and it is the largest single advantage of the learned mixture.
+
+**Caveat.** One seed, one training pair, no oracle in this run, and `n = 4000` is still 58 % of the mesh —
+the full 6890 did **not** fit in memory (measured: 7.24 GB at `n = 5000`, extrapolating to ≈11 GB at 6890
+against a 10.7 GB ceiling).
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the
