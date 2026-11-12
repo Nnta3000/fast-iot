@@ -248,6 +248,15 @@ def main(argv: list[str] | None = None) -> int:
                      f"flip|err={met['flip_share_of_errors']:.3f}")
 
         vmax = float(np.percentile(np.concatenate([values[k] for k in values]), 98))
+        # CN: 逐顶点误差数组随记录一起落盘，绘图端才能在不重算的前提下重绘（figures/ 只读记录）。
+        # EN: the per-vertex error arrays are written next to the record so the figure builder can re-render
+        #     them without recomputing anything (the figures/ tree only reads records).
+        np.savez(
+            run_dir / f"errors_pair{pair[0]:03d}-{pair[1]:03d}.npz",
+            **{arm: np.asarray(values[arm], dtype=np.float64) for arm in values},
+            vmax=np.float64(vmax),
+            pair=np.asarray(pair, dtype=np.int64),
+        )
         for view in config.views:
             for arm in thetas:
                 _render(b_m, values[arm], run_dir / f"pair{pair[0]:03d}-{pair[1]:03d}_{arm}_{view}.png",

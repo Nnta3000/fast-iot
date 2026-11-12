@@ -749,6 +749,78 @@ buys a small, reproducible improvement for free.*
 
 ---
 
+## 4m. Why it does not generalise: the training pair, not the feature class
+
+Eight cross-subject training pairs, all inside subjects 0–4 (subject-disjoint from the test subjects 5–9),
+each fitted separately and **every θ decoded on the same 8 held-out pairs**. All regrets below are
+**exact full-grid POT** (`ot.emd2`), never a restricted edge set — so "the certificate was an artefact of
+`F_p`" is ruled out by construction, and it is now ruled out empirically too (§4h's 0.014–0.030 was measured
+the same way).
+
+| θ fitted on | own-pair regret | **leave-one-out regret** | held-out `miss@5 %` |
+| --- | ---: | ---: | ---: |
+| (0,13) | 0.0087 | 0.0244 | 0.2006 |
+| (2,31) | 0.0033 | 0.3082 | 0.3671 |
+| (4,22) | 0.0075 | 0.0300 | 0.2160 |
+| **(11,33)** | 0.0192 | 0.0231 | **0.1979** |
+| (14,42) | 0.0207 | 0.0441 | 0.2702 |
+| (21,40) | 0.0091 | 0.1182 | 0.2868 |
+| (24,12) | 0.0272 | 0.0216 | 0.2053 |
+| **(33,43)** | **0.0000** | **1.4467** | **0.5080** |
+
+(regrets are shares of `R_uniform`; uniform scores 0.4184.)
+
+**Spread across pairs: 0.310** — 0.198 to 0.508, i.e. **3.5× the 0.089 spread** measured *within* one pair's
+near-optimal set (§4k). The draw of the training pair dominates every other source of variation in this study,
+and (0,13) happens to be a good draw, not a typical one.
+
+**Three correlations, and they say different things:**
+
+| selector | Spearman vs held-out decoding |
+| --- | ---: |
+| own-pair regret (the fitting objective) | **−0.595** |
+| leave-one-out regret (certifies the *other* pairs) | **+0.929** |
+| mean regret over all 8 pairs | +0.905 |
+
+1. **Tightening the certificate makes generalisation worse.** (33,43) is the only pair the loop actually
+   certifies — exact regret `1.5e−8`, training map wrong at 4/2000 vertices — and it produces the worst cost
+   in the table: **0.5080, worse than uniform.** Own-pair regret is *anti*-correlated with transfer. This is
+   §4k's "the certificate never certifies" turned into a measurement of what would happen if it did.
+2. **Cross-certification is a usable, label-free selector.** A θ that explains the *other* pairs' plans
+   decodes well: +0.929 across 8 θ's, with the top three by leave-one-out regret — (24,12), (11,33), (0,13) —
+   scoring 0.205, 0.198 and 0.201. No held-out labels are used to build that ranking.
+3. **The information is in the other pairs, not in the fitted one.** That is the mechanism the multi-pair
+   attempt was reaching for and missed: it *intersected* feasibility across pairs instead of *ranking* θ's by
+   their cross-pair support.
+
+**Pooling by averaging fails**, and for a different reason than §4h:
+
+| candidate | held-out `miss@5 %` |
+| --- | ---: |
+| best single θ, (11,33) | **0.1979** |
+| mean of k = 1 | 0.2006 |
+| mean of k = 4 | 0.2169 |
+| mean of k = 8 | 0.2731 |
+| mean of k = 2 | 0.2839 |
+| validation-selected (`mean_k4`) | 0.2169 |
+| uniform | 0.4184 |
+
+Averaging is dragged by the bad members ((2,31) at 0.367, (33,43) at 0.508). And **validation selection failed
+here**: it ranked `mean_k4` best (0.1773) but the validation differences were 0.177–0.186, inside noise, and the
+test outcome was 0.217 — worse than the plainly better singles.
+
+### What this changes
+
+- The binding constraint is **not** the 13-feature class: the best θ in it reaches 0.198, and the oracle gap is
+  ~0.003. For a well-chosen θ the class is nearly exhausted.
+- It is **not** "more data": the variance across pairs is 0.31, so there is plenty of variance — averaging
+  heterogeneous estimators destroys it rather than exploiting it.
+- It is **which θ you end up with**, and the usable signal for that is *cross-pair* regret, which is label-free.
+- Concretely, the upgrade to test next: fit one θ per pair, score each by leave-one-out regret, and take the
+  top-k (or a regret-weighted committee). Predicted ceiling ≈ 0.20 without any held-out data.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

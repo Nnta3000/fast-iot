@@ -1,0 +1,61 @@
+[13:14:52 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_pairing/run.log
+[13:14:52 +    0.0s] preflight ok=True mem=8.5 GB backend=cupdlpx
+[13:14:52 +    0.0s] training pairs ((0, 13), (2, 31), (4, 22), (11, 33), (14, 42), (21, 40), (24, 12), (33, 43))
+[13:14:52 +    0.0s] validation pairs (training subjects) [(0, 16), (6, 21), (3, 35), (9, 49), (14, 22), (11, 36)]
+[13:14:52 +    0.0s] test pairs (test subjects) [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[13:15:23 +   31.3s]    pair (0, 13): exact regret 0.0008315, training map wrong at 919/2000, 12 rounds, 31.3s
+[13:16:08 +   75.7s]    pair (2, 31): exact regret 0.0001295, training map wrong at 337/2000, 12 rounds, 44.4s
+[13:16:40 +  108.1s]    pair (4, 22): exact regret 0.000331, training map wrong at 663/2000, 11 rounds, 32.4s
+[13:17:05 +  133.4s]    pair (11, 33): exact regret 0.0008183, training map wrong at 830/2000, 12 rounds, 25.3s
+[13:17:40 +  168.4s]    pair (14, 42): exact regret 0.0007396, training map wrong at 648/2000, 11 rounds, 34.9s
+[13:18:20 +  208.5s]    pair (21, 40): exact regret 0.0004969, training map wrong at 724/2000, 13 rounds, 40.1s
+[13:18:46 +  234.0s]    pair (24, 12): exact regret 0.001655, training map wrong at 1140/2000, 11 rounds, 25.5s
+[13:19:22 +  269.8s]    pair (33, 43): exact regret 1.472e-08, training map wrong at 4/2000, 12 rounds, 35.8s
+[13:19:22 +  269.8s] 13 candidates: ['mean_k1', 'mean_k2', 'mean_k4', 'mean_k8', 'theta_p0', 'theta_p1', 'theta_p2', 'theta_p3', 'theta_p4', 'theta_p5', 'theta_p6', 'theta_p7', 'uniform']
+[13:19:59 +  306.8s] 
+--- exact full-grid regret of each candidate on each TRAINING pair (share of R_uniform) ---
+[13:19:59 +  306.8s]                theta_p0   theta_p1   theta_p2   theta_p3   theta_p4   theta_p5   theta_p6   theta_p7    mean_k1    mean_k2    mean_k4    mean_k8    uniform
+[13:19:59 +  306.8s] pair(0, 13)        0.0087     0.7128     0.0450     0.0139     0.1010     0.2794     0.0350     3.6649     0.0087     0.2172     0.0767     0.2529     1.0000
+[13:19:59 +  306.8s] pair(2, 31)        0.0091     0.0033     0.0140     0.0107     0.0155     0.0055     0.0096     0.1420     0.0091     0.0049     0.0060     0.0057     1.0000
+[13:19:59 +  306.8s] pair(4, 22)        0.0163     0.0995     0.0075     0.0186     0.0096     0.0333     0.0086     0.5066     0.0163     0.0298     0.0132     0.0257     1.0000
+[13:19:59 +  306.8s] pair(11, 33)       0.0266     1.0528     0.0601     0.0192     0.1119     0.3912     0.0413     4.3875     0.0266     0.3108     0.0980     0.3007     1.0000
+[13:19:59 +  306.8s] pair(14, 42)       0.0306     0.1370     0.0227     0.0345     0.0207     0.0461     0.0223     0.7358     0.0306     0.0412     0.0264     0.0373     1.0000
+[13:19:59 +  306.8s] pair(21, 40)       0.0248     0.0152     0.0258     0.0222     0.0261     0.0091     0.0189     0.1663     0.0248     0.0121     0.0116     0.0116     1.0000
+[13:19:59 +  306.8s] pair(24, 12)       0.0389     0.1329     0.0290     0.0398     0.0306     0.0625     0.0272     0.5236     0.0389     0.0566     0.0351     0.0502     1.0000
+[13:19:59 +  306.8s] pair(33, 43)       0.0249     0.0072     0.0133     0.0219     0.0142     0.0092     0.0155     0.0000     0.0249     0.0108     0.0113     0.0077     1.0000
+[13:19:59 +  306.8s] 
+--- cross-decoding: candidates x held-out pairs ---
+[13:20:07 +  315.2s]    pair050-066: best=theta_p0 (0.153)  theta_p0=0.153  mean_all=0.399
+[13:20:16 +  323.6s]    pair056-071: best=mean_k4 (0.202)  theta_p0=0.271  mean_all=0.208
+[13:20:25 +  332.8s]    pair053-085: best=theta_p0 (0.206)  theta_p0=0.206  mean_all=0.486
+[13:20:31 +  339.3s]    pair059-099: best=theta_p7 (0.006)  theta_p0=0.101  mean_all=0.023
+[13:20:39 +  346.8s]    pair064-072: best=theta_p2 (0.130)  theta_p0=0.207  mean_all=0.143
+[13:20:47 +  354.5s]    pair061-086: best=mean_k4 (0.143)  theta_p0=0.188  mean_all=0.143
+[13:20:56 +  363.6s]    pair067-091: best=theta_p3 (0.249)  theta_p0=0.327  mean_all=0.684
+[13:21:03 +  370.8s]    pair072-085: best=theta_p5 (0.090)  theta_p0=0.152  mean_all=0.099
+[13:21:03 +  370.8s] 
+held-out miss@5% by candidate (singles sorted):
+[13:21:03 +  370.8s]    theta_p3 (pair (11, 33)): 0.1979
+[13:21:03 +  370.8s]    theta_p0 (pair (0, 13)): 0.2006
+[13:21:03 +  370.8s]    theta_p6 (pair (24, 12)): 0.2053
+[13:21:03 +  370.8s]    theta_p2 (pair (4, 22)): 0.2160
+[13:21:03 +  370.8s]    theta_p4 (pair (14, 42)): 0.2702
+[13:21:03 +  370.8s]    theta_p5 (pair (21, 40)): 0.2868
+[13:21:03 +  370.8s]    theta_p1 (pair (2, 31)): 0.3671
+[13:21:03 +  370.8s]    theta_p7 (pair (33, 43)): 0.5080
+[13:21:03 +  370.8s]    mean_k1 : 0.2006
+[13:21:03 +  370.8s]    mean_k2 : 0.2839
+[13:21:03 +  370.8s]    mean_k4 : 0.2169
+[13:21:03 +  370.8s]    mean_k8 : 0.2731
+[13:21:03 +  370.8s]    uniform : 0.4184
+[13:21:03 +  370.8s] 
+spread across the 8 single-pair thetas: 0.3101 (best 0.1979 pair (11, 33), worst 0.5080 pair (33, 43))
+[13:21:03 +  370.8s] mean training regret vs held-out miss@5% across the 8 single-pair thetas: Spearman +0.905 (regret 0.0223-1.2658, decode 0.1979-0.5080)
+[13:21:03 +  370.8s] 
+--- validation selection over all candidates ---
+[13:21:50 +  417.6s] validation-best candidate: mean_k4 (val 0.1773); held-out 0.2169
+[13:21:50 +  417.6s] validation ranking (top 5): mean_k4=0.1773, theta_p6=0.1843, theta_p3=0.1847, theta_p0=0.1858, mean_k1=0.1858
+[13:21:50 +  418.1s] 
+[{'arm': 'mean_k1', 'n_draws': 8, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.06681820017779587}, {'arm': 'mean_k2', 'n_draws': 8, 'miss_5pct_mean': 0.283875, 'miss_5pct_std': 0.2038787553302207}, {'arm': 'mean_k4', 'n_draws': 8, 'miss_5pct_mean': 0.21687499999999998, 'miss_5pct_std': 0.148765913014373}, {'arm': 'mean_k8', 'n_draws': 8, 'miss_5pct_mean': 0.273125, 'miss_5pct_std': 0.2124555468209762}, {'arm': 'mean_k8_minus_mean_k1', 'n_draws': 1}, {'arm': 'mean_k8_minus_mean_k2', 'n_draws': 1}, {'arm': 'mean_k8_minus_mean_k4', 'n_draws': 1}, {'arm': 'mean_k8_minus_uniform', 'n_draws': 1}, {'arm': 'spread', 'n_draws': 1}, {'arm': 'theta_p0', 'n_draws': 8, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.06681820017779587}, {'arm': 'theta_p0_minus_mean_k1', 'n_draws': 1}, {'arm': 'theta_p0_minus_mean_k2', 'n_draws': 1}, {'arm': 'theta_p0_minus_mean_k4', 'n_draws': 1}, {'arm': 'theta_p0_minus_mean_k8', 'n_draws': 1}, {'arm': 'theta_p0_minus_uniform', 'n_draws': 1}, {'arm': 'theta_p1', 'n_draws': 8, 'miss_5pct_mean': 0.36712500000000003, 'miss_5pct_std': 0.24016540524188743}, {'arm': 'theta_p2', 'n_draws': 8, 'miss_5pct_mean': 0.21600000000000003, 'miss_5pct_std': 0.11845621553975123}, {'arm': 'theta_p3', 'n_draws': 8, 'miss_5pct_mean': 0.197875, 'miss_5pct_std': 0.06377193250168917}, {'arm': 'theta_p4', 'n_draws': 8, 'miss_5pct_mean': 0.27025, 'miss_5pct_std': 0.16397922886756114}, {'arm': 'theta_p5', 'n_draws': 8, 'miss_5pct_mean': 0.28681249999999997, 'miss_5pct_std': 0.2179360481741146}, {'arm': 'theta_p6', 'n_draws': 8, 'miss_5pct_mean': 0.2053125, 'miss_5pct_std': 0.1107217620603556}, {'arm': 'theta_p7', 'n_draws': 8, 'miss_5pct_mean': 0.508, 'miss_5pct_std': 0.2977052863151745}, {'arm': 'uniform', 'n_draws': 8, 'miss_5pct_mean': 0.4184375, 'miss_5pct_std': 0.1355333071379504}]
+[13:21:50 +  418.1s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_pairing/records.json (114 rows)
+[13:21:50 +  418.1s] log closed after 418.1s

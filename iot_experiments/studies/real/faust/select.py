@@ -86,6 +86,7 @@ class SelectConfig(RunConfig):
     n_sub: int = 4000
     proposals: int = 150
     slack_rel: float = 0.25
+    backend: str = "cupdlpx"
     step: float = 0.08
     max_iterations: int = 30
 
@@ -101,6 +102,8 @@ class SelectConfig(RunConfig):
         parser.add_argument("--n-sub", type=int, default=4000)
         parser.add_argument("--proposals", type=int, default=150)
         parser.add_argument("--slack-rel", type=float, default=0.25)
+        parser.add_argument("--backend", choices=("cupdlpx", "highs"), default="cupdlpx",
+                            help="master LP solver; 'highs' is exact but CPU-only")
         parser.add_argument("--step", type=float, default=0.08)
         parser.add_argument("--max-iterations", type=int, default=30)
 
@@ -110,6 +113,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser(SelectConfig)
     args = parser.parse_args(list(argv) if argv is not None else None)
     config = SelectConfig.from_namespace(args, parser)
+    # CN: 两个后端的结果必须分开保存，否则后跑的会覆盖先跑的。
+    # EN: the two backends must not overwrite each other's records.
+    config = dataclasses.replace(config, study=f"{config.study}_{config.backend}")
     run_dir = config.run_dir
     run_dir.mkdir(parents=True, exist_ok=True)
     log = RunLog(run_dir / "run.log")
@@ -137,15 +143,20 @@ def main(argv: list[str] | None = None) -> int:
     k = int(a.shape[1])
 
     started = time.perf_counter()
-    fit = fit_theta(SquaredDifferenceFeatures(a, b), rel=None, max_iterations=int(config.max_iterations))
+    fit = fit_theta(SquaredDifferenceFeatures(a, b), rel=None,
+                    max_iterations=int(config.max_iterations), backend=str(config.backend))
     if fit["theta"] is None:
         log.line("the reference fit failed; nothing to select from")
         log.close()
         return 1
     reference = np.asarray(fit["theta"], dtype=np.float64)
     reference_regret, reference_wrong = duality_gap(reference, a, b)
+    uniform_regret, _uniform_wrong = duality_gap(np.full(k, 1.0 / k), a, b)
     tolerance = abs(reference_regret) * (1.0 + float(config.slack_rel))
-    log.line(f"reference fitted in {time.perf_counter() - started:.1f}s; regret={reference_regret:.4g}, "
+    log.line(f"reference fitted in {time.perf_counter() - started:.1f}s with backend={config.backend}; "
+             f"loop regret={fit['regret']:.4g} (eps_r target {fit['eps_r']:.3g}, stall={fit['stall_status']}, "
+             f"{fit['iterations']} rounds); EXACT OT regret={reference_regret:.4g} "
+             f"({100.0 * reference_regret / max(uniform_regret, 1e-30):.2f}% of R_uniform); "
              f"training map wrong at {reference_wrong}/{index.size}; tolerance={tolerance:.4g}")
 
     admitted = near_optimal_walk(reference, a, b, tolerance=tolerance, proposals=int(config.proposals),
@@ -219,9 +230,18 @@ def main(argv: list[str] | None = None) -> int:
                                    "val_reference_rank": float(reference_rank),
                                    "val_spread": float(val_mean.max() - val_mean.min()),
                                    "reference_regret": float(reference_regret),
-                                   "reference_wrong": float(reference_wrong)},
+                                   "R_uniform": float(uniform_regret),
+                                   "reference_regret_share": float(reference_regret / max(uniform_regret, 1e-30)),
+                                   "reference_wrong": float(reference_wrong),
+                                   "loop_regret": float(fit["regret"]),
+                                   "eps_r": float(fit["eps_r"]),
+                                   "solver_floor": float(fit["solver_floor"]),
+                                   "rounds": float(fit["iterations"]),
+                                   "backend": 0.0 if str(config.backend) == "cupdlpx" else 1.0},
                           config=config.to_dict(),
-                          extra={"selected_theta": selected.tolist(),
+                          extra={"backend": str(config.backend),
+                                 "stall_status": str(fit["stall_status"]),
+                                 "selected_theta": selected.tolist(),
                                  "median_theta": median_theta.tolist(),
                                  "validation_scores": val_mean.tolist()}))
     table = summarise(rows, group=("arm",), metrics=("mean", "miss_5pct"))

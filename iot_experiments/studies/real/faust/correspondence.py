@@ -50,6 +50,7 @@ from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParam
 from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
+from iot.relaxed.master_regret import RegretMasterSolver  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
     FaustMesh,
@@ -120,7 +121,10 @@ PROVENANCE: dict[str, object] = {
     "block_controls": "uniform_hks (8 HKS columns, equal weight) and uniform_late_hks (t = 32/64/128 only, "
                       "equal weight). The fitted theta loads almost entirely on the late-HKS columns, so these "
                       "decide whether learning did more than select the block",
-    "engine": "relaxed regret loop, box x simplex, prune disabled, HiGHS master",
+    "engine": "relaxed regret loop, box x simplex, prune disabled. The master is **CuPDLPx** (first-order GPU) "
+              "by default -- that is what every shipped number used; HiGHS (exact CPU simplex) is reachable "
+              "only via `fit_theta(..., backend='highs')` and is the reference path for questions about the "
+              "*set* of optimal thetas",
     "stats": "paired bootstrap over held-out PAIRS (1000 resamples), never over vertices; each pair is first "
              "averaged across vertex-subsample seeds (seeds are repeated measures, not independent pairs)",
     "corner": "the fitted theta sits on the box floor/ceiling and the loop reports converged=False; the "
@@ -265,8 +269,8 @@ def check_split(train_subjects: tuple[int, ...], test_subjects: tuple[int, ...],
                 raise SystemExit(f"test pair id {vid} has subject {subject_of(vid)}, not in {sorted(te)}")
 
 
-def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_iterations: int
-              ) -> dict[str, object]:
+def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_iterations: int,
+              backend: str = "cupdlpx") -> dict[str, object]:
     """
     CN: 在 `pi_hat = I/n` 上拟合 θ。`rel=None` 表示**只用单纯形**（无盒子）。失败返回 `theta=None`，
         **绝不**回退成 uniform。
@@ -278,6 +282,12 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
 
         `rel` is the inverse box width: `theta in [rel/K, 1/(rel*K)]`, so a *smaller* `rel` is a *wider* box
         and `rel = 1` collapses it to the uniform point. `rel=None` is the largest feasible set.
+
+        `backend` selects the master LP solver: `"cupdlpx"` is the first-order GPU path that every shipped
+        result used, `"highs"` the exact CPU simplex. They are **not** interchangeable for interpretation:
+        a first-order master stops at its solver floor, so its `theta` is an approximate point and the exact
+        regret of the returned theta is much larger than the loop's own `eps_r` target. Use `"highs"` when
+        the question is about the *set* of optimal thetas rather than about runtime.
     """
     # CN: **不物化 (n, n, K)**。`SquaredDifferenceFeatures` 只按被请求的边算特征，故峰值与 n 无关地小。
     # EN: **no (n, n, K)**. `SquaredDifferenceFeatures` computes features only for the edges the solver asks
@@ -287,14 +297,26 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
     plan = sparse.csr_matrix((np.full(n, 1.0 / n), (np.arange(n), np.arange(n))), shape=(n, n))
     theta_set = SimplexTheta(int(k)) if rel is None else box_simplex(int(k), box_relative=float(rel))
     problem = InverseOTProblem(features=features, theta_set=theta_set, plan=plan)
+    objective = RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none")
+    # CN: **必须与 `_make_solver` 的默认构造一致**，只额外指定后端：默认的 `tie_break=True` 会在每轮再解一次
+    #     LP（两段式），把每次拟合变成双倍求解并且在本例中直接挂住（实测 n=400 超过 3 分钟无输出）。
+    # EN: **must match `_make_solver`'s default construction**, adding only the backend: the constructor default
+    #     `tie_break=True` runs a SECOND LP per round, which doubled every fit and hung outright on this
+    #     instance (measured: no output after 3 min at n=400).
+    master = RegretMasterSolver(eta_scale=objective.eta, tie_break=False, backend=str(backend))
     result = solve_inverse_ot_regret(
         problem,
-        objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"),
+        objective=objective,
         params=SolverParameters(tol=None, gamma=1, max_iterations=int(max_iterations),
-                                pruning=PruningParameters(enabled=False)))
+                                pruning=PruningParameters(enabled=False)),
+        master=master)
     return {"theta": np.asarray(result.theta, dtype=np.float64), "regret": float(result.regret),
             "converged": bool(result.converged), "edges": int(result.finite_edges),
-            "rel": rel}
+            "rel": rel, "backend": str(backend),
+            # CN: 停止原因（converged / floor / iterations）——只报 `converged=False` 说不清"为什么停"。
+            # EN: why the loop stopped (converged / floor / iterations) -- `converged=False` alone does not say.
+            "stall_status": str(result.stall_status), "iterations": len(result.iterations),
+            "eps_r": float(result.eps_r), "solver_floor": float(result.solver_floor)}
 
 
 def _sample_index(mesh: FaustMesh, config: CorrespondenceConfig, seed: int) -> Int[np.ndarray, "n"]:

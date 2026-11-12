@@ -3,6 +3,33 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-12 (later) — the training pair dominates, and cross-pair regret is a label-free selector
+
+New `studies/real/faust/pairing.py`: 8 subject-disjoint training pairs, each theta decoded on the same 8
+held-out pairs; all regrets exact full-grid POT.
+
+  held-out miss@5%: (11,33) 0.1979 | (0,13) 0.2006 | (24,12) 0.2053 | (4,22) 0.2160 | (14,42) 0.2702 |
+  (21,40) 0.2868 | (2,31) 0.3671 | (33,43) 0.5080 | uniform 0.4184
+  SPREAD 0.310 -- 3.5x the 0.089 spread within one pair's near-optimal set (4k).
+
+Spearman vs held-out decoding:
+  own-pair regret            -0.595   <- fitting tighter CERTIFIES worse
+  leave-one-out regret       +0.929   <- certifying OTHER pairs predicts transfer
+  mean over all 8 pairs      +0.905
+
+(33,43) is the only pair the loop actually certifies (regret 1.5e-8, 4/2000 wrong) and it is the WORST
+generaliser (0.508, below uniform). Pooling by averaging fails (mean_k4 0.217, mean_k8 0.273) because bad
+members drag it; validation selection also fails (picked mean_k4 at 0.217; validation differences were inside
+noise).
+
+So: the feature class is nearly exhausted for a good theta (best 0.198 vs oracle ~0.195), the training-pair
+draw dominates (0.31), and the usable selector is cross-pair regret -- label-free. Upgrade to test next: one
+theta per pair, rank by leave-one-out regret, top-k or regret-weighted committee.
+
+Also fixes a bug introduced with the backend knob: `fit_theta` must construct the master with
+`tie_break=False` and `eta_scale=objective.eta` (as `_make_solver` does); the constructor default tie_break=True
+runs a second LP per round and hung the fit.
+
 ## 2026-11-12 — direction A: validation selection inside the near-optimal set WORKS
 
 New `studies/real/faust/select.py` (n=4000): the 71 near-optimal candidates from D1, ranked on 6 validation
