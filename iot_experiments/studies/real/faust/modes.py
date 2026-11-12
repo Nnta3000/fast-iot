@@ -9,8 +9,8 @@ EN: **What does the 30 seconds buy? Solver-precision and round-count knobs, meas
       | --- | --- | --- |
       | `normal` | 30 (the shipped cap) | defaults |
       | `few_rounds` | 5 | defaults |
-      | `loose` | 30 | `iter_limit=200, eps_feas=1e-3, eps_opt=1e-3` |
-      | `dirty` | 5 | `iter_limit=200, eps_feas=1e-3, eps_opt=1e-3` |
+      | `loose` | 30 | `time_sec_limit=1.0` per solve |
+      | `dirty` | 5 | `time_sec_limit=1.0` per solve |
 
     plus `numpy_scan` (the scan default before 2026-11-12) to price the scan backend change on its own.
 
@@ -56,7 +56,11 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
 
 DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
 
-LOOSE: dict[str, object] = {"iter_limit": 200, "eps_feas": 1e-3, "eps_opt": 1e-3}
+# CN: `iter_limit` 在本机绑定上**无效**（实测 5/20/50/200 与默认给出完全相同的迭代数与 θ）；
+#     `time_sec_limit` 有效。
+# EN: `iter_limit` is **inert** in this native binding (measured: 5/20/50/200 all give the identical
+#     iteration count and theta); `time_sec_limit` works.
+LOOSE: dict[str, object] = {"time_sec_limit": 1.0}
 
 MODES: dict[str, dict[str, object]] = {
     "normal": {"rounds": 30, "params": None, "scan": None},

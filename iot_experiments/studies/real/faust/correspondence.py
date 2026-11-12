@@ -332,6 +332,7 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
             # CN: 每轮把时间拆成 "master（含 LP 装配+求解）" 与 "分离扫描（含修复）"，用于回答"钱花在哪"。
             # EN: per-round split of "master (LP assembly + solve)" vs "separation scan (incl. repair)".
             "master_seconds": float(sum(r.master_time for r in result.iterations)),
+            "solver_iterations": float(sum(r.solver_iterations for r in result.iterations)),
             "scan_seconds": float(sum(r.scan_time for r in result.iterations)),
             "eps_r": float(result.eps_r), "solver_floor": float(result.solver_floor)}
 

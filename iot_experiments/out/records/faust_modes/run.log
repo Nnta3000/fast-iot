@@ -1,35 +1,35 @@
-[15:09:22 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_modes/run.log
-[15:09:22 +    0.0s] preflight ok=True mem=7.0 GB backend=cupdlpx
-[15:09:25 +    3.3s] train pair (0, 13), n=2000, K=13
-[15:09:54 +   31.9s]    normal            28.3s  rounds=12  loop_regret=0.000917  exact=0.000832  train_wrong=919/2000  stall=solver_floor_no_new_edges
-[15:10:05 +   43.1s]    normal_5rounds    10.9s  rounds= 5  loop_regret=0.0226  exact=0.00084  train_wrong=972/2000  stall=max_iterations
-[15:10:32 +   70.4s]    loose             27.0s  rounds=12  loop_regret=0.000917  exact=0.000832  train_wrong=919/2000  stall=solver_floor_no_new_edges
-[15:10:44 +   81.7s]    dirty             10.9s  rounds= 5  loop_regret=0.0226  exact=0.00084  train_wrong=972/2000  stall=max_iterations
-[15:11:11 +  109.3s]    numpy_scan        27.3s  rounds=12  loop_regret=0.000917  exact=0.000832  train_wrong=919/2000  stall=solver_floor_no_new_edges
-[15:11:11 +  109.3s]    L1(theta_normal_5rounds, theta_normal) = 0.093
-[15:11:11 +  109.3s]    L1(theta_loose, theta_normal) = 0.000
-[15:11:11 +  109.3s]    L1(theta_dirty, theta_normal) = 0.093
-[15:11:11 +  109.3s]    L1(theta_numpy_scan, theta_normal) = 0.000
-[15:11:11 +  109.3s] 
+[15:34:08 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_modes/run.log
+[15:34:10 +    2.0s] preflight ok=True mem=6.5 GB backend=cupdlpx
+[15:34:13 +    5.3s] train pair (0, 13), n=2000, K=13
+[15:34:42 +   34.3s]    normal            28.7s  rounds=12  loop_regret=0.000917  exact=0.000832  train_wrong=919/2000  stall=solver_floor_no_new_edges
+[15:34:53 +   45.6s]    normal_5rounds    11.0s  rounds= 5  loop_regret=0.0226  exact=0.00084  train_wrong=972/2000  stall=max_iterations
+[15:35:23 +   75.4s]    loose             29.4s  rounds=14  loop_regret=0.000919  exact=0.000832  train_wrong=918/2000  stall=solver_floor_no_new_edges
+[15:35:34 +   86.5s]    dirty             10.7s  rounds= 5  loop_regret=0.0177  exact=0.000857  train_wrong=960/2000  stall=max_iterations
+[15:36:03 +  114.9s]    numpy_scan        28.1s  rounds=12  loop_regret=0.000917  exact=0.000832  train_wrong=919/2000  stall=solver_floor_no_new_edges
+[15:36:03 +  114.9s]    L1(theta_normal_5rounds, theta_normal) = 0.093
+[15:36:03 +  114.9s]    L1(theta_loose, theta_normal) = 0.014
+[15:36:03 +  114.9s]    L1(theta_dirty, theta_normal) = 0.058
+[15:36:03 +  114.9s]    L1(theta_numpy_scan, theta_normal) = 0.000
+[15:36:03 +  114.9s] 
 --- held-out evaluation ---
-[15:11:16 +  114.1s]    pair050-066: normal=0.153  normal_5rounds=0.157  loose=0.153  dirty=0.157  numpy_scan=0.153
-[15:11:21 +  119.1s]    pair056-071: normal=0.271  normal_5rounds=0.284  loose=0.271  dirty=0.284  numpy_scan=0.271
-[15:11:26 +  124.2s]    pair053-085: normal=0.206  normal_5rounds=0.211  loose=0.206  dirty=0.211  numpy_scan=0.206
-[15:11:31 +  128.7s]    pair059-099: normal=0.101  normal_5rounds=0.106  loose=0.101  dirty=0.106  numpy_scan=0.101
-[15:11:36 +  133.7s]    pair064-072: normal=0.207  normal_5rounds=0.216  loose=0.207  dirty=0.216  numpy_scan=0.207
-[15:11:40 +  138.5s]    pair061-086: normal=0.188  normal_5rounds=0.199  loose=0.188  dirty=0.199  numpy_scan=0.188
-[15:11:46 +  143.8s]    pair067-091: normal=0.327  normal_5rounds=0.341  loose=0.327  dirty=0.341  numpy_scan=0.327
-[15:11:50 +  148.4s]    pair072-085: normal=0.152  normal_5rounds=0.156  loose=0.152  dirty=0.156  numpy_scan=0.152
-[15:11:50 +  148.4s]    normal          held-out 0.2006  (28.3s, 12 rounds)
-[15:11:50 +  148.4s]    normal_5rounds  held-out 0.2087  (10.9s, 5 rounds)
-[15:11:50 +  148.4s]    loose           held-out 0.2006  (27.0s, 12 rounds)
-[15:11:50 +  148.4s]    dirty           held-out 0.2087  (10.9s, 5 rounds)
-[15:11:50 +  148.4s]    numpy_scan      held-out 0.2006  (27.3s, 12 rounds)
-[15:11:50 +  148.6s]    normal - normal_5rounds  -0.0081  CI [-0.0108, -0.0054]  wins 8/8
-[15:11:50 +  148.6s]    normal - loose           +0.0000  CI [+0.0000, +0.0000]  wins 0/8
-[15:11:50 +  148.6s]    normal - dirty           -0.0081  CI [-0.0107, -0.0053]  wins 8/8
-[15:11:50 +  148.6s]    normal - numpy_scan      +0.0000  CI [+0.0000, +0.0000]  wins 0/8
-[15:11:50 +  148.6s] 
-[{'arm': 'dirty', 'n_draws': 1, 'seconds_mean': 10.890924305997032, 'seconds_std': 0.0, 'miss_5pct_mean': 0.20868750000000003, 'miss_5pct_std': 0.0}, {'arm': 'loose', 'n_draws': 1, 'seconds_mean': 26.973023376001947, 'seconds_std': 0.0, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.0}, {'arm': 'normal', 'n_draws': 1, 'seconds_mean': 28.335809719999816, 'seconds_std': 0.0, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.0}, {'arm': 'normal_5rounds', 'n_draws': 1, 'seconds_mean': 10.882103621999704, 'seconds_std': 0.0, 'miss_5pct_mean': 0.20868750000000003, 'miss_5pct_std': 0.0}, {'arm': 'normal_minus_dirty', 'n_draws': 1}, {'arm': 'normal_minus_loose', 'n_draws': 1}, {'arm': 'normal_minus_normal_5rounds', 'n_draws': 1}, {'arm': 'normal_minus_numpy_scan', 'n_draws': 1}, {'arm': 'numpy_scan', 'n_draws': 1, 'seconds_mean': 27.326074610999058, 'seconds_std': 0.0, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.0}]
-[15:11:50 +  148.6s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_modes/records.json (9 rows)
-[15:11:50 +  148.6s] log closed after 148.6s
+[15:36:08 +  119.7s]    pair050-066: normal=0.153  normal_5rounds=0.157  loose=0.154  dirty=0.148  numpy_scan=0.153
+[15:36:13 +  124.9s]    pair056-071: normal=0.271  normal_5rounds=0.284  loose=0.270  dirty=0.272  numpy_scan=0.271
+[15:36:18 +  130.1s]    pair053-085: normal=0.206  normal_5rounds=0.211  loose=0.205  dirty=0.210  numpy_scan=0.206
+[15:36:22 +  134.5s]    pair059-099: normal=0.101  normal_5rounds=0.106  loose=0.097  dirty=0.102  numpy_scan=0.101
+[15:36:27 +  139.4s]    pair064-072: normal=0.207  normal_5rounds=0.216  loose=0.209  dirty=0.210  numpy_scan=0.207
+[15:36:32 +  144.3s]    pair061-086: normal=0.188  normal_5rounds=0.199  loose=0.189  dirty=0.193  numpy_scan=0.188
+[15:36:37 +  149.5s]    pair067-091: normal=0.327  normal_5rounds=0.341  loose=0.325  dirty=0.343  numpy_scan=0.327
+[15:36:42 +  154.1s]    pair072-085: normal=0.152  normal_5rounds=0.156  loose=0.151  dirty=0.148  numpy_scan=0.152
+[15:36:42 +  154.1s]    normal          held-out 0.2006  (28.7s, 12 rounds)
+[15:36:42 +  154.1s]    normal_5rounds  held-out 0.2087  (11.0s, 5 rounds)
+[15:36:42 +  154.1s]    loose           held-out 0.2000  (29.4s, 14 rounds)
+[15:36:42 +  154.1s]    dirty           held-out 0.2034  (10.7s, 5 rounds)
+[15:36:42 +  154.1s]    numpy_scan      held-out 0.2006  (28.1s, 12 rounds)
+[15:36:42 +  154.3s]    normal - normal_5rounds  -0.0081  CI [-0.0108, -0.0054]  wins 8/8
+[15:36:42 +  154.3s]    normal - loose           +0.0006  CI [-0.0005, +0.0019]  wins 3/8
+[15:36:42 +  154.3s]    normal - dirty           -0.0028  CI [-0.0073, +0.0011]  wins 6/8
+[15:36:42 +  154.3s]    normal - numpy_scan      +0.0000  CI [+0.0000, +0.0000]  wins 0/8
+[15:36:42 +  154.3s] 
+[{'arm': 'dirty', 'n_draws': 1, 'seconds_mean': 10.71670667899889, 'seconds_std': 0.0, 'miss_5pct_mean': 0.203375, 'miss_5pct_std': 0.0}, {'arm': 'loose', 'n_draws': 1, 'seconds_mean': 29.409778411001753, 'seconds_std': 0.0, 'miss_5pct_mean': 0.2, 'miss_5pct_std': 0.0}, {'arm': 'normal', 'n_draws': 1, 'seconds_mean': 28.6517170119987, 'seconds_std': 0.0, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.0}, {'arm': 'normal_5rounds', 'n_draws': 1, 'seconds_mean': 11.022690126999805, 'seconds_std': 0.0, 'miss_5pct_mean': 0.20868750000000003, 'miss_5pct_std': 0.0}, {'arm': 'normal_minus_dirty', 'n_draws': 1}, {'arm': 'normal_minus_loose', 'n_draws': 1}, {'arm': 'normal_minus_normal_5rounds', 'n_draws': 1}, {'arm': 'normal_minus_numpy_scan', 'n_draws': 1}, {'arm': 'numpy_scan', 'n_draws': 1, 'seconds_mean': 28.12027467900043, 'seconds_std': 0.0, 'miss_5pct_mean': 0.200625, 'miss_5pct_std': 0.0}]
+[15:36:42 +  154.3s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_modes/records.json (9 rows)
+[15:36:42 +  154.3s] log closed after 154.3s

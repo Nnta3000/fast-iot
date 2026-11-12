@@ -3,6 +3,19 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-12 (latest++) — correction: iter_limit is inert; the LP solve IS the cost
+
+Re-ran the modes with `time_sec_limit=1` (since `iter_limit` turned out to be ignored):
+
+  normal 28.7s 12r 0.2006 | 5-rounds 11.0s 5r 0.2087 | 1s/solve 29.4s 14r 0.2000 |
+  1s+5rounds 10.7s 5r 0.2034 | numpy_scan 28.1s 12r 0.2006
+
+- `iter_limit` 5/20/50/200/default all give the IDENTICAL 176,810 cumulative LP iterations and theta.
+- `time_sec_limit=1` works (56,810 -> 17,900 over 4 rounds, master 7.9 -> 3.8 s) but the loop then takes
+  14 rounds instead of 12, so wall-clock is unchanged. Only the ROUND cap saves time.
+- Corrected accounting: master 68% (the solve, ~14.7k iterations/round -- not assembly), scan+certificate
+  28%, other 5%. The earlier claim that "the solve is not the cost" was an artefact of the inert knob.
+
 ## 2026-11-12 (latest+) — where the fit's time goes, and what "dirty mode" costs
 
 New `studies/real/faust/modes.py` (n=2000, 8 held-out pairs):
