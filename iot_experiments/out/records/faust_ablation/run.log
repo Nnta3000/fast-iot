@@ -1,0 +1,49 @@
+[14:25:25 +    0.0s] log opened: /home/agent/Documents/fast-iot/iot_experiments/out/faust_ablation/run.log
+[14:25:27 +    2.1s] preflight ok=True mem=7.5 GB; softmax fits on cuda
+[14:25:27 +    2.1s] train pairs ((0, 13), (2, 31), (4, 22), (11, 33), (14, 42), (21, 40), (24, 12), (33, 43)); validation [(0, 16), (6, 21), (3, 35), (9, 49), (14, 22), (11, 36)]; test [(50, 66), (56, 71), (53, 85), (59, 99), (64, 72), (61, 86), (67, 91), (72, 85)]
+[14:25:57 +   32.2s]    iot (0, 13): 30.1s, zeros=0, max=0.747
+[14:26:41 +   75.6s]    iot (2, 31): 43.4s, zeros=0, max=0.427
+[14:27:12 +  107.2s]    iot (4, 22): 31.6s, zeros=0, max=0.571
+[14:27:37 +  132.2s]    iot (11, 33): 25.0s, zeros=0, max=0.632
+[14:28:11 +  166.5s]    iot (14, 42): 34.3s, zeros=0, max=0.422
+[14:28:51 +  205.7s]    iot (21, 40): 39.2s, zeros=0, max=0.547
+[14:29:16 +  230.7s]    iot (24, 12): 25.0s, zeros=5, max=0.533
+[14:29:51 +  265.9s]    iot (33, 43): 35.2s, zeros=0, max=0.894
+[14:29:51 +  265.9s] support of the mean iOT theta: [0, 1, 2, 3, 5, 9, 10, 11, 12] (9/13); mass on it 1.000
+[14:29:56 +  270.8s]    gd tau=0.001: 1.6s
+[14:29:57 +  271.7s]    gd tau=0.003: 0.9s
+[14:29:57 +  272.5s]    gd tau=0.01: 0.9s
+[14:29:57 +  272.5s] families: iot 8, gd 3, random_support 60, random_simplex 60
+[14:30:55 +  329.7s]    validation pair (0, 16): scored 131 candidates
+[14:31:53 +  388.1s]    validation pair (6, 21): scored 131 candidates
+[14:32:52 +  446.7s]    validation pair (3, 35): scored 131 candidates
+[14:33:33 +  488.2s]    validation pair (9, 49): scored 131 candidates
+[14:34:28 +  543.2s]    validation pair (14, 22): scored 131 candidates
+[14:35:24 +  599.5s]    validation pair (11, 36): scored 131 candidates
+[14:35:24 +  599.5s]    iot              validation min 0.1843 median 0.2110 max 0.4619; selected #6 (0.1843)
+[14:35:24 +  599.5s]    gd               validation min 0.2339 median 0.2341 max 0.2613; selected #1 (0.2339)
+[14:35:24 +  599.5s]    random_support   validation min 0.2723 median 0.3885 max 0.5594; selected #43 (0.2723)
+[14:35:24 +  599.5s]    random_simplex   validation min 0.3291 median 0.4573 max 0.5617; selected #37 (0.3291)
+[14:36:23 +  657.7s]    pair050-066: iot=0.338  gd=0.192  random_support=0.340  random_simplex=0.267
+[14:37:21 +  715.8s]    pair056-071: iot=0.238  gd=0.353  random_support=0.341  random_simplex=0.381
+[14:38:19 +  774.3s]    pair053-085: iot=0.257  gd=0.235  random_support=0.323  random_simplex=0.423
+[14:39:01 +  816.2s]    pair059-099: iot=0.035  gd=0.141  random_support=0.123  random_simplex=0.223
+[14:39:56 +  870.6s]    pair064-072: iot=0.132  gd=0.267  random_support=0.235  random_simplex=0.355
+[14:40:51 +  926.0s]    pair061-086: iot=0.150  gd=0.247  random_support=0.262  random_simplex=0.328
+[14:41:52 +  986.9s]    pair067-091: iot=0.381  gd=0.313  random_support=0.435  random_simplex=0.582
+[14:42:40 + 1035.4s]    pair072-085: iot=0.113  gd=0.214  random_support=0.225  random_simplex=0.291
+[14:42:40 + 1035.4s] 
+family            val-selected held-out   | held-out distribution (min / median / max)
+[14:42:40 + 1035.4s] iot              0.2053            | 0.0065 / 0.2290 / 0.9585   (oracle-per-pair 0.1513)
+[14:42:40 + 1035.4s] gd               0.2453            | 0.1260 / 0.2450 / 0.3795   (oracle-per-pair 0.2340)
+[14:42:40 + 1035.4s] random_support   0.2854            | 0.0300 / 0.3960 / 0.7880   (oracle-per-pair 0.2163)
+[14:42:40 + 1035.4s] random_simplex   0.3562            | 0.0865 / 0.4610 / 0.7970   (oracle-per-pair 0.2764)
+[14:42:41 + 1035.6s]    iot - gd               -0.0400  CI [-0.1023, +0.0323]  wins 5/8
+[14:42:41 + 1035.6s]    iot - random_support   -0.0801  CI [-0.1017, -0.0536]  wins 8/8
+[14:42:41 + 1035.6s]    iot - random_simplex   -0.1509  CI [-0.1950, -0.0819]  wins 7/8
+[14:42:41 + 1035.6s]    validation vs test inside random_support: Spearman +0.970
+[14:42:41 + 1035.6s]    validation vs test inside random_simplex: Spearman +0.943
+[14:42:41 + 1035.6s] 
+[{'arm': 'gd', 'n_draws': 1, 'selected_held_out_mean': 0.2453125, 'selected_held_out_std': 0.0}, {'arm': 'iot', 'n_draws': 1, 'selected_held_out_mean': 0.2053125, 'selected_held_out_std': 0.0}, {'arm': 'iot_minus_gd', 'n_draws': 1}, {'arm': 'iot_minus_random_simplex', 'n_draws': 1}, {'arm': 'iot_minus_random_support', 'n_draws': 1}, {'arm': 'random_simplex', 'n_draws': 2, 'selected_held_out_mean': 0.35624999999999996, 'selected_held_out_std': 0.0}, {'arm': 'random_support', 'n_draws': 2, 'selected_held_out_mean': 0.2854375, 'selected_held_out_std': 0.0}]
+[14:42:41 + 1035.6s] wrote /home/agent/Documents/fast-iot/iot_experiments/out/faust_ablation/records.json (9 rows)
+[14:42:41 + 1035.6s] log closed after 1035.6s

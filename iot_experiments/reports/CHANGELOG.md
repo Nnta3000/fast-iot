@@ -3,6 +3,25 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-12 (latest) — the ablation: random search, GD, and what iOT is actually worth
+
+New `studies/real/faust/ablation.py`, four families selected identically on 6 validation pairs, evaluated
+on the 8 held-out pairs:
+
+  iot 0.2053 | gd 0.2453 | random_support 0.2854 | random_simplex 0.3562
+
+  iot - gd              -0.040  CI [-0.102,+0.032]  5/8   <- NOT significant
+  iot - random_support  -0.080  CI [-0.102,-0.054]  8/8
+  iot - random_simplex  -0.151  CI [-0.195,-0.082]  7/8
+
+So: the fit really does locate weights that 60 random draws on its own support do not find (8/8), which is
+the strongest evidence for fitting in the study -- but it does NOT beat a supervised GD cost on the same
+features (CI includes zero). Selection is the active ingredient: within a family, validation ranks
+candidates at Spearman 0.94-0.97, and the iOT family median (0.229) is worse than its selected member (0.205).
+
+Caveat: gd had 3 candidates (tau) vs iot's 8 (pairs); a fair 8-pair x 3-tau gd family can only improve gd,
+so it can only strengthen the "no measurable advantage" conclusion.
+
 ## 2026-11-12 (later) — the training pair dominates, and cross-pair regret is a label-free selector
 
 New `studies/real/faust/pairing.py`: 8 subject-disjoint training pairs, each theta decoded on the same 8

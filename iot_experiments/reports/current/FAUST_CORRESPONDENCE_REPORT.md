@@ -821,6 +821,52 @@ test outcome was 0.217 — worse than the plainly better singles.
 
 ---
 
+## 4n. Is inverse OT doing any of the work? The random-search ablation
+
+Everything in this study is supervised — the registered plan is the label at every stage. So the question is
+not whether it is supervised, but whether the **inverse-OT fit** finds something a cheaper search would miss.
+Four families, **selected identically** on the same 6 validation pairs and evaluated on the same 8 held-out
+pairs:
+
+| family | what it is | val-selected θ, held-out | distribution over the family (min / median / max) | per-pair oracle |
+| --- | --- | ---: | --- | ---: |
+| **`iot`** | 8 fits, one per training pair | **0.2053** | 0.0065 / 0.2290 / 0.9585 | **0.1513** |
+| `gd` | one-sided cross-entropy, `τ` on validation | 0.2453 | 0.1260 / 0.2450 / 0.3795 | 0.2340 |
+| `random_support` | 60 Dirichlet draws on the fit's support (9 of 13 coords) | 0.2854 | 0.0300 / 0.3960 / 0.7880 | 0.2163 |
+| `random_simplex` | 60 Dirichlet draws on the whole simplex | 0.3562 | 0.0865 / 0.4610 / 0.7970 | 0.2764 |
+
+Paired bootstrap over the 8 held-out pairs, validation-selected member of each family:
+
+| comparison | Δ `miss@5 %` | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| `iot` − `gd` | **−0.0400** | [−0.1023, **+0.0323**] | 5/8 |
+| `iot` − `random_support` | **−0.0801** | [−0.1017, −0.0536] | **8/8** |
+| `iot` − `random_simplex` | **−0.1509** | [−0.1950, −0.0819] | 7/8 |
+
+**Three conclusions, in order of importance.**
+
+1. **The fit does locate something random search does not.** Against 60 random draws *inside the support the
+   fit selected*, the iOT θ wins by 0.080 on every one of the 8 pairs. So the weights inside the block carry
+   real information, not just the choice of block — this is the strongest evidence in the study that fitting
+   is doing something.
+2. **But it does not beat a plain supervised learner.** Against one-sided cross-entropy fitted on the same
+   features, the difference is −0.040 with a CI that *includes zero*, winning 5 of 8. Consistent with §4f
+   (0.026–0.035 at n = 1500), the structured objective is worth nothing measurable over supervised
+   reweighting. **The honest headline is that inverse OT is not better than a supervised cost on this task.**
+3. **Selection is the active ingredient.** Within a family, validation ranks candidates almost perfectly
+   (Spearman +0.97 for `random_support`, +0.94 for `random_simplex`), and the iOT family's *median* member is
+   0.229 while its validation-selected member is 0.205. Most of the pipeline's value is "generate candidates,
+   pick on held-out evidence", which is available to any family — which is exactly what the random families
+   also do.
+
+**A caveat that cuts against the conclusion.** The `gd` family has only 3 members (three values of `τ` on a
+single training pair), while `iot` has 8 (one per pair). Given that the training pair alone moves iOT between
+0.198 and 0.508, `gd` was given less room to vary. A fair version — 8 pairs × 3 `τ` = 24 `gd` candidates,
+selected the same way — is the obvious follow-up and could only *improve* `gd`, i.e. it can only strengthen
+conclusion 2.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the
