@@ -867,6 +867,51 @@ conclusion 2.
 
 ---
 
+## 4o. Where the 30 seconds go, and what the cheap modes cost
+
+One training pair, n = 2000, five solver configurations, each scored on the same 8 held-out pairs.
+
+| mode | wall | rounds | loop regret | exact regret | training wrong | held-out `miss@5 %` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `normal` (shipped) | 28.3 s | 12 | 9.2e−4 | 8.3e−4 | 919/2000 | **0.2006** |
+| `normal_5rounds` | **10.9 s** | 5 | 2.3e−2 | 8.4e−4 | 972/2000 | 0.2087 |
+| `loose` (iter_limit 200, eps 1e−3) | 27.0 s | 12 | 9.2e−4 | 8.3e−4 | 919/2000 | 0.2006 |
+| `dirty` (loose + 5 rounds) | **10.9 s** | 5 | 2.3e−2 | 8.4e−4 | 972/2000 | 0.2087 |
+| `numpy_scan` (previous default) | 27.3 s | 12 | 9.2e−4 | 8.3e−4 | 919/2000 | 0.2006 |
+
+Paired bootstrap: `normal − normal_5rounds` = **−0.0081** [−0.0108, −0.0054], 8/8 — i.e. capping the rounds is
+2.6× faster and costs 0.008 `miss@5 %`, a real but small price. Every other mode is **bit-identical** to
+`normal` (`L1(θ, θ_normal) = 0.000`).
+
+**Two hypotheses about the cost are refuted.**
+
+1. **The first-order solve is not the cost.** Capping CuPDLPx at 200 iterations with `1e−3` tolerances changes
+   nothing at all — the returned θ is identical to 15 digits, in the same 12 rounds. The LP is already solved
+   to a vertex at the default tolerances, so the "internal iterations" are not where the time goes.
+2. **The separation scan is not the cost either.** Switching the scan to torch (which the study path now does
+   by default) is bit-identical in the relaxed loop and saves ~0 at n = 2000 (28.3 → 27.3 s); it was worth
+   ~20 % at n = 1000 (14.5 → 11.7 s), i.e. it matters only when the grid is small enough for the scan to
+   dominate, which is the opposite of the large-`n` regime.
+
+**Where it actually goes**, from the loop's own per-round instrumentation (now returned by `fit_theta`):
+
+| mode | master (LP assembly + solve) | scan + certificate | other (repair, selection) |
+| --- | ---: | ---: | ---: |
+| `normal` | 22.5 s (**68 %**) | 9.2 s (28 %) | 1.6 s (5 %) |
+| `dirty` | 7.3 s (60 %) | 3.7 s (31 %) | 1.2 s (10 %) |
+
+Per round that is ~1.9 s of master and ~0.8 s of scan. Since the solve is insensitive to its own tolerance,
+the master's 1.9 s is **assembly and setup of an LP with `2n` dual columns, rebuilt from scratch every round**
+— which is the "bad code" component, and it is structural: the constraint-generation scheme carries `2n`
+variables for a 13-variable problem. A Kelley/cutting-plane master in `K+1` variables (`src/iot/cutting_plane.py`)
+removes it; so would warm-starting the LP across rounds.
+
+**Note on the scan default.** The *library* default stays `numpy`: `iot_shared_scan_test` pins the exact loop
+to bit-identical numbers and the torch scan moves its `delta` by ~8e−5. The *study* path (`fit_theta`) opts
+into torch explicitly, where the relaxed loop's θ is bit-identical.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

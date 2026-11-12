@@ -110,6 +110,13 @@ class ScanParameters:
         - `max_tile_bytes`: bytes per tile for the GPU backends; likewise memory only.
     """
 
+    # CN: **库默认仍是 numpy**（2026-11-12 决定）。`iot_shared_scan_test` 把"精确循环逐位不变"当契约，
+    #     而 torch 扫描把 `delta` 改变了 ~8e-5（求和顺序不同），因此不能改成默认。需要 GPU 扫描的调用方
+    #     **显式**传入 `ScanParameters(backend="torch")`；FAUST 研究路径就是这么做的（`fit_theta`）。
+    # EN: **the library default stays numpy** (decided 2026-11-12). `iot_shared_scan_test` encodes "the exact
+    #     loop's numbers are bit-identical" as a contract, and the torch scan moves `delta` by ~8e-5 (different
+    #     summation order), so it cannot become the default. Callers that want the GPU scan pass
+    #     `ScanParameters(backend="torch")` explicitly; the FAUST study path does exactly that (`fit_theta`).
     backend: ScanBackend = "numpy"
     device: str = "auto"
     max_tile_elements: int = 1 << 20

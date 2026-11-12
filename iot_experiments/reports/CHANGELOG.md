@@ -3,6 +3,22 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-12 (latest+) — where the fit's time goes, and what "dirty mode" costs
+
+New `studies/real/faust/modes.py` (n=2000, 8 held-out pairs):
+
+  normal 28.3s 0.2006 | 5-rounds 10.9s 0.2087 | loose 27.0s 0.2006 | dirty 10.9s 0.2087 | numpy_scan 27.3s 0.2006
+  normal - 5rounds = -0.0081 [-0.0108,-0.0054] 8/8
+
+Two cost hypotheses refuted: (a) CuPDLPx iteration cap/tolerances change NOTHING (identical theta, same 12
+rounds) -- the LP is already solved to a vertex; (b) the scan backend is worth ~0 at n=2000 (and 20% at
+n=1000). Per-round instrumentation: master (LP assembly+solve) 22.5s = 68%, scan+certificate 9.2s = 28%,
+other 5%. Since the solve is tolerance-insensitive, the master cost is rebuilding a 2n-column LP every round.
+
+Scan default: the study path (fit_theta) now passes torch; the LIBRARY default stays numpy because
+iot_shared_scan_test pins the exact loop to bit-identical numbers and torch moves its delta by ~8e-5.
+The relaxed loop's theta is bit-identical under both.
+
 ## 2026-11-12 (latest) — the ablation: random search, GD, and what iOT is actually worth
 
 New `studies/real/faust/ablation.py`, four families selected identically on 6 validation pairs, evaluated

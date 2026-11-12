@@ -26,6 +26,7 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 | `face.py` | **diagnostic D1**: does the admissible set matter? random walk inside the near-optimal set, every point scored on held-out pairs | `python -m iot_experiments.studies.real.faust.face --n-sub 4000` |
 | `regional.py` | **diagnostic D2**: do body regions want different weights? one fit per k-means region, plus a preliminary field evaluation | `python -m iot_experiments.studies.real.faust.regional --n-sub 2000` |
 | `pairing.py` | **does the training pair matter?** 8 subject-disjoint pairs, each θ decoded on the same held-out pairs; pooling curve; cross-pair regret as a selector | `python -m iot_experiments.studies.real.faust.pairing --n-sub 2000` |
+| `modes.py` | **cost of the fit**: solver tolerances vs outer-round cap vs scan backend, with the per-round master/scan split | `python -m iot_experiments.studies.real.faust.modes --n-sub 2000` |
 | `select.py` | **direction A**: rank the near-optimal candidates on training-subject validation pairs and take only the winner to the held-out pairs | `python -m iot_experiments.studies.real.faust.select --n-sub 4000` |
 | `finalists.py` | **the two finalists at full resolution** with the τ grid extended downward, 3 seeds, paired bootstrap (driver only — the Sinkhorn arm needs more VRAM than this machine has free) | `python -m iot_experiments.studies.real.faust.finalists --n-sub 6890` |
 

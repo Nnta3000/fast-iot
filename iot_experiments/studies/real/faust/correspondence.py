@@ -46,7 +46,12 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
-from iot.core.parameters import PruningParameters, RelaxedObjective, SolverParameters  # noqa: E402
+from iot.core.parameters import (  # noqa: E402
+    PruningParameters,
+    RelaxedObjective,
+    ScanParameters,
+    SolverParameters,
+)
 from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
@@ -270,7 +275,8 @@ def check_split(train_subjects: tuple[int, ...], test_subjects: tuple[int, ...],
 
 
 def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_iterations: int,
-              backend: str = "cupdlpx") -> dict[str, object]:
+              backend: str = "cupdlpx", scan_backend: str | None = "torch",
+              solver_params: dict[str, object] | None = None) -> dict[str, object]:
     """
     CN: 在 `pi_hat = I/n` 上拟合 θ。`rel=None` 表示**只用单纯形**（无盒子）。失败返回 `theta=None`，
         **绝不**回退成 uniform。
@@ -303,12 +309,19 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
     # EN: **must match `_make_solver`'s default construction**, adding only the backend: the constructor default
     #     `tie_break=True` runs a SECOND LP per round, which doubled every fit and hung outright on this
     #     instance (measured: no output after 3 min at n=400).
-    master = RegretMasterSolver(eta_scale=objective.eta, tie_break=False, backend=str(backend))
+    # CN: 研究路径**默认用 torch 扫描**（GPU 可用时走 GPU）。库默认仍是 numpy，因为 `iot_shared_scan_test`
+    #     把"精确循环逐位不变"当契约；torch 扫描对 `delta` 有 ~8e-5 的差别。这里不涉及精确循环。
+    # EN: the study path **defaults to the torch scan** (GPU when available). The library default stays numpy
+    #     because `iot_shared_scan_test` pins the exact loop to bit-identical numbers and the torch scan moves
+    #     `delta` by ~8e-5. That loop is not used here.
+    scan = ScanParameters() if scan_backend is None else ScanParameters(backend=str(scan_backend))  # type: ignore[arg-type]
+    master = RegretMasterSolver(eta_scale=objective.eta, tie_break=False, backend=str(backend),
+                                params=dict(solver_params) if solver_params else None)
     result = solve_inverse_ot_regret(
         problem,
         objective=objective,
         params=SolverParameters(tol=None, gamma=1, max_iterations=int(max_iterations),
-                                pruning=PruningParameters(enabled=False)),
+                                pruning=PruningParameters(enabled=False), scan=scan),
         master=master)
     return {"theta": np.asarray(result.theta, dtype=np.float64), "regret": float(result.regret),
             "converged": bool(result.converged), "edges": int(result.finite_edges),
@@ -316,6 +329,10 @@ def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_ite
             # CN: 停止原因（converged / floor / iterations）——只报 `converged=False` 说不清"为什么停"。
             # EN: why the loop stopped (converged / floor / iterations) -- `converged=False` alone does not say.
             "stall_status": str(result.stall_status), "iterations": len(result.iterations),
+            # CN: 每轮把时间拆成 "master（含 LP 装配+求解）" 与 "分离扫描（含修复）"，用于回答"钱花在哪"。
+            # EN: per-round split of "master (LP assembly + solve)" vs "separation scan (incl. repair)".
+            "master_seconds": float(sum(r.master_time for r in result.iterations)),
+            "scan_seconds": float(sum(r.scan_time for r in result.iterations)),
             "eps_r": float(result.eps_r), "solver_floor": float(result.solver_floor)}
 
 

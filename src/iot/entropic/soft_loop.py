@@ -97,8 +97,13 @@ def solve_entropic_soft(problem: InverseOTProblem, *, epsilon_absolute: float,
         # EN: present `(theta,f,g)` as the master solution; `delta=0`, since EOT has no delta column.
         as_master = MasterSolution(delta=0.0, theta=master.theta, source_dual=master.source_dual,
                                    target_dual=master.target_dual, status="ok")
+        # CN: **固定 numpy**：逐点超出质量（`mass_epsilon`）只有 numpy 后端实现，torch 后端会返回
+        #     `None`，于是下面的检查会抛错。这不是静默回退，而是该循环唯一可用的后端。
+        # EN: **pinned to numpy**: per-node excess mass (`mass_epsilon`) is implemented only by the numpy
+        #     backend; the torch one returns `None`, which the check below would reject. Not a silent
+        #     fallback -- simply the only backend this loop can use.
         scan = scan_for_violations(problem, as_master, excluded=finite, tol=-np.inf,
-                                   gamma=int(gamma), scan_backend=str(scan_backend),
+                                   gamma=int(gamma), scan_backend="numpy",
                                    mass_epsilon=float(epsilon_absolute))
         # CN: 逐点超出质量 -> 质量分数（`eta_mass` 是分数，不是绝对量）。
         # EN: per-node excess mass -> a mass fraction (`eta_mass` is a fraction, not an absolute number).
