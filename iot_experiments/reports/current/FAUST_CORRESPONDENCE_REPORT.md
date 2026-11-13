@@ -869,46 +869,51 @@ conclusion 2.
 
 ## 4o. Where the 30 seconds go, and what the cheap modes cost
 
-One training pair, n = 2000, five configurations, each scored on the same 8 held-out pairs.
+One training pair, n = 2000, six configurations, each scored on the same 8 held-out pairs. **Parameter names
+are taken from `pycupdlpx.make_default_params()`**, after the first version of this section was invalidated by
+a whitelist that had been written from memory (see the correction below).
 
 | mode | wall | rounds | exact regret | training wrong | held-out `miss@5 %` |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `normal` (shipped) | 28.7 s | 12 | 8.3e−4 | 919/2000 | **0.2006** |
-| `normal_5rounds` | **11.0 s** | 5 | 8.4e−4 | 972/2000 | 0.2087 |
-| `time_limit=1s` per solve | 29.4 s | **14** | 8.3e−4 | 918/2000 | 0.2000 |
-| `time_limit=1s` + 5 rounds | **10.7 s** | 5 | 8.6e−4 | 960/2000 | 0.2034 |
-| `numpy_scan` (previous default) | 28.1 s | 12 | 8.3e−4 | 919/2000 | 0.2006 |
+| `normal` (shipped) | 27.9 s | 12 | 8.3e−4 | 919/2000 | **0.2006** |
+| `iteration_limit=2000` | **17.2 s** | 12 | 8.5e−4 | 962/2000 | 0.2048 |
+| `iteration_limit=200` | 13.7 s | 9 | 9.2e−3 | 1392/2000 | 0.3264 |
+| 5 rounds | **10.8 s** | 5 | 8.4e−4 | 972/2000 | 0.2087 |
+| 5 rounds + `iteration_limit=200` | **7.0 s** | 5 | 9.2e−3 | 1396/2000 | 0.3262 |
+| `numpy_scan` (previous default) | 35.1 s | 12 | 8.3e−4 | 919/2000 | 0.2006 |
 
-Paired bootstrap: `normal − normal_5rounds` = −0.0081 [−0.0108, −0.0054], 8/8; `normal − (1s+5rounds)` =
-−0.0028 [−0.0073, +0.0011], 6/8; every other difference includes zero.
+Paired bootstrap over the 8 held-out pairs:
 
-**The knob we first trusted does not work, and that changed the conclusion twice.**
+| comparison | Δ `miss@5 %` | 95 % CI | wins |
+| --- | ---: | --- | ---: |
+| `normal` − `iteration_limit=2000` | −0.0041 | [−0.0101, **+0.0006**] | 4/8 |
+| `normal` − 5 rounds | −0.0081 | [−0.0108, −0.0054] | 8/8 |
+| `normal` − `iteration_limit=200` | −0.1258 | [−0.1390, −0.1104] | 8/8 |
+| `normal` − `numpy_scan` | 0.0000 | — | 0/8 |
 
-- **`iter_limit` is inert in this native binding.** 5, 20, 50, 200 and the default all return the *identical*
-  176 810 cumulative LP iterations and the identical θ (L1 = 0.000). The key is accepted by the Python-side
-  whitelist and then ignored by CuPDLPx.
-- **`time_sec_limit` does work**: a 1 s cap takes 56 810 → 17 900 iterations over 4 rounds, halves the master
-  time (7.9 → 3.8 s), and moves θ by L1 0.159.
-- **But it does not make the fit faster**, because a sloppier master detects more violations and the loop
-  compensates with **more rounds** (12 → 14). Net wall-clock is unchanged (28.7 → 29.4 s). The round cap is
-  the only lever that survives.
+**Two levers work, and they are not the ones I first reported.**
 
-**Where the time goes** (the loop's own per-round split, now returned by `fit_theta`):
+1. **`iteration_limit=2000` is free speed**: 1.6× faster with a difference that is not significant (4/8, CI
+   includes zero) and an exact regret that moves from 8.3e−4 to 8.5e−4. That is the setting worth shipping.
+2. **`iteration_limit=200` is too aggressive**: the exact regret degrades 11×, the training map goes from 919
+   to 1392 wrong vertices, and held-out nearly doubles to 0.326. The LP needs its 14 700 default iterations to
+   return a usable vertex; cutting them to 200 does not.
+3. **5 rounds is the other lever**: 2.6× faster for a small, *significant* cost of 0.008.
+4. **The scan backend is free but not valuable**: `numpy_scan` and torch are bit-identical in θ (L1 = 0.000)
+   and the torch scan saves ~20 % at n = 1000 but nothing at n = 2000.
 
-| mode | master (LP assembly + solve) | scan + certificate | other |
-| --- | ---: | ---: | ---: |
-| `normal` | **22.5 s (68 %)** | 9.2 s (28 %) | 1.6 s (5 %) |
-| `dirty` | 7.3 s (60 %) | 3.7 s (31 %) | 1.2 s (10 %) |
+**The correction, because it matters for reading the earlier numbers.** The first version of this section used
+`iter_limit`, `eps_feas`, `eps_opt` and `eps_infeas_detect`. **None of those exist** in this build: the real
+names are `iteration_limit`, `eps_optimal_*` and `eps_feasible_*`. Because CuPDLPx **silently ignores unknown
+keys**, every "loose" run was accepted by our whitelist and then solved with the defaults — which is why
+`iter_limit` from 5 to 200 produced the identical 176 810 cumulative iterations and a bit-identical θ. The
+whitelist in `src/iot/backends/lp_common.py` now equals the API's parameter set exactly, and
+`tests/iot_cupdlpx_params_test.py` asserts that equality so it cannot drift again.
 
-The master cost is the solve, not the assembly: ~14 700 first-order iterations per round at default
-tolerances. So the honest accounting is: **~68 % first-order LP iterations, ~28 % full-grid scan plus
-certificate, ~5 % assembly/repair/Python.** Not "bad code" — the LP carries `2n` dual columns for a
-13-variable problem, which is the structural cost that a Kelley master in `K+1` variables would remove.
-
-**Scan default.** The *library* default stays `numpy`: `iot_shared_scan_test` pins the exact loop to
-bit-identical numbers and the torch scan moves its `delta` by ~8e−5. The *study* path (`fit_theta`) opts into
-torch explicitly, where the relaxed loop's θ is bit-identical and the saving is ~20 % at n = 1000, ~0 at
-n = 2000.
+**Where the time goes** (per-round instrumentation, returned by `fit_theta`): master 68 % (the LP solve,
+~14 700 iterations per round), scan + certificate 28 %, assembly/repair/Python 5 %. The structural cost is
+that the master carries `2n` dual columns for a 13-variable problem — the Kelley/cutting-plane master in `K+1`
+variables (`src/iot/cutting_plane.py`) removes it; parameter tuning only shaves 1.6×.
 
 ---
 

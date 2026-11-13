@@ -60,13 +60,17 @@ DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/trai
 #     `time_sec_limit` 有效。
 # EN: `iter_limit` is **inert** in this native binding (measured: 5/20/50/200 all give the identical
 #     iteration count and theta); `time_sec_limit` works.
-LOOSE: dict[str, object] = {"time_sec_limit": 1.0}
+# CN: 名字取自 `pycupdlpx.make_default_params()`（迭代上限的真实名字是 `iteration_limit`）。
+# EN: names taken from `pycupdlpx.make_default_params()` (the real cap is `iteration_limit`).
+LOOSE: dict[str, object] = {"iteration_limit": 2000}
+VERY_LOOSE: dict[str, object] = {"iteration_limit": 200}
 
 MODES: dict[str, dict[str, object]] = {
     "normal": {"rounds": 30, "params": None, "scan": None},
     "normal_5rounds": {"rounds": 5, "params": None, "scan": None},
-    "loose": {"rounds": 30, "params": LOOSE, "scan": None},
-    "dirty": {"rounds": 5, "params": LOOSE, "scan": None},
+    "loose_2000": {"rounds": 30, "params": LOOSE, "scan": None},
+    "loose_200": {"rounds": 30, "params": VERY_LOOSE, "scan": None},
+    "dirty_200": {"rounds": 5, "params": VERY_LOOSE, "scan": None},
     "numpy_scan": {"rounds": 30, "params": None, "scan": "numpy"},
 }
 

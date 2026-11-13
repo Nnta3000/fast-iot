@@ -445,28 +445,56 @@ class LpResult:
 # CN: 这些是 CuPDLPx **文档字符串** 里承诺的参数名。**实测**：本构建完全忽略 `params`——
 #     用 `eps_opt=1e-1` 与默认值得到逐位相同的解、相同的迭代数（200）与相同的 `rel_obj_gap`。
 #     因此这里对未知键**报错**，避免"调了参数却以为生效"。
-#     本构建实际停在默认相对容差 ~1e-4（`rel_obj_gap` 实测 5.8e-5），且迭代数固定 200。
-# EN: CuPDLPx's documented parameter names. **Measured:** this build ignores `params` entirely --
-#     `eps_opt=1e-1` gives a bit-identical solution, the same iteration count (200) and the same
-#     `rel_obj_gap` as the defaults. Unknown keys therefore raise, so "tuned" parameters cannot silently
-#     do nothing. This build stops at its default relative tolerance (~1e-4; measured rel_obj_gap 5.8e-5)
-#     with the iteration count pinned at 200.
+# CN: **参数名必须与 API 一致**。此前这里的名单是凭印象写的（`iter_limit` / `eps_opt` / `eps_feas` /
+#     `eps_infeas_detect` 都不存在），而 binding 对**未知键静默忽略**，于是"调参"根本没生效——`iter_limit=5`
+#     实测仍给出 176810 次累计迭代与逐位相同的 θ。真实名字取自 `pycupdlpx.make_default_params()`（0.1.0）：
+#     迭代上限是 `iteration_limit`，容差是 `eps_optimal_absolute` / `eps_optimal_relative` /
+#     `eps_feasible_*`。`tests/iot_cupdlpx_params_test.py` 断言这份名单与 API 完全一致，防止再次漂移。
+# EN: **Parameter names must match the API.** This list used to be written from memory (`iter_limit` /
+#     `eps_opt` / `eps_feas` / `eps_infeas_detect` do not exist), and the binding **silently ignores unknown
+#     keys**, so "tuning" did nothing: `iter_limit=5` still gave 176 810 cumulative iterations and a
+#     bit-identical theta. The real names come from `pycupdlpx.make_default_params()` (0.1.0): the iteration
+#     cap is `iteration_limit`, the tolerances are `eps_optimal_absolute` / `eps_optimal_relative` /
+#     `eps_feasible_*`. `tests/iot_cupdlpx_params_test.py` asserts this set equals the API's, so it cannot
+#     drift again.
 CUPDLPX_KNOWN_PARAMS: frozenset[str] = frozenset(
     {
-        "eps_feas",
-        "eps_opt",
-        "eps_infeas_detect",
-        "iter_limit",
-        "time_sec_limit",
-        "eps_feasible_absolute_primal",
+        "bound_objective_rescaling",
+        "dual_nnz_abs_tol",
+        "dual_nnz_factor",
+        "enable_objective_gap_divergence_check",
         "eps_feasible_absolute_dual",
-        "eps_feasible_relative_primal",
+        "eps_feasible_absolute_primal",
+        "eps_feasible_relative",
         "eps_feasible_relative_dual",
+        "eps_feasible_relative_primal",
+        "eps_infeasible",
         "eps_optimal_absolute",
         "eps_optimal_relative",
-        "dual_nnz_abs_tol",
-        "power_tolerance",
+        "has_pock_chambolle_alpha",
+        "hybrid_refine_iterations",
+        "iteration_limit",
+        "l_inf_ruiz_iterations",
+        "pock_chambolle_alpha",
         "power_max_iterations",
+        "power_tolerance",
+        "reflection_coefficient",
+        "step_size_method",
+        "step_size_safety",
+        "stepsize_power_reference",
+        "stepsize_reference_max_iterations",
+        "stepsize_reference_tolerance",
+        "support_limit_mode",
+        "support_stop_nnz",
+        "support_stop_obj_rel_change_tol",
+        "support_stop_threshold",
+        "termination_evaluation_frequency",
+        "termination_norm",
+        "time_sec_limit",
+        "use_dual_nnz_gate",
+        "vector_sum_mode",
+        "verbose",
+        "verbose_time",
     }
 )
 

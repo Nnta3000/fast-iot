@@ -3,6 +3,25 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-13 — the CuPDLPx whitelist was wrong; re-measured with the real names
+
+Root cause: `CUPDLPX_KNOWN_PARAMS` had been written from memory (`iter_limit`, `eps_feas`, `eps_opt`,
+`eps_infeas_detect`), and **none of those exist**. CuPDLPx silently ignores unknown keys, so every "tuned"
+run was solved at the defaults. The real names come from `pycupdlpx.make_default_params()` (0.1.0); the
+iteration cap is `iteration_limit`.
+
+Fixed: whitelist now equals the API's 36 keys, and `tests/iot_cupdlpx_params_test.py` asserts equality.
+
+Re-measured (n=2000, 8 held-out pairs):
+  normal 27.9s 12r 0.2006 | iteration_limit=2000 17.2s 0.2048 | iteration_limit=200 13.7s 0.3264 |
+  5 rounds 10.8s 0.2087 | 5 rounds+200 7.0s 0.3262 | numpy_scan 35.1s 0.2006
+
+  normal - il=2000  -0.0041 [-0.0101,+0.0006] 4/8   <- free 1.6x speedup
+  normal - 5 rounds -0.0081 [-0.0108,-0.0054] 8/8
+  normal - il=200   -0.1258 8/8                      <- 11x worse exact regret
+
+So: iteration_limit=2000 is the setting to ship; 200 is too aggressive; round cap costs 0.008.
+
 ## 2026-11-12 (latest++) — correction: iter_limit is inert; the LP solve IS the cost
 
 Re-ran the modes with `time_sec_limit=1` (since `iter_limit` turned out to be ignored):
