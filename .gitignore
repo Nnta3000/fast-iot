@@ -256,3 +256,7 @@ __pycache__/
 # EN: local tooling state
 /.pytest_cache/
 /uv.lock
+
+# CN: 各 agent 的 git worktree（见 AGENTS.md §0.3）；每个都是独立检出，不属于本仓库索引。
+# EN: per-agent git worktrees (see AGENTS.md §0.3); each is a separate checkout, not part of this index.
+/worktrees/
