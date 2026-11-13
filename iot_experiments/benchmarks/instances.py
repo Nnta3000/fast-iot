@@ -5,11 +5,11 @@ EN: Deterministic benchmark instances wrapping the exact-side `build_pot_problem
     (theta_star first, then source, then target; no mixing), solving the ground-truth plan
     with POT and returning it only after `dual_optimality_certificate` certifies it.
 
-CN: 推理/生成细节（与 `iot_experiments/scratch/common.build_problem` 逐字节一致）：
+CN: 推理/生成细节（与冻结的 `iot_experiments/benchmarks/legacy_reference.build_problem` 逐字节一致）：
     `rng = default_rng(seed)`；`theta_star = SimplexTheta(k).sample(rng)`；随后
     `source, target ~ N(0, 1)`；可选 mixing 与 common 相同。标签为历史/非基准的
     `e3_scaling.py` 换种子约定不被采用。
-EN: Generation details (byte-identical to `iot_experiments/scratch/common.build_problem`):
+EN: Generation details (byte-identical to the frozen `iot_experiments/benchmarks/legacy_reference.build_problem`):
     `rng = default_rng(seed)`; `theta_star = SimplexTheta(k).sample(rng)`; then
     `source, target ~ N(0, 1)`; optional mixing exactly as in common. The historical
     `e3_scaling.py` seed convention is deliberately not used.
