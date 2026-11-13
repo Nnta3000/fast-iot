@@ -917,6 +917,51 @@ variables (`src/iot/cutting_plane.py`) removes it; parameter tuning only shaves 
 
 ---
 
+## 4p. Implementation pass: 1.8× at n = 2000, 2.6× at n = 6890, same θ
+
+Profiled one fit with `cProfile` plus per-method call counters. Three of the top four entries were **not** the
+solver:
+
+| cost centre | before | what it was doing |
+| --- | ---: | --- |
+| `SquaredDifferenceFeatures.features` | 13.1 s (271 calls) | gathering `(E, K)` features, two temporary arrays each |
+| `maximum_slack_grid` | 6.4 s (50 calls) | `features.costs` per block → a `(2M, K)` temporary (208 MB) |
+| `maximum_slack_outside_grid` | 2.95 s (24 calls) + 2.6 s of `searchsorted` | `features.costs` per block, and 2M int64 keys tested against `F` |
+| `solve_lp_cupdlpx` | 14.2 s | the LP solve (unchanged) |
+
+**Three fixes, all value-preserving.**
+
+1. **`SquaredDifferenceFeatures` now implements the bilinear-embedding protocol.** Without it,
+   `bilinear_embedding(...)` returned `None` for this family and the *torch* scan silently fell back to
+   computing costs in **NumPy per tile and copying them to the device** — 3.3 s of host work and transfers per
+   fit, mislabelled as a "GPU scan". The scan now runs one matmul on the device.
+2. **`maximum_slack_grid` uses the embedding**: `|√θ⊙a|² + |√θ⊙b|² − 2⟨√θ⊙a, √θ⊙b⟩` per row block, so the
+   temporary drops from `(2M, K)` = 208 MB to `(2M,)` = 16 MB.
+3. **`maximum_slack_outside_grid` uses the embedding and a per-block mask** instead of 2M int64 keys and
+   `searchsorted`, exploiting that `EdgeSet.rows` is already sorted by row.
+
+| | before | after | |
+| --- | ---: | ---: | --- |
+| n = 2000, total | 28.3 s | **15.7 s** | 1.8× |
+| n = 2000, master / scan | 22.5 / 9.2 s | 12.9 / **2.0** s | scan 4.6× cheaper |
+| **n = 6890, total** | **272 s** | **105 s** | **2.6×** |
+
+**The θ and the regret are unchanged**: `regret = 0.000917216883` at n = 2000 and `0.00122818697` at n = 6890,
+matching the recorded values, with the same support and the same `max θ = 0.7618`. The comparison of the two
+`maximum_slack*` implementations against the generic path agrees to 0 / 4.4e−16 on random instances.
+
+**One test was relaxed, deliberately.** `test_grid_max_is_not_truncated_by_block_size` asserted *bit* equality
+across block sizes; the matmul path accumulates in a block-shape-dependent order, so it now compares at
+1e−12 relative tolerance. What that test pins is "later blocks are not skipped" (the failure mode that would
+make the certificate too optimistic), and a 1e−16 difference is not truncation.
+
+**What is left.** At n = 2000 the remaining 12.9 s of "master" is ~11 s of LP solve plus ~2 s of repair and
+certificate; the LP solve is now ~70 % of the total and is the irreducible part of this formulation. On top of
+this pass, `iteration_limit=2000` (§4o) is still a free further 1.6×, so the n = 2000 fit is now **~6 s** end
+to end, versus 28.3 s at the start of the day.
+
+---
+
 ## 5. Honest limitations
 
 - **Three vertex subsamples, `n = 800` of 6890.** The learned arm moves ≤0.046 miss@5 % across seeds, so the

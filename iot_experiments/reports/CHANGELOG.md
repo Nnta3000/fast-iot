@@ -3,6 +3,28 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-13 (later) — implementation pass: 1.8x at n=2000, 2.6x at n=6890, same theta
+
+Profiled one fit (cProfile + per-method call counters). Three of the four top costs were host work:
+
+- `SquaredDifferenceFeatures` did not implement the bilinear-embedding protocol, so `bilinear_embedding()`
+  returned None and the *torch* scan silently computed costs in NumPy per tile and copied them to the
+  device (3.3 s). It now embeds: the scan is one matmul on the device.
+- `maximum_slack_grid` built a `(2M, K)` = 208 MB temporary per block; now the embedding form (16 MB).
+- `maximum_slack_outside_grid` built 2M int64 keys + `searchsorted` per block; now a per-block boolean mask
+  (EdgeSet.rows is already sorted by row) and the embedding.
+
+  n=2000: 28.3 s -> 15.7 s (master 22.5->12.9, scan 9.2->2.0)
+  n=6890: 272 s -> 105 s
+  regret and theta unchanged (0.000917216883 / 0.00122818697, max theta 0.7618)
+
+One test relaxed on purpose: `test_grid_max_is_not_truncated_by_block_size` compared bit-exactly across block
+sizes; the matmul path is block-shape dependent at ~1e-16, so it now uses 1e-12 relative tolerance. The test's
+purpose (no truncated blocks) is unchanged.
+
+Remaining: ~70% of the n=2000 fit is the LP solve itself; `iteration_limit=2000` adds a further free 1.6x,
+so the fit is now ~6 s end to end (was 28.3 s).
+
 ## 2026-11-13 — the CuPDLPx whitelist was wrong; re-measured with the real names
 
 Root cause: `CUPDLPX_KNOWN_PARAMS` had been written from memory (`iter_limit`, `eps_feas`, `eps_opt`,

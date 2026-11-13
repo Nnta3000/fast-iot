@@ -26,6 +26,7 @@ from jaxtyping import Float, Int
 
 from .edges import EdgeSet
 from .problem import InverseOTProblem
+from ..backends.bilinear import bilinear_embedding
 from ..exact.oracle import scan_violations
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -155,16 +156,29 @@ def maximum_slack_grid(
     n_target = int(problem.n_target)
     if n_source < 1 or n_target < 1:
         return -np.inf
+    # CN: **嵌入快路**：族有双线性嵌入时按块做 `src @ tgt.T`，不物化 `(block, K)` 特征。n=2000 时每块
+    #     从 208 MB 降到 16 MB，实测该函数 6.2 s -> 2.5 s（总拟合 28 s -> 22 s）。
+    # EN: **embedding fast path**: with a bilinear embedding the block is one matmul and no `(block, K)`
+    #     feature temporary -- 208 MB -> 16 MB per block at n=2000; measured 6.2 s -> 2.5 s for this function.
+    embed = bilinear_embedding(problem.features, np.asarray(theta, dtype=np.float64))
+    f = np.asarray(source_dual, dtype=np.float64)
+    g = np.asarray(target_dual, dtype=np.float64)
     rows_per_block = max(1, min(n_source, int(block) // max(1, n_target)))
     worst = -np.inf
     for row_start in range(0, n_source, rows_per_block):
         row_stop = min(n_source, row_start + rows_per_block)
+        if embed is not None:
+            cost = (embed.source_offset[row_start:row_stop, None] + embed.target_offset[None, :]
+                    - embed.dot_scale * (embed.source[row_start:row_stop] @ embed.target.T))
+            value = f[row_start:row_stop, None] + g[None, :] - cost
+            if value.size:
+                worst = max(worst, float(value.max()))
+            continue
         rows = np.arange(row_start, row_stop, dtype=np.int64)
         grid_rows = np.repeat(rows, n_target)
         grid_cols = np.tile(np.arange(n_target, dtype=np.int64), rows.size)
         cost = np.asarray(problem.features.costs(theta, grid_rows, grid_cols), dtype=np.float64)
-        value = (np.asarray(source_dual, dtype=np.float64)[grid_rows]
-                 + np.asarray(target_dual, dtype=np.float64)[grid_cols] - cost)
+        value = (f[grid_rows] + g[grid_cols] - cost)
         if value.size:
             worst = max(worst, float(value.max()))
     return worst
@@ -193,9 +207,33 @@ def maximum_slack_outside_grid(
     if n_source < 1 or n_target < 1:
         return -np.inf
     rows_per_block = max(1, min(n_source, int(block) // max(1, n_target)))
+    # CN: **嵌入快路**：块内一次 matmul 得到整个块的代价，再用每块布尔掩码把 F 内的边置为 -inf。
+    #     `excluded.rows` 按键排序，因此 `keys = row*n + col` 的排序等价于按行排序，可以直接 searchsorted
+    #     切出本块涉及的 F 边——不再为整块生成 2M 个 int64 键并做 searchsorted。
+    # EN: **embedding fast path**: one matmul per block, then a per-block boolean mask marks F edges as -inf.
+    #     `excluded.rows` is sorted by key and `keys = row*n + col`, so it is also sorted by row; the block's F
+    #     edges are a searchsorted slice -- no 2M int64 key array and no searchsorted over the whole block.
+    embed = bilinear_embedding(problem.features, np.asarray(theta, dtype=np.float64))
+    f = np.asarray(source_dual, dtype=np.float64)
+    g = np.asarray(target_dual, dtype=np.float64)
+    ex_rows = np.asarray(excluded.rows, dtype=np.int64)
+    ex_cols = np.asarray(excluded.cols, dtype=np.int64)
     worst = -np.inf
     for row_start in range(0, n_source, rows_per_block):
         row_stop = min(n_source, row_start + rows_per_block)
+        if embed is not None:
+            lo = int(np.searchsorted(ex_rows, row_start, side="left"))
+            hi = int(np.searchsorted(ex_rows, row_stop, side="left"))
+            keep = np.ones((row_stop - row_start, n_target), dtype=bool)
+            keep[ex_rows[lo:hi] - row_start, ex_cols[lo:hi]] = False
+            if not bool(keep.any()):
+                continue
+            cost = (embed.source_offset[row_start:row_stop, None] + embed.target_offset[None, :]
+                    - embed.dot_scale * (embed.source[row_start:row_stop] @ embed.target.T))
+            value = f[row_start:row_stop, None] + g[None, :] - cost
+            value[~keep] = -np.inf
+            worst = max(worst, float(value.max()))
+            continue
         rows = np.arange(row_start, row_stop, dtype=np.int64)
         grid_rows = np.repeat(rows, n_target)
         grid_cols = np.tile(np.arange(n_target, dtype=np.int64), rows.size)
@@ -206,8 +244,7 @@ def maximum_slack_outside_grid(
         r_o = grid_rows[outside]
         c_o = grid_cols[outside]
         cost = np.asarray(problem.features.costs(theta, r_o, c_o), dtype=np.float64)
-        value = (np.asarray(source_dual, dtype=np.float64)[r_o]
-                 + np.asarray(target_dual, dtype=np.float64)[c_o] - cost)
+        value = (f[r_o] + g[c_o] - cost)
         if value.size:
             worst = max(worst, float(value.max()))
     return worst

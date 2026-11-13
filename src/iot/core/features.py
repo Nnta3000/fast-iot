@@ -118,11 +118,11 @@ class DiagonalWeightFeatures:
         row_index = _index_array(rows, name="rows")
         col_index = _index_array(cols, name="cols")
         difference = self.source_points[row_index] - self.target_points[col_index]
-        return np.ascontiguousarray(difference * difference, dtype=np.float64)
+        np.square(difference, out=difference)
+        return np.ascontiguousarray(difference, dtype=np.float64)
 
     def costs(self, theta: np.ndarray, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
         return _linear_costs(self.features(rows, cols), theta)
-
 
 @dataclass(frozen=True)
 class SquaredDifferenceFeatures:
@@ -182,6 +182,34 @@ class SquaredDifferenceFeatures:
 
     def costs(self, theta: np.ndarray, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
         return _linear_costs(self.features(rows, cols), theta)
+
+    def bilinear_embedding(self, theta: np.ndarray) -> "object":
+        """
+        EN: The bilinear embedding of the weighted squared difference, so the GPU scan and the full-grid
+            slack use one matmul instead of materialising `(edges, K)` features:
+
+            `sum_k theta_k (a_ik - b_jk)^2 = |sqrt(theta) * a_i|^2 + |sqrt(theta) * b_j|^2
+                                            - 2 <sqrt(theta) * a_i, sqrt(theta) * b_j>`
+
+            Without this method `bilinear_embedding(...)` returns `None` for this family and the torch scan
+            silently fell back to computing costs in **NumPy** per tile and copying them to the device —
+            measured at 3.3 s of a 36 s fit, all of it host work plus transfers.
+
+        CN: 加权平方差的双线性嵌入：`sum_k θ_k (a-b)^2 = |√θ⊙a|² + |√θ⊙b|² − 2⟨√θ⊙a, √θ⊙b⟩`。
+            没有这个方法时，torch 扫描会**静默**退回"逐块用 NumPy 算代价再拷到设备"，实测占 36 s 中的 3.3 s。
+        """
+        from ..backends.bilinear import BilinearEmbedding  # noqa: PLC0415 - avoids a circular import
+
+        root = np.sqrt(np.maximum(np.asarray(theta, dtype=np.float64).reshape(-1), 0.0))
+        source = np.ascontiguousarray(self.source_points * root)
+        target = np.ascontiguousarray(self.target_points * root)
+        return BilinearEmbedding(
+            source=source,
+            target=target,
+            source_offset=(source * source).sum(axis=1),
+            target_offset=(target * target).sum(axis=1),
+            dot_scale=2.0,
+        )
 
 
 @dataclass(frozen=True)
