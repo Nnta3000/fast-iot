@@ -17,6 +17,7 @@ CN: **`maximum_slack_grid` 必须与 `maximum_slack` 完全相等**——`s` 进
 from __future__ import annotations
 
 import numpy as np
+import pytest
 import scipy.sparse as sparse
 
 from iot.core.features import DiagonalWeightFeatures
@@ -72,8 +73,15 @@ def test_grid_max_is_not_truncated_by_block_size() -> None:
     rr, cc = np.meshgrid(np.arange(problem.n_source), np.arange(problem.n_target), indexing="ij")
     reference = maximum_slack(problem, theta, source_dual, target_dual,
                               rr.reshape(-1).astype(np.int64), cc.reshape(-1).astype(np.int64))
+    # CN: 数值上仍是"同一组边、同一个 max"，但双线性嵌入路径用 matmul，累加顺序随块形状变化，因此
+    #     最后一位可能差 1e-16。用 1e-12 的相对容差比较——被钉住的是"没有漏掉后面的块"，不是浮点结合律。
+    # EN: still the same edge set and the same max, but the bilinear-embedding path accumulates with a
+    #     matmul whose order depends on the block shape, so the last bit can differ by ~1e-16. Compare at
+    #     1e-12 relative tolerance: what is pinned here is "the later blocks are not skipped", not the
+    #     association order of floating-point sums.
     for block in (1, 4, 8, 100):
-        assert maximum_slack_grid(problem, theta, source_dual, target_dual, block=block) == reference
+        assert maximum_slack_grid(problem, theta, source_dual, target_dual, block=block) == pytest.approx(
+            reference, rel=1e-12, abs=1e-12)
 
 
 def test_grid_max_handles_a_single_edge_grid() -> None:
