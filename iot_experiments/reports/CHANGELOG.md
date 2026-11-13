@@ -3,6 +3,16 @@
 Newest first. One line per change. This file records **organisational** changes; scientific
 corrections live inside the report they correct.
 
+## 2026-11-13 (later still) — a tracked test no longer imports an ignored path
+
+`tests/iot_benchmark_test.py` imported `iot_experiments.legacy.scratch.common.build_problem` to check the
+current instance generator against the historical one -- but `.gitignore:243` ignores `/iot_experiments/legacy/`
+wholesale, so that module is **untracked**. The test therefore passed only where the ignored tree happened to
+survive and failed in any fresh clone (it surfaced in a fresh worktree). The 50-line generator is now frozen as
+`iot_experiments/benchmarks/legacy_reference.py`, labelled as a fixture, and the stale docstring path in
+`instances.py` (`iot_experiments/scratch/...`) is fixed. Verified: the test passes with the legacy directory
+removed. Rule to keep: **a tracked test may not import an ignored path; check the reference in.**
+
 ## 2026-11-13 (later) — implementation pass: 1.8x at n=2000, 2.6x at n=6890, same theta
 
 Profiled one fit (cProfile + per-method call counters). Three of the four top costs were host work:
