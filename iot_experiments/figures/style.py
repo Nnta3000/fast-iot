@@ -39,6 +39,12 @@ FORBIDDEN = re.compile(
 )
 
 
+# CN: 页脚里出现文件路径（`.md`/`.json`/…）就抛错：读者要的是"哪个实验、比了什么"，不是路径。
+# EN: a file path in the footer (`.md`, `.json`, ...) raises: the reader needs "which experiment, what is
+#     compared", not a path.
+NO_PATH = re.compile(r"\.(?:md|json|csv|py|pdf|png|log)\b|/out/", re.IGNORECASE)
+
+
 class StyleError(RuntimeError):
     """CN: 样式或标题不合规。EN: a style or title violation."""
 
@@ -64,6 +70,16 @@ ARM_COLORS: dict[str, str] = {
     "residual64": _magma(0.78),
     "residual16": _magma(0.68),
     "sinkhorn": _magma(0.40),
+    # FAUST 学习臂与方法 / FAUST learned arms and objectives
+    "relaxed_lp": _magma(0.25),
+    "multi": _magma(0.78),
+    "single": _magma(0.25),
+    "entropic_iot": _magma(0.40),
+    "row_softmax": _magma(0.52),
+    "rowcol_softmax": _magma(0.68),
+    "selected": _magma(0.25),
+    "median": _magma(0.68),
+    "reference": "#2e2e2e",
     # 基线 / 参考 —— 中性灰
     "cosine": "#4d4d4d",
     "cosine_nn": "#4d4d4d",
@@ -73,6 +89,12 @@ ARM_COLORS: dict[str, str] = {
     "pixel_corr": "#6e6e6e",
     "nmi": "#999999",
     "cca": "#7f7f7f",
+    "uniform": "#8c8c8c",
+    "uniform_theta": "#8c8c8c",
+    "uniform_late_hks": "#a8a8a8",
+    "uniform_hks": "#bcbcbc",
+    "grouped_uniform": "#6e6e6e",
+    "position_only": "#c9c9c9",
     # 几何 G0-G3（F1）
     "G0": "#b3b3b3",
     "G1": "#8c8c8c",
@@ -87,6 +109,15 @@ ARM_MARKERS: dict[str, str] = {
     "residual64": "^",
     "residual16": "v",
     "sinkhorn": "D",
+    "relaxed_lp": "o",
+    "multi": "^",
+    "single": "o",
+    "entropic_iot": "v",
+    "row_softmax": "s",
+    "rowcol_softmax": "^",
+    "selected": "o",
+    "median": "s",
+    "reference": "D",
     "cosine": "o",
     "cosine_nn": "o",
     "cosine_ot": "D",
@@ -95,6 +126,12 @@ ARM_MARKERS: dict[str, str] = {
     "pixel_corr": "^",
     "nmi": "P",
     "cca": "s",
+    "uniform": "s",
+    "uniform_theta": "s",
+    "uniform_late_hks": "v",
+    "uniform_hks": "^",
+    "grouped_uniform": "D",
+    "position_only": "x",
     "G0": "o",
     "G1": "s",
     "G2": "^",
@@ -126,6 +163,11 @@ def marker(arm: str) -> str:
 
 FIGURE_DIR: Path = Path(__file__).resolve().parent
 OUTPUT_DIR: Path = FIGURE_DIR / "out"
+# CN: 图的元数据（caption.md + csv）放在 `out/` 之外，因为 `.../figures/out/` 被 .gitignore 忽略——
+#     放进 out/ 就会在 clone 后消失，而"这张图画的是什么"必须能被复现。
+# EN: figure metadata (caption.md + csv) lives outside `out/`, because `.../figures/out/` is git-ignored:
+#     anything inside it disappears on a clone, and "what is plotted here" has to be reproducible.
+METADATA_DIR: Path = FIGURE_DIR / "metadata"
 
 
 def apply_style() -> None:
@@ -190,35 +232,106 @@ def direct_label(ax, x: float, y: float, text: str, *, colour: str, dx: float = 
                 ha="left", va="center", fontsize=fontsize, color=colour)
 
 
-def add_footer(fig: Figure, source: str, caveat: str, *, axes_left: float = 0.13) -> None:
+def _wrap_to_width(fig: Figure, text: str, width_in: float, *, fontsize: float) -> list[str]:
     """
-    CN: 两行页脚（7 pt 灰）：第一行来源（记录路径 | commit | pool/draw），第二行注意事项与状态。
-    EN: two-line footer (7 pt grey): line 1 the source (record path | commit | pool/draw), line 2 the
-        caveats and status.
+    CN: 按**英寸**宽度把一段文字折成若干行（用渲染器量宽，不靠字符数估算）。
+    EN: wrap one paragraph to a width given in **inches**. Widths are measured with the renderer rather
+        than estimated from character counts, so a wide glyph does not push a line off the canvas.
     """
-    if "\n" in source or "\n" in caveat:
-        raise StyleError("each footer line must be a single line")
-    fig.text(axes_left, 0.035, source, ha="left", va="bottom", fontsize=7, color="#8c8c8c")
-    fig.text(axes_left, 0.005, caveat, ha="left", va="bottom", fontsize=7, color="#8c8c8c")
+    renderer = fig.canvas.get_renderer()
+    probe = fig.text(0.0, 0.0, "", fontsize=fontsize)
+    try:
+        def width_of(candidate: str) -> float:
+            probe.set_text(candidate)
+            return float(probe.get_window_extent(renderer).width) / float(fig.dpi)
+
+        words = str(text).split()
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            trial = f"{current} {word}".strip()
+            if not current or width_of(trial) <= width_in:
+                current = trial
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+    finally:
+        probe.remove()
 
 
-def save(fig: Figure, name: str) -> tuple[Path, Path]:
+def add_footer(fig: Figure, *, experiment: str, comparing: str, config: str,
+               axes_left: float = 0.13, axes_right: float = 0.985, labelled: bool = True,
+               top: float | None = None, fontsize: float = 7.0) -> None:
     """
-    CN: 以 300 dpi 保存 PNG 与 PDF，tight bbox，白底。返回两个路径。
-    EN: save PNG and PDF at 300 dpi with a tight bbox on white. Returns both paths.
+    CN: 页脚是**一个块**，不是固定三行：每段文字按图宽（`axes_left`..`axes_right`）自动折行，行数按内容
+        增减；折出来的行**向下**排，必要时越过画布底边——`bbox_inches="tight"` 会把画布向下扩展，所以
+        页脚永远不会挤压坐标区，也永远不会超出左右边界。
+    EN: the footer is **one block**, not a fixed three lines: each field wraps at the plot width
+        (`axes_left`..`axes_right`), so the number of lines follows the content. The lines run **downwards**
+        and may pass the bottom edge of the canvas — `bbox_inches="tight"` extends the saved image down, so the
+        footer never steals space from the axes and never runs past the left or right edge.
+
+        Fields, in order: `experiment` (which run), `comparing` (what is side by side), `config` (instance and
+        protocol). `labelled=False` prints them as plain sentences, which is the shipped style; `labelled=True`
+        prefixes `experiment —` / `comparing —` / `config —`. Either way the footer **must not cite a record
+        path** (`NO_PATH`).
+    """
+    for label, text in (("experiment", experiment), ("comparing", comparing), ("config", config)):
+        if not str(text).strip():
+            raise StyleError(f"footer {label} is empty; all three footer fields are required")
+        if "\n" in text:
+            raise StyleError(f"footer {label} must be a single paragraph: {text!r}")
+        if (match := NO_PATH.search(text)) is not None:
+            raise StyleError(
+                f"footer {label} points at a file ({match.group(0)!r}): {text!r}. "
+                "State the experiment, the comparison and the config; do not cite a path.")
+    # CN: 留 1% 的右边距，避免最后一行正好顶到画布边缘；字段之间空半行，否则折行后三段糊成一段。
+    # EN: keep 1 % of the width free at the right so the longest line does not touch the edge, and leave
+    #     half a line between fields, otherwise the wrapped paragraphs merge into one block.
+    width_in = max(1.0, 0.99 * (float(axes_right) - float(axes_left)) * float(fig.get_figwidth()))
+    gap = 9.5 / 72.0 / float(fig.get_figheight())
+    field_gap = 4.5 / 72.0 / float(fig.get_figheight())
+    # CN: 页脚顶边贴在坐标区下方约 30 pt（标签加刻度的高度），而不是固定在画布底部——否则折行后
+    #     坐标标签与页脚之间会留出一大块空白。
+    # EN: the footer's top edge sits ~30 pt under the axes (label plus tick height) rather than at a fixed
+    #     fraction of the canvas; a fixed fraction leaves a large blank gap once the text wraps.
+    if top is None:
+        axes_bottom = min((ax.get_position().y0 for ax in fig.axes), default=0.30)
+        top = max(0.005, float(axes_bottom) - 30.0 / 72.0 / float(fig.get_figheight()))
+    y = float(top)
+    for index, (label, text) in enumerate(
+            (("experiment", experiment), ("comparing", comparing), ("config", config))):
+        wrapped = _wrap_to_width(fig, text, width_in, fontsize=fontsize)
+        if labelled:
+            wrapped = [f"{label} — {wrapped[0]}"] + wrapped[1:]
+        for line in wrapped:
+            fig.text(axes_left, y, line, ha="left", va="top", fontsize=fontsize, color="#8c8c8c")
+            y -= gap
+        if index < 2:
+            y -= field_gap
+
+
+def save(fig: Figure, name: str) -> Path:
+    """
+    CN: 以 300 dpi 只保存 PNG，tight bbox，白底。返回路径。**不再生成 PDF**：`out/` 里只有 PNG。
+    EN: save PNG only, at 300 dpi, tight bbox, white background. Returns the path. **No PDF**: `out/`
+        holds PNG files and nothing else.
     """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     png = OUTPUT_DIR / f"{name}.png"
-    pdf = OUTPUT_DIR / f"{name}.pdf"
     fig.savefig(png, dpi=300, bbox_inches="tight", facecolor="white")
-    fig.savefig(pdf, dpi=300, bbox_inches="tight", facecolor="white")
-    return png, pdf
+    return png
 
 
 __all__ = [
     "ALIASES",
     "ARM_COLORS",
     "ARM_MARKERS",
+    "METADATA_DIR",
+    "NO_PATH",
     "OUTPUT_DIR",
     "FORBIDDEN",
     "StyleError",

@@ -1,0 +1,10 @@
+arm,metric,value
+position_only,miss_5pct,0.8550
+uniform_theta,miss_5pct,0.4567
+learned,miss_5pct,0.1550
+position_only,wrong_vertices,513
+uniform_theta,wrong_vertices,274
+learned,wrong_vertices,93
+position_only,mean,0.3882
+uniform_theta,mean,0.1633
+learned,mean,0.0526

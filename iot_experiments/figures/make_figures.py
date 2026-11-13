@@ -14,7 +14,6 @@ EN: **Meeting figures** -- read only saved records (JSON/MD); **never recompute*
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,6 +25,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from iot_experiments.figures.metadata import (  # noqa: E402
+    FigureError,
+    print_caption,
+    write_metadata,
+)
 from iot_experiments.figures.style import (  # noqa: E402
     ARM_COLORS,
     ARM_MARKERS,
@@ -103,19 +107,6 @@ EXPECTED: dict[str, dict[str, tuple[float, ...]]] = {
 COVERAGE: tuple[float, ...] = (0.25, 0.50, 0.75, 1.00)
 
 
-class FigureError(RuntimeError):
-    """CN: 记录缺失或数值不符。EN: a record is missing or a value disagrees."""
-
-
-def short_commit() -> str:
-    """CN: 当前短 commit 哈希（用于页脚）。EN: short commit hash for the footer."""
-    try:
-        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=str(_REPO_ROOT),
-                              capture_output=True, text=True, check=True).stdout.strip()
-    except Exception:  # noqa: BLE001 - the footer must not fail the figure
-        return "unknown"
-
-
 def parse_precision_table(path: Path) -> dict[str, tuple[float, ...]]:
     """
     CN: 从 `current/REAL_PAIRS_REPORT.md` 的**表格行**解析 P@25/50/75/100。
@@ -166,7 +157,7 @@ def check(name: str, parsed: dict[str, tuple[float, ...]]) -> None:
         raise FigureError("plotted values disagree with the expected values:\n  " + "\n  ".join(problems))
 
 
-def build_f2() -> tuple[Path, Path]:
+def build_f2() -> Path:
     """
     CN: **F2** —— 三个 K 的小多图；x=m，y=相对 cosine 的差值（点）。hollow 标记表示 `R'/R_uniform > 1`
         的 solver-limited iOT 拟合。
@@ -259,16 +250,53 @@ def build_f2() -> tuple[Path, Path]:
 
     title, subtitle = TITLES["F2"]
     add_title(fig, title, subtitle, axes_left=0.085)
-    add_footer(
-        fig,
-        f"data: {record.relative_to(_REPO_ROOT)} | commit {short_commit()} | "
-        "geometry G2, fixed 400-pair pool, 3 draws",
-        "hollow = solver-limited iOT fit; k is the PCA width; |theta| = k for diagonal arms; "
-        "objective and parameterisation are independent axes",
-        axes_left=0.085,
+    config = payload["records"][0]["config"]
+    experiment = (
+        "t1t2/metric_learning — T1↔T2 MRI pairing, DINOv2-pool4 features, PCA to k, geometry "
+        f"{payload['provenance'].get('geometry', 'G2').split(',')[0]}")
+    comparing = (
+        "iOT (diagonal θ), InfoNCE (diagonal θ) and InfoNCE low-rank r=64; "
+        "y = hit − cosine at the same k, m and draw")
+    config_text = (
+        f"k ∈ {{{', '.join(map(str, config['ks']))}}} · "
+        f"m ∈ {{{', '.join(map(str, config['ms']))}}} · "
+        f"one fixed {config['holdout_pairs']}-pair held-out pool · {len(config['draws'])} draws · "
+        f"chance 1/{config['holdout_pairs']}")
+    add_footer(fig, experiment=experiment, comparing=comparing, config=config_text, axes_left=0.085)
+    fig.subplots_adjust(left=0.085, right=0.985, top=0.80, bottom=0.22, wspace=0.12)
+    png = save(fig, "F2_learned_vs_cosine")
+
+    rows: list[list[object]] = []
+    for k in ks:
+        for m in ms:
+            for arm in arms:
+                values = np.asarray([r["metrics"]["hit"] for r in by[(k, m, arm)]], dtype=float) * 100.0
+                cosine = np.asarray([r["metrics"]["hit"] for r in by[(k, m, "cosine")]], dtype=float) * 100.0
+                for draw, (value, base) in enumerate(zip(values, cosine)):
+                    rows.append([k, m, arm, f"draw{draw}", f"{value - base:+.4f}"])
+                rows.append([k, m, arm, "mean", f"{float(np.mean(deltas[(k, m, arm)])):+.4f}"])
+            rows.append([k, m, "cosine", "hit_percent", f"{float(np.mean(cosine)):.4f}"])
+    write_metadata(
+        "F2_learned_vs_cosine",
+        caption={
+            "axes": "x = number of labelled pairs m; y = held-out matching hit minus the cosine hit at the "
+                    "same k, m and draw, in percentage points (0 = cosine); one panel per PCA width k.",
+            "instance": f"k ∈ {{{', '.join(map(str, ks))}}}, m ∈ {{{', '.join(map(str, ms))}}}, "
+                        f"{len(config['draws'])} draws, geometry G2, "
+                        f"one fixed {config['holdout_pairs']}-pair held-out pool, chance 1/{config['holdout_pairs']}",
+            "methods": "cosine (baseline, the zero line); iOT with diagonal θ; InfoNCE with diagonal θ; "
+                       "InfoNCE with a low-rank r=64 residual",
+            "config": config_text,
+            "sources": "iot_experiments/out/records/metric_learning/records.json (study "
+                       "t1t2/metric_learning); cosine is label-free and constant per k, asserted in the study",
+            "conventions": "hollow marker = solver-limited iOT fit (R'/R_uniform > 1); numbers beside a "
+                           "marker are the m=300 mean, the full set of points is in the CSV",
+        },
+        header=["k", "m", "arm", "stat", "value"],
+        rows=rows,
     )
-    fig.subplots_adjust(left=0.085, right=0.985, top=0.78, bottom=0.30, wspace=0.12)
-    return save(fig, "F2_learned_vs_cosine")
+    print_caption("F2_learned_vs_cosine", experiment=experiment, comparing=comparing, config=config_text)
+    return png
 
 
 def parse_phase_c_table(path: Path) -> dict[int, dict[str, float]]:
@@ -298,7 +326,7 @@ def parse_phase_c_table(path: Path) -> dict[int, dict[str, float]]:
     return out
 
 
-def build_f5() -> tuple[Path, Path]:
+def build_f5() -> Path:
     """
     CN: **F5** —— 左：最终边集占 `m·n` 的百分比；右：循环耗时（对数 m 轴），并画密集 LP 的单点。
     EN: **F5** -- left: final edge set as a percentage of `m*n`; right: loop time on a log m axis, with the
@@ -388,18 +416,44 @@ def build_f5() -> tuple[Path, Path]:
 
     title, subtitle = TITLES["F5"]
     add_title(fig, title, subtitle, axes_left=0.095)
-    add_footer(
-        fig,
-        f"data: {record.relative_to(_REPO_ROOT)} | commit {short_commit()} | k=64, G3, soft window, GPU master",
-        "peak memory 5.2 GB (m=600) and 5.9 GB (m=2000); the time step between m=600 and m=2000 is not "
-        "yet explained",
-        axes_left=0.095,
+    experiment = (
+        "constraint-generation loop on real SynthRAD features — K=64, G3, soft window, "
+        "GPU master + GPU scan")
+    comparing = (
+        "relaxed loop vs one dense LP over all m·n edges (m=300 only); "
+        "|F|/(m·n) and wall time vs m")
+    config_text = (
+        "m=300 from Phase B (loop 2.5 s, dense LP 14.13 s) · m=600 and m=2000 from Phase C · 1 draw")
+    add_footer(fig, experiment=experiment, comparing=comparing, config=config_text, axes_left=0.095)
+    fig.subplots_adjust(left=0.095, right=0.985, top=0.80, bottom=0.22, wspace=0.30)
+    png = save(fig, "F5_constraint_generation")
+
+    rows = ([[m, "edge_share_percent", f"{f:.4f}"] for m, f in zip(ms, frac)]
+            + [[m, "seconds", f"{s:.4f}"] for m, s in zip(ms, secs)]
+            + [[300, "dense_lp_seconds", f"{dense_seconds:.4f}"]])
+    write_metadata(
+        "F5_constraint_generation",
+        caption={
+            "axes": "left: final edge set |F| as a percentage of all m·n edges; right: wall time in "
+                    "seconds on a log scale; both against the number of labelled slices m (log scale).",
+            "instance": f"m ∈ {tuple(ms)}, K=64, geometry G3, soft window, one draw, GPU master and scan",
+            "methods": "the constraint-generation loop at every m; one dense LP over all m·n edges at "
+                       "m=300, drawn as a hollow diamond",
+            "config": config_text,
+            "sources": "reports/STATE.md §3.5 (Phase B: loop vs dense LP at m=300) and §3.6 (Phase C: loop "
+                       "scaling at m=600 and m=2000); the values are parsed from those prose tables, the "
+                       "generating records were not preserved",
+            "conventions": "the diamond is a single dense-LP measurement, not a curve; m=300 on the right "
+                           "panel is the Phase B loop",
+        },
+        header=["m", "quantity", "value"],
+        rows=rows,
     )
-    fig.subplots_adjust(left=0.095, right=0.985, top=0.78, bottom=0.30, wspace=0.30)
-    return save(fig, "F5_constraint_generation")
+    print_caption("F5_constraint_generation", experiment=experiment, comparing=comparing, config=config_text)
+    return png
 
 
-def build_f4() -> tuple[Path, Path]:
+def build_f4() -> Path:
     """
     CN: **F4** —— 两栏点图：左为精确切片恢复（对数轴），右为同患者恢复（线性轴）；每行一个方法。
         `nmi` 用空心标记，作为**参考**而非竞争对手（注册配对上接近 oracle）。
@@ -496,19 +550,50 @@ def build_f4() -> tuple[Path, Path]:
 
     title, subtitle = TITLES["F4"]
     add_title(fig, title, subtitle, axes_left=0.115)
-    add_footer(
-        fig,
-        f"data: {rec_main.relative_to(_REPO_ROOT)} + {rec_pix.relative_to(_REPO_ROOT)} | "
-        f"commit {short_commit()} | 630 slices / 45 patients, soft window",
-        "preliminary, one draw, 15 fit / 15 evaluation patients; NMI on registered pairs is a reference, "
-        "not a competitor",
-        axes_left=0.115,
+    cfg = next(r for r in payload["records"] if not r["excluded"])["config"]
+    extra = next(r for r in payload["records"] if not r["excluded"])["extra"]
+    n_slices, n_patients = int(extra["n_side"]), int(extra["n_patients"])
+    experiment = (
+        f"Each method must pair MR slices with CT slices from one {n_slices}-slice SynthRAD pool "
+        f"({n_patients} patients, soft window, DEV split), and is scored against the true patient "
+        "and slice.")
+    comparing = (
+        "Rows compare pixel distance, cosine, cosine plus OT and the learned cost, plus NMI as a "
+        "reference; the left panel needs the exact slice, the right one only the patient.")
+    config_text = (
+        f"Costs are fitted on {cfg['fit_patients_per_draw']} other FIT patients, in one draw. Any of "
+        f"the {n_slices} slices could be named, so blind guessing is right 1 time in {n_slices} for "
+        f"the slice and 1 in {n_patients} for the patient.")
+    add_footer(fig, experiment=experiment, comparing=comparing, config=config_text,
+               axes_left=0.115, labelled=False)
+    fig.subplots_adjust(left=0.115, right=0.985, top=0.80, bottom=0.22, wspace=0.22)
+    png = save(fig, "F4_pair_recovery")
+
+    rows = [[arm, "exact_slice", f"{values[arm][0]:.4f}"] for arm in order] + \
+           [[arm, "same_patient", f"{values[arm][1]:.4f}"] for arm in order]
+    write_metadata(
+        "F4_pair_recovery",
+        caption={
+            "axes": "left: exact-slice recovery, i.e. the paired slice has the right patient and the right "
+                    "z index (log scale); right: same-patient recovery (linear scale); one row per method.",
+            "instance": f"{n_slices} slices / {n_patients} patients, soft CT window, one draw, "
+                        f"{cfg['fit_patients_per_draw']} FIT patients for the fits, DEV split for evaluation",
+            "methods": "pixel MSE and correlation (no learning); cosine NN and cosine + OT; the learned "
+                       "θ; pixel NMI as a reference; random",
+            "config": config_text,
+            "sources": "iot_experiments/out/synthrad_v2/records.json (feature arms) and "
+                       "iot_experiments/out/synthrad_cheap/records.json (pixel arms, item A)",
+            "conventions": "left and right share one categorical y axis; the dashed line is chance; "
+                           "pixel NMI is a reference on registered pairs, drawn hollow",
+        },
+        header=["method", "metric", "value"],
+        rows=rows,
     )
-    fig.subplots_adjust(left=0.115, right=0.985, top=0.78, bottom=0.30, wspace=0.22)
-    return save(fig, "F4_pair_recovery")
+    print_caption("F4_pair_recovery", experiment=experiment, comparing=comparing, config=config_text)
+    return png
 
 
-def build_f3() -> tuple[Path, Path]:
+def build_f3() -> Path:
     """
     CN: **F3** —— 覆盖度 vs 精确率，cosine 与学到的代价两条线；每个覆盖率上有淡点表示各 draw。
     EN: **F3** -- coverage vs precision for cosine and the learned cost, with faint per-draw dots.
@@ -517,7 +602,7 @@ def build_f3() -> tuple[Path, Path]:
     parsed = parse_precision_table(record)
     check("F3", parsed)
 
-    fig, ax = plt.subplots(figsize=(6.5, 4.0))
+    fig, ax = plt.subplots(figsize=(6.5, 4.4))
     apply_style()
     x = np.asarray([c * 100.0 for c in COVERAGE])
 
@@ -558,29 +643,47 @@ def build_f3() -> tuple[Path, Path]:
 
     title, subtitle = TITLES["F3"]
     add_title(fig, title, subtitle, axes_left=0.105)
-    add_footer(
-        fig,
-        f"data: {record.relative_to(_REPO_ROOT)} | commit {short_commit()} | "
-        "k=256, geometry G2, m in {100,300}, fixed 400-pair pool, 3 draws",
-        "standardisation and PCA fitted on pool images (transductive, label-free); "
-        "precision ranked by margin",
-        axes_left=0.105,
+    experiment = (
+        "t1t2/pool — T1↔T2 matching on one fixed 700-pair pool, geometry G2, "
+        "standardisation and PCA fitted on the pool images")
+    comparing = (
+        "cosine (label-free) vs learned diagonal θ, the same cost family with two θ; "
+        "precision among the top 25/50/75/100 % of rows ranked by margin")
+    config_text = (
+        "K=256 · m ∈ {100,300} · 3 draws · P@c = hit rate of the top c·n rows; "
+        "no pair discarded from the matching")
+    add_footer(fig, experiment=experiment, comparing=comparing, config=config_text, axes_left=0.105)
+    fig.subplots_adjust(left=0.105, right=0.97, top=0.84, bottom=0.18)
+    png = save(fig, "F3_precision_by_confidence")
+
+    rows = [[arm, int(round(c * 100)), f"{parsed[arm][i]:.4f}"]
+            for arm in ("cosine", "learned") for i, c in enumerate(COVERAGE)]
+    write_metadata(
+        "F3_precision_by_confidence",
+        caption={
+            "axes": "x = share of matches kept, ranked from most to least confident by margin (%); "
+                    "y = precision among those kept; two arms.",
+            "instance": "K=256, m ∈ {100,300}, 3 draws, one fixed 700-pair pool, geometry G2",
+            "methods": "cosine (hollow squares) and the learned diagonal θ (filled circles); every row is "
+                       "matched to exactly one column and a row is a hit when the id matches",
+            "config": config_text,
+            "sources": "reports/current/REAL_PAIRS_REPORT.md §5, table of P@25..P@100; the generating "
+                       "records were never committed, so these values are parsed from the report table",
+            "conventions": "margin = min(row best−second gap, column best−second gap); coverage selects "
+                           "which subset is evaluated, no pair is removed from the matching",
+        },
+        header=["arm", "coverage_percent", "precision"],
+        rows=rows,
     )
-    fig.subplots_adjust(left=0.105, right=0.97, top=0.80, bottom=0.18)
-    return save(fig, "F3_precision_by_confidence")
+    print_caption("F3_precision_by_confidence", experiment=experiment, comparing=comparing, config=config_text)
+    return png
 
 
 def main() -> int:
     """CN: 入口。EN: entry point."""
     apply_style()
-    png, pdf = build_f2()
-    print(f"F2 written:\n  {png}\n  {pdf}")
-    png, pdf = build_f5()
-    print(f"F5 written:\n  {png}\n  {pdf}")
-    png, pdf = build_f4()
-    print(f"F4 written:\n  {png}\n  {pdf}")
-    png, pdf = build_f3()
-    print(f"F3 written:\n  {png}\n  {pdf}")
+    for build in (build_f2, build_f5, build_f4, build_f3):
+        print(f"written: {build()}")
     return 0
 
 

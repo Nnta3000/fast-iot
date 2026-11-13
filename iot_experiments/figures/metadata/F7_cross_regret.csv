@@ -1,0 +1,49 @@
+evaluated_pair,fitted_theta,value
+Pair 1 plan,theta from Pair 1,0.0075
+Pair 1 plan,theta from Pair 2,0.7566
+Pair 1 plan,theta from Pair 3,0.0143
+Pair 1 plan,theta from Pair 4,0.0114
+Pair 2 plan,theta from Pair 1,0.0207
+Pair 2 plan,theta from Pair 2,0.0086
+Pair 2 plan,theta from Pair 3,0.0290
+Pair 2 plan,theta from Pair 4,0.0252
+Pair 3 plan,theta from Pair 1,0.1027
+Pair 3 plan,theta from Pair 2,0.4349
+Pair 3 plan,theta from Pair 3,0.0135
+Pair 3 plan,theta from Pair 4,0.0565
+Pair 4 plan,theta from Pair 1,0.0259
+Pair 4 plan,theta from Pair 2,1.1218
+Pair 4 plan,theta from Pair 3,0.0351
+Pair 4 plan,theta from Pair 4,0.0193
+Pair 1 plan,theta shared by all four,0.0142
+Pair 2 plan,theta shared by all four,0.0298
+Pair 3 plan,theta shared by all four,0.0141
+Pair 4 plan,theta shared by all four,0.0281
+Pair 1,registration_ids,000-013
+Pair 2,registration_ids,002-041
+Pair 3,registration_ids,005-088
+Pair 4,registration_ids,007-052
+pair050-066,multi,0.3417
+pair056-071,multi,0.5392
+pair053-085,multi,0.4492
+pair059-099,multi,0.3992
+pair064-072,multi,0.5167
+pair061-086,multi,0.4592
+pair067-091,multi,0.6017
+pair072-085,multi,0.4258
+pair050-066,single,0.1508
+pair056-071,single,0.2792
+pair053-085,single,0.2017
+pair059-099,single,0.1008
+pair064-072,single,0.2117
+pair061-086,single,0.1742
+pair067-091,single,0.3167
+pair072-085,single,0.1442
+pair050-066,uniform_theta,0.5067
+pair056-071,uniform_theta,0.4967
+pair053-085,uniform_theta,0.6033
+pair059-099,uniform_theta,0.1650
+pair064-072,uniform_theta,0.3500
+pair061-086,uniform_theta,0.3408
+pair067-091,uniform_theta,0.4708
+pair072-085,uniform_theta,0.3008

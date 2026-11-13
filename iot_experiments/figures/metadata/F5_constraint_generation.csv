@@ -1,0 +1,8 @@
+m,quantity,value
+300,edge_share_percent,3.4000
+600,edge_share_percent,1.8600
+2000,edge_share_percent,0.6500
+300,seconds,2.5000
+600,seconds,7.8000
+2000,seconds,185.0000
+300,dense_lp_seconds,14.1300

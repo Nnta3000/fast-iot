@@ -1,0 +1,9 @@
+arm,coverage_percent,precision
+cosine,25,1.0000
+cosine,50,0.9996
+cosine,75,0.9456
+cosine,100,0.8428
+learned,25,1.0000
+learned,50,0.9988
+learned,75,0.9503
+learned,100,0.8518

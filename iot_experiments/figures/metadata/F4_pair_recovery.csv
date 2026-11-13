@@ -1,0 +1,15 @@
+method,metric,value
+random,exact_slice,0.0063
+pixel_mse,exact_slice,0.0190
+pixel_corr,exact_slice,0.0492
+cosine_nn,exact_slice,0.1111
+cosine_ot,exact_slice,0.1143
+learned,exact_slice,0.1667
+nmi,exact_slice,0.7635
+random,same_patient,0.0270
+pixel_mse,same_patient,0.1460
+pixel_corr,same_patient,0.1905
+cosine_nn,same_patient,0.1889
+cosine_ot,same_patient,0.1778
+learned,same_patient,0.2333
+nmi,same_patient,0.8238
