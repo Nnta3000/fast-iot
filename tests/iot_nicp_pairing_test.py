@@ -124,6 +124,24 @@ def test_transport_is_perfectly_balanced_on_random_costs() -> None:
         assert stats.excess_repeat_fraction == pytest.approx(0.0)
 
 
+def test_both_rules_report_cost_in_the_same_units() -> None:
+    """
+    EN: regression for a units bug: `decode_argmin` summed the row minima while `decode_transport` reported a
+        unit-mass `<P, C>`. The argmin then looked ~500x cheaper than a *constrained* minimum, which is
+        impossible. Both must now be `<P, C>` for a plan of unit total mass, so transport can never be
+        cheaper than argmin.
+    CN: 单位 bug 的回归测试：argmin 曾对行最小求和、transport 报告单位质量的 `<P,C>`，使 argmin 看起来
+        比受约束的最小值还便宜 500 倍。现在两者同单位，transport 不可能更便宜。
+    """
+    rng = np.random.default_rng(7)
+    for _trial in range(4):
+        cost = rng.random((40, 8)) * 5.0
+        baseline = decode_argmin(cost)
+        transported = decode_transport(cost)
+        assert baseline.transport_cost == pytest.approx(float(cost.min(axis=1).mean()))
+        assert transported.transport_cost >= baseline.transport_cost - 1e-9
+
+
 def test_transport_cost_is_never_below_the_row_constrained_optimum() -> None:
     """
     EN: the per-row argmin minimises `<P, C>` under the row constraint alone, so adding the column constraint

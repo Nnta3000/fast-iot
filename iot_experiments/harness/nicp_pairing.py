@@ -144,7 +144,12 @@ def decode_argmin(cost: Float[np.ndarray, "k m"]) -> DecodedPairing:
     """
     arr = _validate_cost(cost)
     assignment = np.asarray(np.argmin(arr, axis=1), dtype=np.int64)
-    total = float(arr[np.arange(arr.shape[0]), assignment].sum())
+    # EN: **same units as `decode_transport`.** Both report `<P, C>` for a plan of UNIT total mass, so the
+    #     argmin's row minima must be averaged (its plan puts `1/K` on one entry per row), not summed. An
+    #     earlier version summed here and used the weighted form there, which made the argmin look 500x
+    #     *cheaper* than the transport plan -- a units artefact that inverts the obvious reading.
+    # CN: 与 `decode_transport` 同单位：两者都是总量为 1 的方案的 `<P,C>`，所以 argmin 的行最小要取平均而非求和。
+    total = float(arr[np.arange(arr.shape[0]), assignment].mean())
     return DecodedPairing(assignment=assignment, rule="argmin", transport_cost=total)
 
 
