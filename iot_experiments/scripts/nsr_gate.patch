@@ -1,0 +1,88 @@
+diff --git a/src/lvd_templ/evaluation/evaluation_benchmark.py b/src/lvd_templ/evaluation/evaluation_benchmark.py
+index 59c9d40..de002dc 100644
+--- a/src/lvd_templ/evaluation/evaluation_benchmark.py
++++ b/src/lvd_templ/evaluation/evaluation_benchmark.py
+@@ -218,7 +218,11 @@ def run(cfg: DictConfig) -> str:
+             out_name = out_name + '_ss'
+             et = time.time()
+             module.train()
+-            selfsup_ref(module, torch.tensor(np.asarray(scan_src.vertices)), voxel_src, gt_points,steps=cfg['core'].steps_ss, lr_opt=cfg['core'].lr_ss)
++            # IOT-GATE: dump NICP's cost matrix when NSR_COST_DUMP_ROOT is set; otherwise inert.
++            import os as _os
++            _root = _os.environ.get('NSR_COST_DUMP_ROOT')
++            _dump = _os.path.join(_root, name + '.npz') if _root else None
++            selfsup_ref(module, torch.tensor(np.asarray(scan_src.vertices)), voxel_src, gt_points,steps=cfg['core'].steps_ss, lr_opt=cfg['core'].lr_ss, dump_path=_dump)
+             module.eval()
+ 
+         # You can initialize LVD in different points in space. Default is at the origin
+diff --git a/src/lvd_templ/evaluation/utils.py b/src/lvd_templ/evaluation/utils.py
+index 298a45b..e08f089 100644
+--- a/src/lvd_templ/evaluation/utils.py
++++ b/src/lvd_templ/evaluation/utils.py
+@@ -415,15 +415,24 @@ def SMPL_fitting(SMPL_model, in_points, gt_idxs, prior, iterations = 1000):
+ 
+ 
+ #### SELF SUPERVISED NF ICP
+-def selfsup_ref(module, input_points, voxel_src, gt_points,steps=10, lr_opt=0.00001):
++def selfsup_ref(module, input_points, voxel_src, gt_points,steps=10, lr_opt=0.00001,
++               dump_path=None):
++    # IOT-GATE: `dump_path` (optional) writes NICP's pairwise cost matrix for the LAST iteration:
++    #     cost[k, i] = ||F(y_k)_i||^2   for k over sampled target points, i over template vertices,
++    # together with the *vertex index* of each sampled point, so a downstream comparison can score
++    # the argmin and the transport plan against ground truth. Off by default: None changes nothing.
+     optimizer = torch.optim.Adam(module.parameters(), lr=lr_opt)
++    input_idx = torch.arange(input_points.shape[0])  # IOT-GATE: vertex id of each point, permuted in step
+ 
+     for i in tqdm.tqdm(np.arange(0,steps),desc="NICP"):
+         # Sample points on the target surface
+         with torch.no_grad():
+             factor = max(1, int(input_points.shape[0] / 20000))
+-            input_points = input_points[torch.randperm(input_points.size()[0])]
++            perm = torch.randperm(input_points.size()[0])          # IOT-GATE: capture the permutation
++            input_points = input_points[perm]
++            input_idx = input_idx[perm]                            # IOT-GATE: keep ids aligned
+             input_points_res = input_points[1:input_points.shape[0]:factor,:].type(torch.float32).unsqueeze(0).cuda()
++            input_idx_res = input_idx[1:input_points.shape[0]:factor]   # IOT-GATE
+ 
+         optimizer.zero_grad()
+         
+@@ -439,7 +448,10 @@ def selfsup_ref(module, input_points, voxel_src, gt_points,steps=10, lr_opt=0.00
+         pred_dist = pred_dist.reshape(1, gt_points, 3, -1).permute(0, 1, 3, 2)
+         
+         # Collect the offset with the minimum norm for each target vertex
+-        v, _ = torch.min(torch.sum(pred_dist**2,axis=3),axis=1)
++        sq = torch.sum(pred_dist**2, axis=3)          # IOT-GATE: (1, M, K) -- the cost, before the min
++        v, argmin_i = torch.min(sq, axis=1)           # IOT-GATE: argmin over i is NICP's own rule
++        if dump_path is not None:
++            _dump_nicp_cost(dump_path, sq, argmin_i, input_points_res, input_idx_res, iteration=int(i))
+         
+         # Global loss
+         loss = torch.sum(v)
+@@ -448,6 +460,27 @@ def selfsup_ref(module, input_points, voxel_src, gt_points,steps=10, lr_opt=0.00
+         loss.backward()
+         optimizer.step()
+ 
++def _dump_nicp_cost(path, sq, argmin_i, points, idx, *, iteration):
++    """IOT-GATE: write NICP's cost matrix and the sampled points' vertex ids.
++
++    `sq` is (1, M, K): squared offset norms for template vertex i at query point k. Saved transposed as
++    `cost` (K, M) so a row is one target point, matching the decoder's convention.
++    """
++    import os
++    folder = os.path.dirname(str(path))
++    if folder:
++        os.makedirs(folder, exist_ok=True)
++    cost = sq[0].transpose(0, 1).detach().cpu().numpy().astype(np.float32)
++    np.savez_compressed(
++        str(path),
++        cost=cost,
++        nicp_assignment=argmin_i[0].detach().cpu().numpy().astype(np.int64),
++        target_points=points[0].detach().cpu().numpy().astype(np.float32),
++        template_vertex_id=idx.detach().cpu().numpy().astype(np.int64),
++        iteration=np.int64(iteration),
++    )
++
++
+ def fit_cham(SMPL_model, pred_mesh, vertices_scan, prior,init, bidir=0):
+     chamferDist = ChamferDistance()
+     parameters_smpl = OptimizationSMPL().cuda()
