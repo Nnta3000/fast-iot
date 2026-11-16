@@ -244,9 +244,12 @@ def build_f2() -> Path:
     # CN: 零线标签放在右下角，避开数据线。/ EN: put the zero-line label at the right, clear of the data.
     axes[0].annotate("cosine", xy=(50, 0), xytext=(4, 5), textcoords="offset points",
                      ha="left", fontsize=7, color="#8c8c8c")
+    # CN: 页脚现在按宽度折行并向下长，图例不能再放在坐标轴下面 —— 挪到坐标区上方的空白处。
+    # EN: the footer now wraps and grows downwards, so the legend cannot sit under the axes any more; it
+    #     goes into the free band between the subtitle and the panels.
     handles, names = axes[0].get_legend_handles_labels()
-    fig.legend(handles, names, loc="lower center", ncol=3, frameon=False, fontsize=8,
-               bbox_to_anchor=(0.5, 0.115))
+    fig.legend(handles, names, loc="lower right", ncol=3, frameon=False, fontsize=8,
+               bbox_to_anchor=(0.985, 0.775))
 
     title, subtitle = TITLES["F2"]
     add_title(fig, title, subtitle, axes_left=0.085)
@@ -263,7 +266,7 @@ def build_f2() -> Path:
         f"one fixed {config['holdout_pairs']}-pair held-out pool · {len(config['draws'])} draws · "
         f"chance 1/{config['holdout_pairs']}")
     add_footer(fig, experiment=experiment, comparing=comparing, config=config_text, axes_left=0.085)
-    fig.subplots_adjust(left=0.085, right=0.985, top=0.80, bottom=0.22, wspace=0.12)
+    fig.subplots_adjust(left=0.085, right=0.985, top=0.75, bottom=0.22, wspace=0.12)
     png = save(fig, "F2_learned_vs_cosine")
 
     rows: list[list[object]] = []

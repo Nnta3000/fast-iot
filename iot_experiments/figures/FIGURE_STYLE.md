@@ -70,8 +70,9 @@ figure height makes 7 pt text collide on a 3.6 in canvas.
 
 ## 4. Colour, markers and encodings
 
-- One fixed colour per method, shared by every figure (`ARM_COLORS`), sampled from **magma** only in
-  `[0.15, 0.80]` — the ends are unreadable in print and on a projector.
+- One fixed colour per method, shared by every figure (`ARM_COLORS`), taken from the project palette
+  `PALETTE` in `style.py`: the 14 colours of `orange-palette-q3.png`, read pixel by pixel. The pale end
+  (white, pale yellow, pink) is for fills and heat maps only, never for a line on white.
 - Baselines and references are neutral grey (`cosine`, `random`, `pixel_*`, `nmi`).
 - **Marker shape varies with the method** as well, so the figure survives greyscale printing.
 - `colour()` and `marker()` honour the `ALIASES` table, so `learned` and `iot` are one series everywhere.
@@ -84,7 +85,8 @@ figure height makes 7 pt text collide on a 3.6 in canvas.
 
 - No grid. Top and right spines off. Bottom/left spines 0.8 pt. Tick length 3, minor ticks off.
 - **Exception — surface panels (F6).** A rendered surface has no cartesian axes at all: axes are off, the
-  aspect is equal, and the quantity is carried by a continuous colour field on the project's `magma`
+  aspect is equal, and the quantity is carried by a continuous colour field on `SEQUENTIAL_CMAP`
+  (the palette's monotone-lightness segment: ink → crimson → orange → yellow → pale yellow)
   colormap with one labelled colourbar per comparable group. The same rules still apply to titles,
   annotations and the footer.
 - Explicit ticks: `set_xticks` / `set_yticks` with the values that appear in the data, and explicit tick
