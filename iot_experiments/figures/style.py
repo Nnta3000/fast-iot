@@ -5,13 +5,13 @@ CN: **图形样式** —— 一次定义，五张图共用。所有颜色、字�
         here; the figure scripts contain none of it.
 
     CN: 设计约束（来自要求）：
-        * 调色板取 matplotlib 的 "magma"，只在 [0.15, 0.80] 之间取色——避开过浅的黄色端与纯黑端；
+        * 调色板是项目自己的 14 色条（`orange-palette-q3.png`），见 `PALETTE`；
         * **每个方法一个固定颜色**，五张图复用；基线/参考（cosine、random、像素方法、NMI）用中性灰；
         * 同时变化**标记形状**，因此在灰度打印下仍可区分；
         * 极简：无网格、无上/右边框、左/下边框 0.8 pt、显式刻度、刻度长 3、无次刻度；
         * **标题是名词短语，不是结论**；`add_title` 会**拒绝**含结论性词汇的标题或副标题。
     EN: Design constraints (from the brief):
-        * "magma" palette sampled only in [0.15, 0.80], avoiding the pale-yellow and black ends;
+        * the project's own 14-colour strip (`orange-palette-q3.png`), exposed as `PALETTE`;
         * **one fixed colour per method**, reused across all figures; baselines/references (cosine, random,
           pixel methods, NMI) in neutral greys;
         * **marker shape** varies too, so figures stay readable in greyscale;
@@ -25,9 +25,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_hex
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 
 # CN: 结论性词汇黑名单。标题/副标题命中任何一个就抛错。
@@ -49,57 +48,91 @@ class StyleError(RuntimeError):
     """CN: 样式或标题不合规。EN: a style or title violation."""
 
 
-def _magma(position: float) -> str:
-    """
-    CN: 从 "magma" 上取一个固定位置的颜色。位置必须在 [0.15, 0.80]：更低是黑，更高是浅黄，两端在
-        打印和投影上都不可读。
-    EN: sample "magma" at a fixed position. The position must lie in [0.15, 0.80]: below is black and above is
-        pale yellow, and neither end is readable in print or on a projector.
-    """
-    if not 0.15 <= float(position) <= 0.80:
-        raise StyleError(f"palette position {position!r} outside [0.15, 0.80]")
-    return to_hex(matplotlib.colormaps["magma"](float(position)))
+# CN: **项目调色板** —— 14 色，取自 `orange-palette-q3.png`（14×1 px 的色条，逐像素读出来的，不是目测）。
+#     按色条的从左到右顺序排列；浅色端（白、浅黄、粉）只用于填充/热图，不用于线条。
+# EN: **the project palette** -- 14 colours taken from `orange-palette-q3.png` (a 14x1 px strip, read
+#     pixel by pixel, not eyeballed). Ordered left to right along the strip. The pale end (white, pale
+#     yellow, pink) is for fills and heat maps only, never for a line on white.
+PALETTE: tuple[str, ...] = (
+    "#c0c0e0",  # 0 lavender
+    "#ffffff",  # 1 white
+    "#c0c0e0",  # 2 lavender (repeated in the strip)
+    "#606080",  # 3 slate
+    "#202020",  # 4 ink
+    "#000000",  # 5 black
+    "#c04060",  # 6 crimson
+    "#ff8020",  # 7 orange
+    "#ffe020",  # 8 yellow
+    "#ffffc0",  # 9 pale yellow
+    "#60c0e0",  # 10 sky
+    "#4060c0",  # 11 royal
+    "#ffe0a0",  # 12 cream
+    "#ffe0e0",  # 13 pink
+)
+
+# CN: 中性带里插值出来的三档浅灰，给基线与参考文献用（调色板本身只有 slate / ink / white 三档）。
+# EN: three light neutrals interpolated inside the palette's neutral band, for baselines and references
+#     (the strip itself only has slate / ink / white).
+GREY_SOFT: str = "#9090b0"
+GREY_FAINT: str = "#b0b0d0"
+
+# CN: 热图的连续色表 —— 取色条中**亮度单调上升**的一段：ink → crimson → orange → yellow → pale yellow。
+# EN: the continuous map for heat maps -- the segment of the strip whose lightness rises monotonically:
+#     ink -> crimson -> orange -> yellow -> pale yellow.
+SEQUENTIAL_COLORS: tuple[str, ...] = ("#202020", "#c04060", "#ff8020", "#ffe020", "#ffffc0")
+SEQUENTIAL_CMAP = LinearSegmentedColormap.from_list("iot_palette", list(SEQUENTIAL_COLORS))
 
 
-# CN: **每个方法一个颜色**。位置来自要求：iOT 0.25、InfoNCE 0.52、low-rank residual 0.78。
-# EN: **one colour per method**. Positions from the brief: iOT 0.25, InfoNCE 0.52, low-rank residual 0.78.
+def _palette(index: int) -> str:
+    """
+    CN: 取调色板上的第 `index` 色（0–13）。越界即报错，避免悄悄回退到默认色。
+    EN: the `index`-th colour of the palette (0-13). Out of range raises rather than silently falling back.
+    """
+    if not 0 <= int(index) < len(PALETTE):
+        raise StyleError(f"palette index {index!r} outside 0..{len(PALETTE) - 1}")
+    return PALETTE[int(index)]
+
+
+# CN: **每个方法一个颜色**。学到的臂用暖色（crimson/orange）与冷色（royal/sky）区分族；基线与参考用中性色。
+# EN: **one colour per method**. Learned arms split into a warm family (crimson/orange) and a cool one
+#     (royal/sky); baselines and references stay neutral.
 ARM_COLORS: dict[str, str] = {
     # 学到的代价 / learned costs
-    "iot": _magma(0.25),
-    "infonce": _magma(0.52),
-    "residual64": _magma(0.78),
-    "residual16": _magma(0.68),
-    "sinkhorn": _magma(0.40),
+    "iot": _palette(6),
+    "infonce": _palette(7),
+    "residual64": _palette(11),
+    "residual16": _palette(10),
+    "sinkhorn": _palette(10),
     # FAUST 学习臂与方法 / FAUST learned arms and objectives
-    "relaxed_lp": _magma(0.25),
-    "multi": _magma(0.78),
-    "single": _magma(0.25),
-    "entropic_iot": _magma(0.40),
-    "row_softmax": _magma(0.52),
-    "rowcol_softmax": _magma(0.68),
-    "selected": _magma(0.25),
-    "median": _magma(0.68),
-    "reference": "#2e2e2e",
-    # 基线 / 参考 —— 中性灰
-    "cosine": "#4d4d4d",
-    "cosine_nn": "#4d4d4d",
-    "cosine_ot": "#2e2e2e",
-    "random": "#b3b3b3",
-    "pixel_mse": "#8c8c8c",
-    "pixel_corr": "#6e6e6e",
-    "nmi": "#999999",
-    "cca": "#7f7f7f",
-    "uniform": "#8c8c8c",
-    "uniform_theta": "#8c8c8c",
-    "uniform_late_hks": "#a8a8a8",
-    "uniform_hks": "#bcbcbc",
-    "grouped_uniform": "#6e6e6e",
-    "position_only": "#c9c9c9",
+    "relaxed_lp": _palette(6),
+    "multi": _palette(11),
+    "single": _palette(6),
+    "entropic_iot": _palette(10),
+    "row_softmax": _palette(7),
+    "rowcol_softmax": _palette(11),
+    "selected": _palette(6),
+    "median": _palette(7),
+    "reference": _palette(4),
+    # 基线 / 参考 —— 中性
+    "cosine": _palette(3),
+    "cosine_nn": _palette(3),
+    "cosine_ot": _palette(4),
+    "random": _palette(0),
+    "pixel_mse": GREY_SOFT,
+    "pixel_corr": _palette(3),
+    "nmi": _palette(0),
+    "cca": GREY_SOFT,
+    "uniform": _palette(3),
+    "uniform_theta": _palette(3),
+    "uniform_late_hks": GREY_SOFT,
+    "uniform_hks": _palette(0),
+    "grouped_uniform": _palette(4),
+    "position_only": _palette(0),
     # 几何 G0-G3（F1）
-    "G0": "#b3b3b3",
-    "G1": "#8c8c8c",
-    "G2": "#4d4d4d",
-    "G3": "#2e2e2e",
+    "G0": _palette(0),
+    "G1": GREY_SOFT,
+    "G2": _palette(3),
+    "G3": _palette(4),
 }
 
 # CN: 标记形状同时变化，保证灰度可读。EN: marker shapes vary too, for greyscale readability.

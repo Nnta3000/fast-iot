@@ -21,7 +21,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import colormaps
 from matplotlib.collections import PolyCollection
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +35,7 @@ from iot_experiments.figures.metadata import (  # noqa: E402
     write_metadata,
 )
 from iot_experiments.figures.style import (  # noqa: E402
+    SEQUENTIAL_CMAP,
     apply_style,
     colour,
     marker,
@@ -98,7 +98,7 @@ def _mesh_panel(ax, mesh, values: np.ndarray, vmax: float, *, view: str = "front
     order = np.argsort(depth[f].mean(axis=1))
     polys = xy[f[order]]
     face_colour = np.asarray(values, dtype=np.float64)[f[order]].mean(axis=1)
-    coll = PolyCollection(polys, array=face_colour, cmap="magma", edgecolors="none", clim=(0.0, float(vmax)))
+    coll = PolyCollection(polys, array=face_colour, cmap=SEQUENTIAL_CMAP, edgecolors="none", clim=(0.0, float(vmax)))
     ax.add_collection(coll)
     ax.set_xlim(float(xy[:, 0].min()), float(xy[:, 0].max()))
     ax.set_ylim(float(xy[:, 1].min()), float(xy[:, 1].max()))
@@ -207,7 +207,7 @@ def build_f7() -> Path:
     fig, (ax_m, ax_h) = plt.subplots(1, 2, figsize=(10.0, 3.9), gridspec_kw={"width_ratios": [1.15, 1.0]})
     apply_style()
     vmax = 0.35
-    image = ax_m.imshow(np.clip(matrix, 0.0, vmax), cmap="magma", vmin=0.0, vmax=vmax, aspect="auto")
+    image = ax_m.imshow(np.clip(matrix, 0.0, vmax), cmap=SEQUENTIAL_CMAP, vmin=0.0, vmax=vmax, aspect="auto")
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             value = matrix[i, j]
@@ -754,7 +754,7 @@ def build_f13() -> Path:
     columns = ("x", "y", "z", "area", "curv") + tuple(f"hks{i}" for i in range(1, thetas.shape[1] - 4))
     fig, (ax_w, ax_b) = plt.subplots(1, 2, figsize=(9.8, 3.9), gridspec_kw={"width_ratios": [1.6, 1.0]})
     apply_style()
-    image = ax_w.imshow(thetas, cmap="magma", aspect="auto", vmin=0.0, vmax=float(thetas.max()))
+    image = ax_w.imshow(thetas, cmap=SEQUENTIAL_CMAP, aspect="auto", vmin=0.0, vmax=float(thetas.max()))
     for i in range(thetas.shape[0]):
         for j in range(thetas.shape[1]):
             if thetas[i, j] >= 0.01:
@@ -772,8 +772,10 @@ def build_f13() -> Path:
     bar.ax.tick_params(labelsize=6.5)
 
     ys = np.arange(len(regions))
-    ax_b.barh(ys, l1, color=[colormaps["magma"](0.15 + 0.65 * i / max(1, len(regions) - 1)) for i in ys],
-              height=0.62, zorder=3)
+    # CN: 柱长已经表示数值，颜色不再编码大小；统一用 crimson，浅黄端在白底上读不出来。
+    # EN: the bar length already carries the value, so colour does not encode magnitude here; a single
+    #     crimson keeps the pale end of the ramp (unreadable on white) out of the figure.
+    ax_b.barh(ys, l1, color=colour("iot"), height=0.62, zorder=3)
     for y, value in zip(ys, l1):
         ax_b.annotate(f"{value:.2f}", xy=(value, y), xytext=(3, 0), textcoords="offset points",
                       va="center", fontsize=7)
@@ -875,7 +877,7 @@ def build_f14() -> Path:
     for ax, arm in zip(axes, arms):
         ax.add_collection(PolyCollection(polys, facecolors="#e2e2e2", edgecolors="#cfcfcf", linewidths=0.05))
         points = index[wrong_mask[arm]]
-        scatter = ax.scatter(xy[points, 0], xy[points, 1], c=errors[arm][wrong_mask[arm]], cmap="magma",
+        scatter = ax.scatter(xy[points, 0], xy[points, 1], c=errors[arm][wrong_mask[arm]], cmap=SEQUENTIAL_CMAP,
                              vmin=0.0, vmax=vmax, s=8, linewidths=0, zorder=3)
         ax.set_xlim(float(xy[:, 0].min()), float(xy[:, 0].max()))
         ax.set_ylim(float(xy[:, 1].min()), float(xy[:, 1].max()))
