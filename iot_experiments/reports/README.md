@@ -56,6 +56,8 @@ status and the "which verdict wins" order.
 | `current/SANITY_CHECKS_REPORT.md` | real + synthetic | the five sanity hypotheses: what existed, what is now run, and where | CURRENT — checks A, B, E run (B recovered from log) | `out/sanity*/` |
 | `current/FAUST_PRELIMINARY_REPORT.md` | real (3D) | FAUST shape correspondence: do the pre-flight gates pass? | CURRENT — gates 6.0–6.3 **pass**; preliminary only | `out/faust_data_check/`, `out/faust_gates/` |
 | `current/FAUST_CORRESPONDENCE_REPORT.md` | real (3D) | does a `θ` learned on one pair transfer to held-out pairs? | CURRENT — **yes, 24/24 pair-wins**; learned captures ≈75 % of the oracle gain | `out/faust_correspondence{,_b,_c}/` |
+| `current/PAIRING_GATE_REPORT.md` | real (3D) | does a balanced transport plan beat per-point `argmin` on a given cost? | CURRENT — **yes, 15–71 %**, with the mechanism measured | `out/faust_pairing_gate{,_learned}/` |
+| `current/NSR_ARM_REPORT.md` | real (3D) | why we used FAUST, and why the NSR/NICP vehicle was abandoned | CURRENT — **negative result**; records the structural blocker and the unreproducible submission path | `out/nsr_gate/`, server-side |
 | `current/E5_SCOPE.md` | real | pseudo-pair synthesis with the N=1 trainer | SCOPE ONLY — never run | — |
 
 ### 2.3 Other current reports
