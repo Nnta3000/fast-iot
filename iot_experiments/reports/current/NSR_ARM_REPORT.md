@@ -157,8 +157,51 @@ https://nuage.lix.polytechnique.fr/public.php/webdav/FAUST_r_vts.zip       2.2 M
 user LJFXrsTG22wYCXx, empty password
 ```
 
-Both downloaded and integrity-checked. **Reproduction of URSSM has not been achieved yet**; the baseline run is
-the outstanding step.
+Both downloaded and integrity-checked. The reproduction (below) ran on 2026-11-16 and **matches the published
+number**.
+
+### 5a. The baseline run, and why 0.0159 is 1.59
+
+Server run, `~/Documents/URSSM`, `test.py --opt options/test/faust.yaml` with the released `checkpoints/faust.pth`:
+
+```
+Number of test images in FaustVal: 400
+Testing PairFaustDataset...  400/400 [03:43, 1.79it/s]
+Val auc: 0.8478
+Val avg error: 0.0159
+```
+
+**Conversion to the published convention verified, not assumed** — read the code, then measure the data.
+
+- `metrics/geodist_metric.py: calculate_geodesic_error` is `np.take(dist_x, (corr_x, p2p[corr_y]))` — it returns
+  the geodesic distance **as stored**, with no scaling of its own.
+- The scaling therefore lives in `preprocess.py`, which normalises each mesh so that `sqrt(face area) = 1`
+  before computing `dist/*.mat`. That is exactly the Kim et al. (2011) convention, `error / sqrt(area)`.
+- The shipped FAUST_r `.off` files are **already** in that normalisation — measured on `a.off`: `area =
+  0.9999999999999996`, `sqrt(area) = 1.0`, centroid at the origin — which is why the README uses
+  `--no_normalize` and why no further divisor is needed.
+
+So the stored error *is* `dist / sqrt(area)`, and the published ×100 gives **1.59**, against the paper's FAUST
+entry of **1.6**. The AUC of 0.8478 is the area under the PCK curve up to a threshold of 0.10 in the same units.
+
+**What the 0.0159 is averaged over.** `PairFaustDataset` in the test phase is `product(range(20), repeat=2)`: the
+20 test shapes are `off_files[80:]` (the released 80/20 split), and all **400 ordered pairs** are evaluated,
+including the 20 self-pairs whose error is identically 0. `base_model.py` pools `geo_error(..., return_mean=False)`
+over every vertex of every pair before taking the mean, so the number is a vertex- and pair-pooled mean, not a
+per-pair mean of means. That is the released protocol, so it is comparable to the published table — but a
+per-pair mean would be slightly *higher*, and the 20 self-pairs are 5 % of the denominator.
+
+**No test-time adaptation.** `test.py` runs the feature extractor once per pair; the repo contains no TTA loop.
+The 1.59 is therefore the plain feed-forward number, i.e. the "Ours, no post-processing" column — the one that
+should be quoted.
+
+**What this buys.** The baseline anchor exists: any assignment change we make inside URSSM can be scored with the
+*same* `test.py`, the same 400 pairs and the same metric, and the delta read directly against 1.59 with no
+cross-convention argument.
+
+**Caveat to carry forward.** The published variants of this number are reported as 1.56 ± 0.04 in later papers, so
+1.59 is inside the band rather than a point match; do not quote a difference smaller than ~0.05 as a real
+improvement on this split.
 
 ---
 
@@ -171,6 +214,7 @@ the outstanding step.
 | URSSM's assignment is also row-wise greedy with no column constraint | this report §5 |
 | NSR runs reproducibly enough for cost-level study (0.018 % variation) | this report §2 |
 | a live FAUST_r mirror, with exact file sizes | this report §5 |
+| URSSM reproduced at **1.59** (published 1.6), metric conversion verified | this report §5a |
 
 **Does not survive:** any claim that adding a transport plan to NSR improves registration, because we never had
 a non-circular way to measure it.
@@ -182,7 +226,9 @@ a non-circular way to measure it.
 - **2026-11-16** — NSR arm dropped as the vehicle for the decoder question. Reason: §4.1 and §4.2, not
   difficulty of installation.
 - **2026-11-16** — vehicle changed to functional-maps matching (URSSM).
-- **2026-11-17** — FAUST_r mirror found and downloaded; URSSM reproduction pending.
+- **2026-11-17** — FAUST_r mirror found and downloaded.
+- **2026-11-16** — URSSM baseline reproduced on the server: `Val avg error 0.0159` = **1.59** in the published
+  ×100 convention (paper: 1.6), 400 ordered pairs of the 20-shape test split, no TTA. See §5a.
 
 **To re-open the NSR arm** it would need one of: (a) the authors' test-scan pipeline, (b) a way to define
 per-scan-point ground truth in the 690-vertex SMPL space independently of NSR, or (c) a decision to accept a
