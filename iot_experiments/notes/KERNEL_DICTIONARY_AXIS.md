@@ -1,8 +1,14 @@
 # Kernel / dictionary axis for the cost family
 
-**Status: GATE FAILED (2026-11-17).** The kernel/dictionary axis did **not** clear its own gate. The plan, the
-measurement and the reason are below; the families remain available in `src/iot` for other uses, but the axis is
-closed as a route to a better cost on FAUST.
+**Status: REOPENED (2026-11-17, second revision).** The first verdict in this file — "the axis is closed" — was
+an artefact of **three defects in the dictionaries I wrote**, not a property of richer dictionaries. With them
+fixed, the oracle gate passes on the same pair (0.0325 vs 0.1163 `miss@5 %`) and the full 8-pair × 3-seed gate
+has been relaunched. Sections §3a–§3c record the wrong verdict and why it was wrong; §3d–§3e record the defects
+and the shared-θ result, which is the sharper finding of the two.
+
+**Read §3d before citing anything above it.** Two of the defects were in the *measurement* (a flatness tolerance
+that counted a strictly-better diagonal as "tied"), and one was in the *parameterisation* (a null direction that
+makes the cost constant).
 
 **Why this file exists.** The cost family is the one place where the inverse-OT formulation can be made richer
 without touching the solver, the scan, or the loop. This note fixes the question, the options, and the stop
@@ -151,6 +157,71 @@ six dictionaries used `rel=None`). That internal comparison is the one the verdi
 **What would be a different question.** Whether a richer dictionary helps *transfer* is now moot: it cannot help
 the oracle, so it cannot help transfer. The bottleneck on FAUST is the descriptors and the decision rule, not the
 cost's functional form.
+
+## 3d. The three defects that produced the first verdict
+
+Fixed in this revision; each has a regression test.
+
+| # | defect | symptom | fix |
+| --- | --- | --- | --- |
+| 1 | a multi-σ kernel spec counted as **one** feature while only the first σ was evaluated | `n_features` disagreed with the cost | `_expand_kernel_specs` |
+| 2 | the hat basis is a **partition of unity**, so uniform weights on one coordinate's hats give a *constant* cost; a linear weight profile plus the ramp is also constant | `cost_std = 1.5e-17` at uniform θ, the fit could not move | new `HingeProfileFeatures` (hinges vanish at `t = 0`, so no non-negative combination is constant) |
+| 3 | the flatness diagnostic tested `gap < 1e-6`, so every row where the correct partner was *cheaper* (negative gap) counted as "tied" | `tied = 1.000` for any well-separated cost — i.e. the diagnostic fired on everything | test `abs(gap) < 1e-6`; `tests/iot_multi_pair_test.py` |
+
+Defect 3 was caught by a test I wrote for defect 2's diagnostic, which is the only reason it is known: every
+"tied" number in §3a–§3c is wrong and has been recomputed.
+
+**The corrected oracle number.** Pair 050-066, seed 0, n = 800, simplex, identical subsample:
+
+| dictionary | K | `miss@5 %` | regret | median identity gap |
+| --- | ---: | ---: | ---: | ---: |
+| `diag13` (incumbent) | 13 | 0.1163 | 1.9e-2 | +2.5e-4 |
+| `profile8` (hats + ramp) | 117 | 0.0975 | 1.5e-3 | +2.5e-4 |
+| **`hinge8`** (hinges, natural scale) | 104 | **0.0325** | 6.8e-5 | +6.2e-6 |
+| `hinge8`, NN-residual scale | 104 | 0.0650 | 4.8e-4 | +6.8e-5 |
+
+The hinge normalisation matters as much as the basis: with the nearest-neighbour residual spread as `extent`,
+almost every candidate distance clips to 1 and the cost saturates (`tied = 1.000` at the joint level). The
+99th percentile of `|a-b|` over **random** pairs spans the actual range of candidate distances.
+
+## 3e. Shared θ across pairs: "satisfies all plans" is achievable and vacuous
+
+Asked directly: *can one θ satisfy many pairs at once?* Yes — **and that is the problem.** Four training pairs,
+n = 800, one shared θ, per-pair potentials, block LP, then the honest check on the **full edge set** with exact
+POT (`R_p(θ) = <θ, φ̄_p> − OT_p(c(θ))`, never the restricted-master objective).
+
+| family | K | joint full-edge regret (4 pairs) | median identity gap | tied | decoded `miss@5 %` | `single` | `uniform` |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| `diag13` | 13 | 0.0117 – 0.0265 | +2.0e-3 … +4.3e-3 | 0.000 | 0.3841 | 0.1694 | 0.4306 |
+| `profile8` | 117 | **0.0000** on all four | **+1.6e-14** | **1.000** | **0.9600** | 0.3556 | 0.4131 |
+| `hinge8` | 104 | **0.0000** on all four | **0.00e+00** | **1.000** | **0.9697** | 0.3203 | 0.3997 |
+
+Both rich families **exactly** certify all four plans, and both do it by destroying the cost's information:
+
+- `profile8`'s shared θ has 8 non-zeros, all on descriptor coordinate 6: hats 0–6 with weights `0.2 − l/35` plus
+  the ramp at `0.2`. Because hats are a nodal basis, `Σ_l (0.2 − l/35) h_l(t) = 0.2 − 0.2t`, and the ramp adds
+  `+0.2t`. The cost matrix is therefore **constant**: `std = 1.4e-14`, `max − min = 5e-14` over all 800×800
+  entries.
+- `hinge8`'s shared θ is a **single hinge** (coordinate 8, level 6, weight 1.0). It is zero on **93.6 %** of all
+  pairs, so the cost is 0 almost everywhere.
+
+A constant or (almost) zero cost gives regret 0 for **every** plan. The simplex bounds `Σθ = 1` but places no
+constraint on the *dynamic range* of the resulting cost, so any family containing a feature that is ≈0 or
+constant over the pair population has an escape direction, and a regret-minimising LP finds it first. `diag13`
+has no such feature — its 13 columns all have large range (`cost std ≈ 3.2`) — which is exactly why it *cannot*
+reach joint regret 0 (0.012–0.027), and exactly why its decoded map is merely mediocre (0.384) rather than
+collapsed.
+
+**The ordering is monotone in the achieved regret**: joint regret 0.02 → 0.0000, decoded `miss@5 %` 0.384 →
+0.96. Satisfaction and usefulness are anti-correlated here, so "can expressivity find a plan satisfying all
+pairs" cannot be the gate — the trivially degenerate cost satisfies everything. The gate has to be a **margin**.
+
+**What the margin version needs, and why the naive version is broken.** Replacing the constraint with
+`f_i + g_j + δ·ℓ_ij ≤ c_ij(θ)` and maximising δ is *unbounded* if every constraint stays an inequality: `f` and
+`g` are free, so any δ can be absorbed by shifting them down. The observed support must be imposed as
+**equalities** (`f_i + g_j = c_ij(θ)` on the plan's support, as in §2 of `AGENTS.md`), which is what pins `δ`.
+This is the next experiment: a joint max-margin master with `ℓ_ij` the normalised geodesic loss (the task loss,
+available on training pairs), one shared δ, and the same full-edge verification.
 
 ## 4. What option D would add, and why it is deferred
 

@@ -44,7 +44,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot.core.edges import EdgeSet  # noqa: E402
-from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
+from iot.core.features import FeatureMap  # noqa: E402
 from iot.core.parameters import (  # noqa: E402
     PruningParameters,
     RelaxedObjective,
@@ -56,7 +56,13 @@ from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot.relaxed.master_regret import regret_objective  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
-from iot_experiments.harness.faust import default_registrations_root, read_ply  # noqa: E402
+from iot_experiments.harness.faust import (  # noqa: E402
+    default_registrations_root,
+    geodesic_matrix,
+    read_ply,
+    surface_area,
+)
+from iot_experiments.harness.faust_match import geodesic_errors, match  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -66,12 +72,15 @@ from iot_experiments.harness.records import (  # noqa: E402
     write_records,
 )
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
-    _evaluate_pair,
     _sample_index,
     default_pairs,
     descriptors,
     standardise,
 )
+# EN: the dictionary DEFINITIONS live in one place only. Importing the gate's builder (a private helper, but the
+#     single source of truth) guarantees the two studies cannot drift apart.
+# CN: 字典定义只有一处。复用 gate 的构造器（私有函数，但唯一真源），保证两个研究不会漂移。
+from iot_experiments.studies.real.faust.oracle_ceiling import _dictionaries  # noqa: E402
 
 DEFAULT_ROOT = str(default_registrations_root())
 
@@ -85,6 +94,14 @@ PROVENANCE: dict[str, object] = {
     "solver": "scipy HiGHS on the assembled sparse LP (one solve, no constraint generation)",
     "comparison": "theta_single (fitted on pair 1) vs theta_multi (shared over all P), both evaluated on the "
                   "same held-out test pairs",
+    "cost_family": "selectable with --family; the definitions are imported from the oracle-ceiling gate so the two "
+                   "studies cannot drift. Default diag13 = the incumbent 13-feature diagonal family",
+    "joint_feasibility": "reported on the FULL edge set with exact POT per pair, NOT as the restricted-master LP "
+                         "objective, which is only a lower bound on the true joint regret",
+    "scales": "the shared object is theta. Each pair's Gaussian bandwidths / hat-basis extent are derived from "
+              "that pair's own nearest-neighbour distances, because they are normalisations, not parameters",
+    "flatness": "every score is reported with the cost's identity gap; a rich family can certify a plan by tying "
+                "all candidates (measured median gap 1e-5), after which the decoded map is an arbitrary optimum",
 }
 
 
@@ -101,6 +118,13 @@ class MultiPairConfig(RunConfig):
     n_sub: int = 1500
     max_iterations: int = 30
     per_pair_backend: str = "cupdlpx"   # the per-pair fits; the joint LP itself is solved by HiGHS
+    # EN: which cost family the shared theta is fitted over. `diag13` is the incumbent; `profile8` is the hat
+    #     basis that was bimodal in the oracle gate (7/24 wins, then catastrophic losses through flat costs).
+    # CN: 共享 θ 所用的代价族。`diag13` 是现有基线；`profile8` 是 oracle 门中呈双峰的帽基（24 行赢 7 行，
+    #     但通过"平代价"惨败）。
+    family: str = "diag13"
+    bands: int = 5
+    basis_size: int = 8
 
     @classmethod
     def add_study_arguments(cls, parser) -> None:
@@ -113,13 +137,18 @@ class MultiPairConfig(RunConfig):
         parser.add_argument("--n-sub", type=int, default=1500)
         parser.add_argument("--max-iterations", type=int, default=30)
         parser.add_argument("--per-pair-backend", default="cupdlpx", choices=["cupdlpx", "highs"])
+        parser.add_argument("--family", default="diag13",
+                            choices=["diag13", "hinge8", "profile8", "group+diag", "group_gauss",
+                                     "gauss", "gauss+cos"])
+        parser.add_argument("--bands", type=int, default=5)
+        parser.add_argument("--basis-size", type=int, default=8)
 
 
 @dataclasses.dataclass(frozen=True)
 class _PairProblem:
     """CN: 一个训练对：特征族、方案、最终边集。EN: one training pair: family, plan, final edge set."""
 
-    features: SquaredDifferenceFeatures
+    features: FeatureMap
     problem: InverseOTProblem
     edges: EdgeSet
     theta_single: np.ndarray
@@ -209,6 +238,100 @@ def _solve_multi(pairs: list[_PairProblem], k: int, *, scales: list[float] | Non
             "shape": (total_rows, ncols), "nnz": int(a_ub.nnz)}
 
 
+def _family(name: str, a: np.ndarray, b: np.ndarray, *, bands: int, basis_size: int) -> FeatureMap:
+    """
+    EN: build one named dictionary for a pair, reusing the oracle gate's definitions so the two studies stay
+        comparable. The per-pair *scales* (Gaussian bandwidths, hat-basis extent) are derived from the pair's own
+        nearest-neighbour distances, so a theta transfers but the scale does not; that is a property of the
+        dictionary, and it is stated in the provenance rather than hidden.
+    CN: 为一对形状构造指定字典，复用 oracle gate 的定义以保证可比。逐对**尺度**（高斯带宽、帽基范围）来自该对
+        自身的最近邻距离，所以迁移的是 θ、不是尺度；这是字典的性质，写进 provenance 而不是藏起来。
+    """
+    available = dict(_dictionaries(a, b, bands=int(bands), basis_size=int(basis_size)))
+    if name not in available:
+        raise SystemExit(f"unknown family {name!r}; known: {sorted(available)}")
+    return available[name]
+
+
+def _cost_rows(feature_map: FeatureMap, theta: np.ndarray, n: int, *, block: int = 64
+               ) -> np.ndarray:
+    """
+    EN: the full **square** `n x n` cost, built in row blocks. Materialising `(n*n, K)` at once is 600 MB for
+        `K = 117` at `n = 800`; this path never does, so the rich families are as cheap in memory as the diagonal
+        one. Every use in this study is square (source and target are the same vertex subsample).
+    CN: 完整 `n x n` 代价，**按行分块**构造。一次性物化 `(n*n, K)` 在 `n=800, K=117` 时是 600 MB；本路径不做，
+        所以丰富族与对角族的内存开销相同。
+    """
+    theta = np.asarray(theta, dtype=np.float64).reshape(-1)
+    out = np.empty((int(n), int(n)), dtype=np.float64)
+    cols_index = np.arange(int(n), dtype=np.int64)
+    for start in range(0, int(n), int(block)):
+        stop = min(int(n), start + int(block))
+        rows_index = np.repeat(np.arange(start, stop, dtype=np.int64), int(n))
+        cols = np.tile(cols_index, stop - start)
+        values = feature_map.costs(theta, rows_index, cols)
+        out[start:stop, :] = np.asarray(values, dtype=np.float64).reshape(stop - start, int(n))
+    return out
+
+
+def _flatness(cost: np.ndarray) -> dict[str, float]:
+    """
+    EN: **how tied is the cost?** This is the diagnostic the oracle gate was missing, and it explains that
+        result: a rich dictionary can certify the observed plan by making every candidate equally good, after
+        which the decoded optimal plan is an arbitrary optimum and the map is bad *while the certificate is
+        excellent*.
+
+        Sign convention: `gap = c_ii - min_{j != i} c_ij`. **Negative** means the correct partner is strictly
+        cheaper than every alternative (good); **zero** means it is tied with some other candidate, so the
+        optimal plan is not unique. Only `|gap|` may be compared to a tolerance — an earlier version tested
+        `gap < 1e-6` and so counted every *strictly better* diagonal as "tied" (`tied = 1.000` for any
+        well-separated cost). That is a measurement bug, caught by `tests/iot_multi_pair_test.py`.
+    CN: **代价有多"平"？** 符号约定：`gap = c_ii - min_{j≠i} c_ij`，**负**表示正确伙伴严格更便宜（好），**零**
+        表示与某个候选打平（最优方案不唯一）。只有 `|gap|` 才能与容差比较——早期版本用 `gap < 1e-6`，于是把每个
+        "严格更好"的对角都算成打平（任何分离良好的代价都 `tied=1.000`）。这是测量 bug，由测试捕获。
+    """
+    n = int(cost.shape[0])
+    off_diagonal = np.array(cost, dtype=np.float64, copy=True)
+    np.fill_diagonal(off_diagonal, np.inf)
+    gap = cost[np.arange(n), np.arange(n)] - off_diagonal.min(axis=1)
+    return {"row_gap_median": float(np.median(gap)),
+            "row_gap_p90": float(np.percentile(gap, 90.0)),
+            "tied_fraction_1e6": float((np.abs(gap) < 1e-6).mean())}
+
+
+def _score_pair(a, b, *, family: str, config, thetas: dict[str, np.ndarray], seed: int,
+                bands: int, basis_size: int) -> list[RunRecord]:
+    """
+    EN: score supplied thetas on one pair with **its own** dictionary, using exact OT and the geodesic metric.
+        Mirrors `correspondence._evaluate_pair` but goes through `FeatureMap.costs`, because that helper builds
+        the cost from a diagonal weight vector and would silently score a rich family as if it were diagonal.
+        Also returns `nn_*` (argmin, no transport) as the pairing-gate control.
+    CN: 用该对**自身**的字典评估给定 θ，精确 OT + 测地线度量。与 `_evaluate_pair` 平行，但走 `FeatureMap.costs`，
+        因为那个助手按对角权重构造代价，会把丰富族当作对角族评估。同时给出 `nn_*`（argmin，无传输）作对照。
+    """
+    index = _sample_index(a, config, seed)
+    da, db = standardise(descriptors(a)[index], descriptors(b)[index])
+    n = int(index.size)
+    geo = geodesic_matrix(b.vertices, b.faces, index)
+    norm = float(np.sqrt(surface_area(b.vertices, b.faces)))
+    feature_map = _family(family, da, db, bands=bands, basis_size=basis_size)
+    everything = {"uniform": np.full(int(feature_map.n_features), 1.0 / float(feature_map.n_features)),
+                  **{key: value for key, value in thetas.items() if value is not None}}
+    geometry = f"pair{a.path.stem[7:]}-{b.path.stem[7:]}"
+    rows: list[RunRecord] = []
+    for name, theta in everything.items():
+        cost = _cost_rows(feature_map, theta, n)
+        flat = _flatness(cost)
+        for mode, prediction in (("ot", match(cost)), ("nn", np.argmin(cost, axis=1).astype(np.int64))):
+            label = f"nn_{name}" if mode == "nn" else name
+            rows.append(RunRecord(
+                study=str(config.study), geometry=geometry, arm=label, k=int(feature_map.n_features),
+                m=int(n), draw=int(seed), metrics=geodesic_errors(prediction, geo, norm),
+                config=config.to_dict(),
+                extra={"family": family, "n_features": int(feature_map.n_features), "mode": mode, **flat}))
+    return rows
+
+
 def _cross_regret(pairs: list[_PairProblem], thetas: list[np.ndarray], scales: list[float]
                   ) -> np.ndarray:
     """
@@ -234,13 +357,11 @@ def _cross_regret(pairs: list[_PairProblem], thetas: list[np.ndarray], scales: l
         a = a / a.sum()
         b = b / b.sum()
         n_src = int(pair.features.n_source)
-        n_tgt = int(pair.features.n_target)
-        rows = np.repeat(np.arange(n_src, dtype=np.int64), n_tgt)
-        cols = np.tile(np.arange(n_tgt, dtype=np.int64), n_src)
         for q, theta in enumerate(thetas):
-            cost = np.asarray(pair.features.costs(np.asarray(theta, dtype=np.float64), rows, cols),
-                              dtype=np.float64).reshape(n_src, n_tgt)
-            transport = float(ot.emd2(a, b, cost, numItermax=10_000_000))
+            # EN: blocked, so a rich family does not allocate `(n*n, K)` just to measure one theta.
+            # CN: 分块，避免为了量一个 θ 就分配 `(n*n, K)`。
+            cost = _cost_rows(pair.features, theta, n_src)
+            transport = float(ot.emd2(a, b, np.ascontiguousarray(cost), numItermax=10_000_000))
             out[p, q] = (float(phi_bar @ np.asarray(theta, dtype=np.float64)) - transport) / scales[p]
     return out
 
@@ -264,6 +385,8 @@ def main(argv: list[str] | None = None) -> int:
     train_pairs = [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
     test_pairs = default_pairs(tuple(int(v) for v in config.test_subjects), int(config.test_pair_count))
     log.line(f"{len(train_pairs)} training pairs {train_pairs}; {len(test_pairs)} held-out pairs")
+    log.line(f"cost family={config.family!r}  bands={config.bands}  basis={config.basis_size}  "
+             f"n_sub={config.n_sub}  per-pair iterations={config.max_iterations}")
 
     built: list[_PairProblem] = []
     for pair in train_pairs:
@@ -273,8 +396,10 @@ def main(argv: list[str] | None = None) -> int:
         da, db = standardise(descriptors(a)[idx], descriptors(b)[idx])
         n = int(idx.size)
         plan = sparse.csr_matrix((np.full(n, 1.0 / n), (np.arange(n), np.arange(n))), shape=(n, n))
-        family = SquaredDifferenceFeatures(da, db)
-        problem = InverseOTProblem(features=family, theta_set=SimplexTheta(int(da.shape[1])), plan=plan)
+        family = _family(str(config.family), da, db, bands=int(config.bands),
+                         basis_size=int(config.basis_size))
+        problem = InverseOTProblem(features=family, theta_set=SimplexTheta(int(family.n_features)),
+                                   plan=plan)
         master = RecordingMaster(
             backend=str(config.per_pair_backend), tie_break=False,
             params={"time_sec_limit": 300.0} if str(config.per_pair_backend) == "cupdlpx" else None)
@@ -289,7 +414,8 @@ def main(argv: list[str] | None = None) -> int:
         built.append(_PairProblem(features=family, problem=problem, edges=master.last_edges,
                                   theta_single=np.asarray(single.theta, dtype=np.float64),
                                   regret_single=float(single.regret)))
-        log.line(f"pair {pair}: |F|={int(master.last_edges.size)} regret_single={float(single.regret):.6g}")
+        log.line(f"pair {pair}: K={int(family.n_features)} |F|={int(master.last_edges.size)} "
+                 f"regret_single={float(single.regret):.6g}")
 
     k = int(built[0].features.n_features)
     scales = [_uniform_regret(piece) for piece in built]
@@ -327,12 +453,37 @@ def main(argv: list[str] | None = None) -> int:
                           extra={"matrix": matrix.tolist(), "train_pairs": [list(p) for p in train_pairs],
                                  "scales": [float(v) for v in (scales or [])]}))
 
+    # EN: the honest joint-feasibility question, per training pair: the **full-edge** normalised regret of the
+    #     shared theta (NOT the restricted LP value) plus the flatness of the cost it induces. The restricted
+    #     master can only be optimistic, so the LP objective alone must never be reported as "satisfies all".
+    # CN: 逐训练对的诚实联合可行性：共享 θ 在**全边集**上的归一化 regret（不是受限 LP 值），以及它诱导代价的
+    #     平坦度。受限 master 只会偏乐观，故绝不能只凭 LP 目标宣称"满足所有对"。
+    diagnostics: dict[str, dict[str, float]] = {}
+    for p, (pair_id, piece) in enumerate(zip(train_pairs, built)):
+        n_pair = int(piece.problem.n_source)
+        flat_multi = _flatness(_cost_rows(piece.features, theta_multi, n_pair))
+        flat_single = _flatness(_cost_rows(piece.features, piece.theta_single, n_pair))
+        diagnostics[f"pair{list(pair_id)}"] = {
+            "full_edge_regret_multi": float(matrix[p, len(built)]),
+            "full_edge_regret_single": float(matrix[p, p]),
+            **{f"multi_{key}": value for key, value in flat_multi.items()},
+            **{f"single_{key}": value for key, value in flat_single.items()},
+        }
+        log.line(f"  pair {pair_id}: full-edge regret multi={matrix[p, len(built)]:.4f} "
+                 f"single={matrix[p, p]:.4f}  flatness median gap={flat_multi['row_gap_median']:.2e} "
+                 f"tied={flat_multi['tied_fraction_1e6']:.3f}")
+    rows.append(RunRecord(study=str(config.study), geometry="joint_diagnostics", arm="diagnostics",
+                          k=k, m=int(config.n_sub), draw=0, metrics={}, config=config.to_dict(),
+                          extra={"family": str(config.family), "pairs": diagnostics,
+                                 "theta_multi": theta_multi.tolist(),
+                                 "l1_to_uniform": float(np.abs(theta_multi - 1.0 / k).sum())}))
+
     for pair in test_pairs:
         a = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
         b = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
         thetas = {"multi": theta_multi, "single": built[0].theta_single}
-        for r in _evaluate_pair(a, b, config=config, thetas=thetas, seed=0):
-            rows.append(r)
+        rows.extend(_score_pair(a, b, family=str(config.family), config=config, thetas=thetas, seed=0,
+                                bands=int(config.bands), basis_size=int(config.basis_size)))
 
     table = summarise(rows, group=("arm",), metrics=("mean", "miss_5pct"))
     log.line("\n" + format_table(table, ("arm", "n_draws", "mean_mean", "miss_5pct_mean")))

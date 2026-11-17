@@ -52,6 +52,7 @@ if str(_REPO_ROOT) not in sys.path:
 from iot.core.features import (  # noqa: E402
     ConcatFeatures,
     DiagonalWeightFeatures,
+    HingeProfileFeatures,
     FeatureMap,
     KernelMixtureFeatures,
     RadialProfileFeatures,
@@ -95,10 +96,12 @@ class CeilingConfig(RunConfig):
     max_iterations: int = 5
     bands: int = 5
     basis_size: int = 8
+    families: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """EN: normalise and validate. CN: 归一化与校验。"""
         object.__setattr__(self, "seeds", tuple(int(v) for v in self.seeds))
+        object.__setattr__(self, "families", tuple(str(v) for v in self.families))
         object.__setattr__(self, "test_pairs", tuple(int(v) for v in self.test_pairs))
         if len(self.test_pairs) % 2 != 0 or not self.test_pairs:
             raise ValueError("--test-pairs needs an even, non-empty list")
@@ -117,6 +120,8 @@ class CeilingConfig(RunConfig):
         parser.add_argument("--max-iterations", type=int, default=5)
         parser.add_argument("--bands", type=int, default=5)
         parser.add_argument("--basis-size", type=int, default=8)
+        parser.add_argument("--families", nargs="+", default=None,
+                            help="subset of dictionaries to run (default: all)")
 
 
 def _nearest_neighbour_scale(source: Float[np.ndarray, "m d"], target: Float[np.ndarray, "n d"]
@@ -210,6 +215,14 @@ def _dictionaries(a: Float[np.ndarray, "m d"], b: Float[np.ndarray, "n d"], *,
         ("gauss", KernelMixtureFeatures(a, b, gaussian_specs)),
         ("gauss+cos", KernelMixtureFeatures(a, b, gaussian_specs + ("cosine",))),
         ("profile8", RadialProfileFeatures(a, b, basis_size=int(basis_size), extent=error_spread)),
+        # EN: the same radial profile with the constant (null) direction removed -- see HingeProfileFeatures.
+        # CN: 同一径向剖面，去掉了常数（零）方向。
+        # CN: 铰链基**不能**用最近邻残差尺度归一化：那个尺度太小，几乎所有候选距离都被截断到 1，代价饱和成常数
+        #     （实测 tied=1.000，共享 θ 解码 miss 0.92）。用随机对的 99 分位才覆盖候选距离的真实范围。
+        # EN: the hinge basis must NOT use the NN residual spread as its scale -- that is tiny, so nearly every
+        #     candidate distance clips to 1 and the cost saturates to a constant (measured tied=1.000). Its own
+        #     default (99th percentile over RANDOM pairs) spans the real range: 0.0325 vs 0.1163 on pair 050-066.
+        ("hinge8", HingeProfileFeatures(a, b, basis_size=int(basis_size))),
         ("group_gauss", ConcatFeatures(tuple(item for _name, item in groups))),
         ("group+diag", ConcatFeatures((DiagonalWeightFeatures(a, b),
                                        *(item for _name, item in groups)))),
@@ -274,8 +287,16 @@ def main(argv: list[str] | None = None) -> int:
             geometry_id = index.astype(np.int64)
             geo = geodesic_matrix(b_mesh.vertices, b_mesh.faces, geometry_id)
             norm = float(np.sqrt(surface_area(b_mesh.vertices, b_mesh.faces)))
-            for name, features in _dictionaries(da, db, bands=int(config.bands),
-                                                basis_size=int(config.basis_size)):
+            available = _dictionaries(da, db, bands=int(config.bands),
+                                      basis_size=int(config.basis_size))
+            if config.families:
+                missing = set(config.families) - {name for name, _ in available}
+                if missing:
+                    raise SystemExit(f"unknown --families {sorted(missing)}; known "
+                                     f"{sorted(name for name, _ in available)}")
+                available = [(name, features) for name, features in available
+                             if name in set(config.families)]
+            for name, features in available:
                 started = time.perf_counter()
                 fit = fit_theta(features, rel=None, max_iterations=int(config.max_iterations))
                 theta = fit["theta"]

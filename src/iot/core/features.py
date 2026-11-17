@@ -479,6 +479,7 @@ __all__ = [
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
     "FeatureMap",
+    "HingeProfileFeatures",
     "KernelMixtureFeatures",
     "QuadraticFeatures",
     "RadialProfileFeatures",
@@ -592,6 +593,13 @@ class RadialProfileFeatures:
         lets the cost saturate (robust to outliers), stay flat (tolerant within a band), or be non-monotone —
         none of which a squared Euclidean can do.
 
+        **Ill-posed for fitting: use `HingeProfileFeatures` instead.** Hats are a partition of unity, so weights
+        uniform on one coordinate's hats give a *constant* cost, and a linear weight profile plus the ramp is
+        also constant. A constant cost has zero regret for every plan, so a regret-minimising LP finds that null
+        direction immediately and reports a perfect certificate with an uninformative cost (measured on FAUST:
+        `std = 1.1e-14`, regret 0, decoded `miss@5 % = 0.96`). The ramp below removes the degeneracy at the
+        *uniform-over-all-features* point only; it does not remove the null space.
+
         `n_features = dim * basis_size`, so with 13 descriptors and 8 basis functions this is 104 parameters.
         A large basis dilutes every coordinate in the simplex, so `theta -> uniform` is the failure mode to
         watch; report `L1(theta, uniform)` with every fit.
@@ -698,6 +706,101 @@ class RadialProfileFeatures:
                 # EN: the ramp breaks the partition-of-unity degeneracy at uniform theta.
                 # CN: 斜坡打破均匀 theta 处的单位分解退化。
                 out[:, base + basis] = normalised[:, coordinate]
+        return np.ascontiguousarray(out, dtype=np.float64)
+
+    def costs(self, theta: Float[np.ndarray, "k"], rows: Int[np.ndarray, "edges"],
+              cols: Int[np.ndarray, "edges"]) -> Float[np.ndarray, "edges"]:
+        return _linear_costs(self.features(rows, cols), theta)
+
+
+@dataclass(frozen=True)
+class HingeProfileFeatures:
+    """
+    EN: **additive per-coordinate radial profiles with NO constant direction** — a hinge (truncated-linear) basis
+        on the normalised absolute difference: `phi_ij,(k,l) = max(0, t_ikl - l/B)` with
+        `t = clip(|a_ik - b_jk| / extent_k, 0, 1)`.
+
+        **Why this exists.** `RadialProfileFeatures` is ill-posed: hats form a partition of unity (`sum_l h_l = 1`
+        for every pair), so weights uniform on one coordinate's hats give a **constant cost**; and hats are a
+        nodal basis, so a linear weight profile `w_l = a - b*l` combined with the linear ramp is *also* constant.
+        A constant cost has zero regret for every plan and carries no information, so an LP that only minimises
+        regret finds that direction at once and reports a perfect certificate with a useless cost. Measured on
+        FAUST: the 4-pair shared-θ LP returned a cost matrix constant to `5e-14` (`std = 1.1e-14`), full-edge
+        regret exactly 0, decoded `miss@5 % = 0.96`.
+
+        Every hinge vanishes at `t = 0`, so `g(0) = 0` and no non-negative combination is constant. The basis is
+        monotone by construction — the correct inductive bias for a cost (a larger distance must not be cheaper)
+        — and still contains `t^2` in its closure.
+
+    CN: **逐坐标可加径向剖面，且没有常数方向** —— 归一化绝对差上的铰链基 `phi = max(0, t - l/B)`。存在的理由：
+        帽基 `RadialProfileFeatures` 是病态的（单位分解 ⇒ 帽基权重均匀给出常数代价；节点基 ⇒ 线性权重加斜坡也
+        是常数），而常数代价对任何方案 regret 都是 0、不含信息，只最小化 regret 的 LP 会立刻命中它。铰链基在
+        t=0 处全为 0，任何非负组合都不是常数；构造上单调，这对代价是正确的归纳偏置，同时仍以 t² 为极限。
+    """
+
+    source_points: Float[np.ndarray, "m d"]
+    target_points: Float[np.ndarray, "n d"]
+    basis_size: int = 8
+    extent: Float[np.ndarray, "d"] | float | None = None
+    sample_size: int = 4096
+    seed: int = 0
+
+    def __post_init__(self) -> None:
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2:
+            raise ValueError("source_points and target_points must be 2D")
+        if source.shape[1] != target.shape[1]:
+            raise ValueError("source_points and target_points must share a feature dimension")
+        if int(self.basis_size) < 1:
+            raise ValueError("basis_size must be at least 1")
+        dimension = int(source.shape[1])
+        extent = self.extent
+        if extent is None:
+            scale = _default_extent(source, target, sample_size=int(self.sample_size), seed=int(self.seed))
+        else:
+            scale = np.asarray(extent, dtype=np.float64).reshape(-1)
+            if scale.size == 1:
+                scale = np.full(dimension, float(scale[0]), dtype=np.float64)
+            if scale.size != dimension:
+                raise ValueError(f"extent must be scalar or length {dimension}")
+            if np.any(scale <= 0.0):
+                raise ValueError("extent entries must be positive")
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+        object.__setattr__(self, "basis_size", int(self.basis_size))
+        object.__setattr__(self, "extent", np.ascontiguousarray(scale, dtype=np.float64))
+
+    @property
+    def n_source(self) -> int:
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        return int(self.source_points.shape[1]) * int(self.basis_size)
+
+    def features(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges k"]:
+        """
+        EN: hinge values of the normalised absolute difference, flattened as `(dim, basis)`.
+        CN: 归一化绝对差的铰链取值，按 `(维度, 基函数)` 展平。
+        """
+        row_index = _index_array(rows, name="rows")
+        col_index = _index_array(cols, name="cols")
+        difference = np.abs(self.source_points[row_index] - self.target_points[col_index])
+        normalised = difference / np.asarray(self.extent, dtype=np.float64)[None, :]
+        np.clip(normalised, 0.0, 1.0, out=normalised)
+        basis = int(self.basis_size)
+        out = np.zeros((difference.shape[0], difference.shape[1] * basis), dtype=np.float64)
+        for coordinate in range(difference.shape[1]):
+            base = coordinate * basis
+            column = normalised[:, coordinate]
+            for level in range(basis):
+                out[:, base + level] = np.maximum(0.0, column - float(level) / float(basis))
         return np.ascontiguousarray(out, dtype=np.float64)
 
     def costs(self, theta: Float[np.ndarray, "k"], rows: Int[np.ndarray, "edges"],

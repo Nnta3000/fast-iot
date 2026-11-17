@@ -7,6 +7,7 @@ from iot import (
     ConcatFeatures,
     DenseFeatureTensor,
     DiagonalWeightFeatures,
+    HingeProfileFeatures,
     KernelMixtureFeatures,
     QuadraticFeatures,
     RadialProfileFeatures,
@@ -207,3 +208,59 @@ def test_concat_features_concatenate_in_order_and_validate_shapes() -> None:
     np.testing.assert_allclose(phi, expected, rtol=1e-12, atol=1e-12)
     with pytest.raises(ValueError):
         ConcatFeatures((left, DiagonalWeightFeatures(source[:3, :2], target[:, :2])))
+
+
+def _null_direction_dimension(features, rows: np.ndarray, cols: np.ndarray) -> int:
+    """
+    EN: dimension of the space of theta with `<phi(theta), 1> const`, i.e. how many parameter directions make a
+        **constant cost**. Computed as the rank deficit of `[Phi | 1]`. Nonzero means the dictionary contains a
+        direction the fitting objective cannot distinguish from "no information".
+    CN: 使 `theta` 给出**常数代价**的参数方向维数（`[Phi|1]` 的秩亏）。非零表示字典含有拟合目标无法与"无信息"
+        区分的方向。
+    """
+    phi = features.features(rows, cols)
+    augmented = np.hstack([phi, np.ones((phi.shape[0], 1))])
+    return int(phi.shape[1] + 1 - np.linalg.matrix_rank(augmented))
+
+
+def test_hinge_profile_has_no_constant_direction() -> None:
+    """
+    EN: the property the whole fitting depends on. A constant (or zero) cost has zero regret for **every** plan,
+        so a regret-only LP finds such a direction and reports a perfect certificate with an uninformative cost.
+        Measured on FAUST: the 4-pair shared-theta LP returned a cost constant to 5e-14 and decoded `miss@5 %`
+        of 0.96. The hinge basis must therefore have a *trivial* null direction.
+    CN: 整个拟合所依赖的性质。常数（或零）代价对**任何**方案 regret 为 0，只最小化 regret 的 LP 会命中它，
+        报告完美证书却给出无信息的代价（FAUST 实测：4 对共享 θ 的代价常数到 5e-14，解码 miss@5%=0.96）。
+        故铰链基的零方向必须是平凡的。
+    """
+    rng = np.random.default_rng(7)
+    source = rng.normal(size=(40, 3))
+    target = rng.normal(size=(40, 3))
+    features = HingeProfileFeatures(source, target, basis_size=8)
+    rows, cols = _edge_grid(40, 40)
+    assert features.n_features == 3 * 8
+    assert _null_direction_dimension(features, rows, cols) == 0
+
+
+def test_hat_profile_constant_direction_is_documented_not_hidden() -> None:
+    """
+    EN: `RadialProfileFeatures` **has** a constant direction and that is why it is not the family to fit with.
+        Hats are a partition of unity (`sum_l h_l = 1` for every pair), so weights uniform on one coordinate's
+        hats give a constant cost. This test pins the defect rather than the symptom: if someone later "fixes"
+        the ramp and the null direction becomes trivial, this test fails and the docstring must be revisited.
+    CN: `RadialProfileFeatures` **确实**有常数方向，这正是不能用它做拟合的原因。帽基构成单位分解，故某坐标上
+        帽基权重均匀给出常数代价。本测试钉住的是缺陷本身：若有人日后"修好"了斜坡使零方向变为平凡，本测试失败，
+        必须重新审视文档。
+    """
+    rng = np.random.default_rng(8)
+    source = rng.normal(size=(40, 3))
+    target = rng.normal(size=(40, 3))
+    features = RadialProfileFeatures(source, target, basis_size=8)
+    rows, cols = _edge_grid(40, 40)
+    assert _null_direction_dimension(features, rows, cols) >= 1
+    # EN: and the concrete witness: uniform weights on coordinate 0's 8 hats give a constant cost.
+    # CN: 具体证据：坐标 0 的 8 个帽基权重均匀 ⇒ 常数代价。
+    theta = np.zeros(features.n_features)
+    theta[:8] = 1.0 / 8.0
+    cost = features.costs(theta, rows, cols)
+    assert float(cost.std()) < 1e-12
