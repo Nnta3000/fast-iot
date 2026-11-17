@@ -21,6 +21,7 @@ CN: **FAUST 网格读写** —— 只用标准库解析 MPI-FAUST 的注册 PLY�
 from __future__ import annotations
 
 import dataclasses
+import os
 import struct
 from pathlib import Path
 
@@ -30,6 +31,45 @@ from jaxtyping import Float, Int
 
 class FaustError(RuntimeError):
     """CN: FAUST 数据不可用或格式不符。EN: FAUST data missing or in an unsupported format."""
+
+
+# EN: the repository root, derived from this file rather than written down. `parents[2]` because this module is
+#     `iot_experiments/harness/faust.py`.
+# CN: 仓库根目录，由本文件位置推出而不是写死；`parents[2]` 是因为本模块在 `iot_experiments/harness/faust.py`。
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def default_registrations_root() -> Path:
+    """
+    EN: where the MPI-FAUST registration PLYs live, resolved **portably**.
+
+        The old code wrote the absolute path of one particular machine
+        (`/home/agent/Documents/fast-iot/data/faust_extract/...`) into every FAUST driver. On any other
+        checkout -- a different user, a server, a `git worktree` (where the git-ignored `data/` is absent by
+        design) -- that path simply does not exist, and the failure surfaced as
+        `FaustError: missing mesh: /home/agent/...`, which reads like corrupt data rather than a wrong
+        default.
+
+        Resolution order:
+
+          1. `FAUST_ROOT` if set -- one `export` fixes every driver and every queued job at once, without
+             touching command lines;
+          2. otherwise `<repo root>/data/faust_extract/MPI-FAUST/training/registrations`, which is where
+             `data/README.md`'s drop point puts an extracted archive.
+
+        This only chooses a **default**; every driver keeps its `--root` flag, and an explicit `--root` always
+        wins. The directory is not checked here: `read_ply` names the path it tried and tells you to pass
+        `--root` / set `FAUST_ROOT` when the whole root is absent.
+
+    CN: MPI-FAUST 注册 PLY 的**可移植**默认位置。旧代码把某台机器的绝对路径写进每个 FAUST 驱动；换用户、换服务器或
+        在 `git worktree` 里（被 git 忽略的 `data/` 本来就不存在）该路径不存在，报错却是 `missing mesh:
+        /home/agent/...`，看起来像数据坏了。解析顺序：`FAUST_ROOT` > `<repo>/data/faust_extract/...`。这里只决定
+        **默认值**，各驱动的 `--root` 仍然优先。
+    """
+    override = os.environ.get("FAUST_ROOT")
+    if override:
+        return Path(override).expanduser()
+    return REPO_ROOT / "data" / "faust_extract" / "MPI-FAUST" / "training" / "registrations"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -63,6 +103,17 @@ def read_ply(path: str | Path) -> FaustMesh:
     """
     p = Path(path)
     if not p.is_file():
+        # EN: separate "the whole root is wrong" from "this one file is missing". The first is a config error
+        #     (a hardcoded default, a fresh worktree, a server) and saying "missing mesh" for it sends the reader
+        #     looking for corrupt data.
+        # CN: 区分"整个根目录不对"与"单个文件缺失"。前者是配置错误（写死的默认值、新的 worktree、别的机器），
+        #     只报 "missing mesh" 会让人去查数据是否损坏。
+        if not p.parent.is_dir():
+            raise FaustError(
+                f"registrations root does not exist: {p.parent}\n"
+                f"  looked for: {p.name}\n"
+                f"  fix: pass --root <dir> or set FAUST_ROOT=<dir>; the default is "
+                f"{default_registrations_root()} (repo-relative, overridable)")
         raise FaustError(f"missing mesh: {p}")
     with p.open("rb") as handle:
         header: list[str] = []

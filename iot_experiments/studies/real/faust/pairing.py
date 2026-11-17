@@ -45,7 +45,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import pair_geometry, read_ply, shared_index  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, pair_geometry, read_ply, shared_index  # noqa: E402
 from iot_experiments.harness.faust_match import (  # noqa: E402
     bootstrap_contrast,
     duality_gap,
@@ -59,7 +59,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     subject_of,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 # CN: 8 个跨受试者的训练对，全部落在受试者 0–4 内（测试受试者是 5–9）。
 # EN: 8 cross-subject training pairs, all inside subjects 0-4 (the test subjects are 5-9).

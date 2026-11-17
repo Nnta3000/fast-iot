@@ -36,6 +36,13 @@ while [[ $# -gt 0 ]]; do
     --timeout) TIMEOUT="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    # CN: 未知参数**必须报错**：以前它会被当成 jobs 文件静默吞掉，于是 `gpu_queue.sh ... -root DIR`
+    #     这种笔误什么都不改、什么都不说，作业照旧用旧配置跑（已实际发生过一次）。
+    # EN: an unknown argument MUST be an error: it used to be swallowed as the jobs-file name, so a typo such as
+    #     `gpu_queue.sh ... -root DIR` silently changed nothing and the jobs ran with the old config. This has
+    #     happened for real.
+    -*) echo "[queue] unknown option: $1 (options are: --parallel --jobs --poll --timeout --out; job flags " \
+              "belong INSIDE the jobs file)" >&2; exit 2 ;;
     *) JOBS_FILE="$1"; shift ;;
   esac
 done

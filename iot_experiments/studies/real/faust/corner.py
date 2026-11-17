@@ -56,7 +56,7 @@ from iot.core.problem import InverseOTProblem  # noqa: E402
 from iot.core.theta import SimplexTheta  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import read_ply  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -68,7 +68,7 @@ from iot_experiments.harness.records import (  # noqa: E402
 from iot_experiments.harness.faust import descriptors, standardise  # noqa: E402
 from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "is the boundary theta an artefact of the solver, and are the individual weights identified?",

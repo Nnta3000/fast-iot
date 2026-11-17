@@ -19,6 +19,7 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 | `heatmaps.py` | **error heat maps** at full 6890-vertex resolution, plus left/right flip counts | `--pairs 50 66 56 71` |
 | `analyse.py` | **tables and figure captions from the saved records only** (§7.3 / §7.2) | `--study correspondence` or `--study heatmaps` |
 | `arms.py` | **four objectives on one hypothesis class**: one-sided CE, Sinkhorn CE, entropic joint master, regret LP, plus uniform | `python -m iot_experiments.studies.real.faust.arms --n-sub 1500` |
+| | the relaxed-LP arm needs a master: `--master-backend auto` (default) picks `cupdlpx` **only when a CUDA device is usable**, else the exact CPU simplex `highs` | `--master-backend highs` |
 | `multi_pair.py` | **many plans, one θ**: block LP with a shared θ, per-pair normalisation, cross-regret matrix | `--n-sub 1200 --train-pairs 0 13 2 41 5 88 7 52` |
 | `deformation.py` | **deformation sweep**: twist about the vertical axis, vertex identity preserved, θ fitted once at σ=0 | `python -m iot_experiments.studies.real.faust.deformation --n-sub 1500` |
 | `abstention.py` | **where is it wrong?** label-free confidence scores (raw / relative cost margin, OT dual certificate, softmax margin) as risk–coverage | `python -m iot_experiments.studies.real.faust.abstention --n-sub 4000` |
@@ -32,8 +33,8 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 
 Loader and descriptor primitives live in `iot_experiments/harness/faust.py` (`read_ply`, `vertex_areas`,
 `cotangent_laplacian`, `spectral_basis`, `heat_kernel_signature`, `descriptors`, `standardise`,
-`shared_index`), because no mesh library is installed — `trimesh`, `potpourri3d`, `robust_laplacian`, `igl`
-and `open3d` are all absent.
+`shared_index`), because no general mesh library is installed — `trimesh`, `robust_laplacian`, `igl` and
+`open3d` are absent (`potpourri3d` alone is used, for geodesics).
 
 Everything that more than one driver needs **is defined once**, in the harness, not copied per driver:
 `harness/faust.py` (mesh, descriptors, index subsample), `harness/faust_match.py` (cost matrix in numpy and
@@ -50,6 +51,26 @@ needed so far; the 200 test scans are withheld for the website, so **all evaluat
 registrations split by pose**.
 
 `data/` is git-ignored; the loader refuses a missing or unexpected file rather than silently substituting.
+
+**Where that path comes from is not assumed.** The drivers used to carry the absolute path of one machine
+(`/home/agent/Documents/fast-iot/data/...`), so on a server, under another user, or in a `git worktree` (where the
+git-ignored `data/` is absent by design) every run died with `FaustError: missing mesh: /home/agent/...` — a config
+error that reads like corrupt data. Now:
+
+- `harness/faust.py: default_registrations_root()` returns `$FAUST_ROOT` if set, else
+  `<repo>/data/faust_extract/MPI-FAUST/training/registrations`;
+- every driver's `--root` still wins over both;
+- `read_ply` says **"registrations root does not exist"** (with both fixes) when the whole directory is wrong,
+  and only says "missing mesh" for a single absent file.
+
+On a machine whose data lives elsewhere, one export covers every driver and every queued job:
+
+```bash
+export FAUST_ROOT=$HOME/Documents/faust_reg     # 100 tr_reg_*.ply, 6890 verts, flat
+```
+
+`potpourri3d` is required (the geodesic solver behind every reported error); `trimesh`, `robust_laplacian`, `igl`
+and `open3d` are not used.
 
 ## What is established (2026-11-09)
 
@@ -169,7 +190,7 @@ corrupt a flip count).
 ## Next
 
 1. A `θ` **fitted on pair (a, b)** and evaluated on held-out pairs — the actual experiment.
-2. A geodesic error (needs `potpourri3d` or a Dijkstra approximation, and the convention stated).
+2. A geodesic error — `potpourri3d` is now required and used; the convention (`dist / sqrt(area)`) is stated.
 3. `K` sweep: cheap descriptors vs +HKS vs +WKS, since the HKS result shows capacity is the binding term.
 4. The synthetic distortion layer (bends/twists with fixed vertex identity) for an accuracy-vs-deformation
    curve.

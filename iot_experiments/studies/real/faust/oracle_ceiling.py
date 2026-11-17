@@ -57,7 +57,7 @@ from iot.core.features import (  # noqa: E402
     RadialProfileFeatures,
 )
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import geodesic_matrix, read_ply, shared_index, surface_area  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, geodesic_matrix, read_ply, shared_index, surface_area  # noqa: E402
 from iot_experiments.harness.faust_match import geodesic_errors, match  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import RunLog, RunRecord, write_records  # noqa: E402
@@ -67,7 +67,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     standardise,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "does a richer cost dictionary raise the achievable miss@5% on FAUST at all (oracle theta)?",

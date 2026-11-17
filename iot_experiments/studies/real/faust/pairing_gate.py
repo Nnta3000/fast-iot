@@ -40,6 +40,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
+    default_registrations_root,
     geodesic_matrix,
     read_ply,
     shared_index,
@@ -60,7 +61,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
 )
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "does a balanced transport plan beat per-row argmin on a given pairwise cost matrix?",

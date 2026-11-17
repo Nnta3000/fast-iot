@@ -24,8 +24,11 @@ import numpy as np
 import pytest
 
 from iot.core.features import SquaredDifferenceFeatures
+import iot_experiments.harness.faust as faust_module
 from iot_experiments.harness.faust import (
+    FaustError,
     cotangent_laplacian,
+    default_registrations_root,
     curvature,
     geodesic_matrix,
     mirror_indices,
@@ -263,3 +266,68 @@ def test_intra_and_inter_generators_differ() -> None:
     assert intra != inter
     assert all(subject_of(a) == subject_of(b) for a, b in intra)
     assert any(subject_of(a) != subject_of(b) for a, b in inter)
+
+
+def test_default_registrations_root_is_portable_and_honours_faust_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    EN: the default FAUST root must not name one machine.
+
+        Regression: every FAUST driver carried `DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/..."`, so on
+        any other checkout (a server, another user, a `git worktree`, where the git-ignored `data/` is absent by
+        design) the run died with `FaustError: missing mesh: /home/agent/...` -- a config error that reads like
+        corrupt data. The default is now repo-relative, and `FAUST_ROOT` overrides it for all drivers at once.
+
+    CN: 默认 FAUST 根目录不得写死某台机器。回归场景：换机器/换用户/worktree 时报 `missing mesh: /home/agent/...`，
+        看起来像数据损坏。现在默认是仓库相对路径，`FAUST_ROOT` 可一次性覆盖所有驱动。
+    """
+    monkeypatch.delenv("FAUST_ROOT", raising=False)
+    default = default_registrations_root()
+    assert default.is_absolute()
+    # EN: it must be exactly the repo-relative drop point described in data/README.md, i.e. derived from the
+    #     repository this file lives in -- not from any particular user's home.
+    # CN: 必须正是 data/README.md 约定的仓库相对位置，即由本仓库推出，而不是某个用户的家目录。
+    assert default == (faust_module.REPO_ROOT / "data" / "faust_extract" / "MPI-FAUST" / "training"
+                       / "registrations")
+    assert default.is_relative_to(faust_module.REPO_ROOT)
+
+    # EN: and no driver may reintroduce the literal. This is the actual regression: 21 modules carried the
+    #     absolute path of one machine, so the only reliable guard is to look at the source.
+    # CN: 任何驱动都不许再写回这个绝对路径。真正的回归就在这里：21 个模块写死了同一台机器的路径，所以只能查源码。
+    offenders = [
+        str(path.relative_to(faust_module.REPO_ROOT))
+        for path in (faust_module.REPO_ROOT / "iot_experiments" / "studies" / "real" / "faust").glob("*.py")
+        if "/home/agent/Documents" in path.read_text()
+    ]
+    assert not offenders, f"hardcoded machine path in: {offenders}"
+
+    monkeypatch.setenv("FAUST_ROOT", "/tmp/some/other/root")
+    assert default_registrations_root() == Path("/tmp/some/other/root")
+    # EN: `~` is expanded, because a shell that quotes it would otherwise pass a literal tilde.
+    # CN: 展开 `~`，否则被引号包住的 `~` 会原样传入。
+    monkeypatch.setenv("FAUST_ROOT", "~/faust_reg")
+    assert default_registrations_root() == Path.home() / "faust_reg"
+
+
+def test_read_ply_names_the_root_when_the_directory_is_missing() -> None:
+    """
+    EN: a missing **directory** must not be reported as a missing mesh.
+
+        The two failures need different reactions -- one is "set --root / FAUST_ROOT", the other is "this file is
+        gone" -- and the old single message sent the reader looking for corrupt data. This asserts the message
+        names the root, the file and both fixes.
+
+    CN: **目录**缺失不能报成"网格缺失"。两种失败需要不同的处理（设 `--root`/`FAUST_ROOT` vs 该文件不见了），
+        旧消息只有一种说法。这里断言消息同时给出根目录、文件与两种修法。
+    """
+    missing_dir = Path("/tmp/definitely-not-a-faust-root-8f2c")
+    with pytest.raises(FaustError) as raised:
+        read_ply(missing_dir / "tr_reg_000.ply")
+    message = str(raised.value)
+    assert "registrations root does not exist" in message
+    assert str(missing_dir) in message
+    assert "--root" in message and "FAUST_ROOT" in message
+    # EN: and a missing file inside an EXISTING directory keeps the short message.
+    # CN: 目录存在而文件缺失时仍然是简短消息。
+    with pytest.raises(FaustError) as raised_file:
+        read_ply(Path("/tmp") / "tr_reg_000.py")
+    assert "registrations root does not exist" not in str(raised_file.value)

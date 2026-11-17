@@ -50,7 +50,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import pair_geometry, read_ply, shared_index  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, pair_geometry, read_ply, shared_index  # noqa: E402
 from iot_experiments.harness.faust_match import (  # noqa: E402
     bootstrap_contrast,
     fit_softmax,
@@ -66,7 +66,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
 )
 from iot_experiments.studies.real.faust.pairing import TRAIN_PAIRS  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "does the inverse-OT fit locate thetas that a random search over the same support, or a "

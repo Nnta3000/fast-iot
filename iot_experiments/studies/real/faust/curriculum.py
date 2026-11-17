@@ -48,7 +48,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import geodesic_matrix, read_ply, surface_area  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, geodesic_matrix, read_ply, surface_area  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -74,7 +74,7 @@ from iot_experiments.harness.faust_match import (  # noqa: E402
     fit_softmax,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "can the inverse-OT fit be spent once, as a hard-negative miner, and give a cheap supervised "

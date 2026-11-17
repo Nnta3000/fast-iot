@@ -41,7 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import pair_geometry, read_ply, shared_index  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, pair_geometry, read_ply, shared_index  # noqa: E402
 from iot_experiments.harness.faust_match import (  # noqa: E402
     bootstrap_contrast,
     duality_gap,
@@ -54,7 +54,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     fit_theta,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 # CN: `iter_limit` 在本机绑定上**无效**（实测 5/20/50/200 与默认给出完全相同的迭代数与 θ）；
 #     `time_sec_limit` 有效。

@@ -45,7 +45,7 @@ from iot.core.parameters import (  # noqa: E402
 )
 from iot.exact.loop import solve_inverse_ot  # noqa: E402
 from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
-from iot_experiments.harness.faust import read_ply  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, read_ply  # noqa: E402
 from iot_experiments.harness.lib.planting import plant_instance  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     descriptors,
@@ -53,7 +53,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     standardise,
 )
 
-ROOT = "data/faust_extract/MPI-FAUST/training/registrations"
+ROOT = str(default_registrations_root())
 
 
 def peak_mb() -> float:

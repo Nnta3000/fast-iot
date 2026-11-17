@@ -56,7 +56,7 @@ from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot.relaxed.master_regret import regret_objective  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
-from iot_experiments.harness.faust import read_ply  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -73,7 +73,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     standardise,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "does a theta shared across several training pairs transfer to held-out pairs better than a "

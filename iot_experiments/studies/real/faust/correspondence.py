@@ -58,6 +58,7 @@ from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
 from iot.relaxed.master_regret import RegretMasterSolver  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
+    default_registrations_root,
     FaustMesh,
     descriptors,
     geodesic_matrix,
@@ -82,7 +83,7 @@ from iot_experiments.harness.records import (  # noqa: E402
 )
 from iot_experiments.harness.solver import box_simplex  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 GROUPS: dict[str, slice] = {"sparse": slice(0, 3), "area": slice(3, 4), "curv": slice(4, 5),
                             "hks": slice(5, 13)}
 # CN: HKS 列在 13 维描述子里的位置。`LATE` 取 t = 32/64/128，正是拟合出的 θ 加载的那几列——
@@ -346,16 +347,52 @@ def _sample_index(mesh: FaustMesh, config: CorrespondenceConfig, seed: int) -> I
     return shared_index(mesh, int(config.n_sub), int(seed))
 
 
+@dataclasses.dataclass(frozen=True)
+class _PairCache:
+    """
+    EN: the `(pair, seed)`-dependent part of `_evaluate_pair`, so a hyperparameter sweep does not recompute it.
+
+        Measured at `n = 2000` on one pair: HKS descriptors 2.1 s (per mesh), geodesic matrix 4.3 s, so ~7.7 s
+        per call that depends only on the pair and the vertex subsample -- never on `theta`.
+
+    CN: `_evaluate_pair` 中只依赖 `(对, seed)` 的部分，避免超参数扫描重复计算。实测 n=2000 单对约 7.7 秒。
+    """
+
+    a: Float[np.ndarray, "n k"]
+    b: Float[np.ndarray, "n k"]
+    n: int
+    geo: Float[np.ndarray, "n n"]
+    norm: float
+    mirror: Int[np.ndarray, "n"]
+
+
 def _evaluate_pair(a_mesh: FaustMesh, b_mesh: FaustMesh, *, config: CorrespondenceConfig,
                    thetas: dict[str, Float[np.ndarray, "k"]], seed: int,
-                   baselines: bool = True) -> list[RunRecord]:
-    """CN: 在一对形状上评估全部臂（θ 由外部提供）。EN: evaluate every arm on one pair."""
-    idx = _sample_index(a_mesh, config, seed)
-    a, b = standardise(descriptors(a_mesh)[idx], descriptors(b_mesh)[idx])
-    n = int(idx.size)
-    geo = geodesic_matrix(b_mesh.vertices, b_mesh.faces, idx)
-    norm = float(np.sqrt(surface_area(b_mesh.vertices, b_mesh.faces)))
-    mirror, _residual = mirror_indices(b_mesh.vertices, idx)
+                   baselines: bool = True,
+                   cache: dict[tuple[str, str, int], "_PairCache"] | None = None) -> list[RunRecord]:
+    """
+    CN: 在一对形状上评估全部臂（θ 由外部提供）。`cache` 为 `None` 时行为与以前完全相同。
+    EN: evaluate every arm on one pair (thetas supplied by the caller). With `cache=None` the behaviour is
+        exactly as before.
+
+        `cache` exists because the per-pair preparation (HKS descriptors, the geodesic matrix, the mirror finder)
+        costs ~7.7 s at `n = 2000` and depends only on `(pair, seed)`, not on `theta`. A hyperparameter sweep
+        that scores 12 candidate thetas on the same 3 validation pairs was therefore recomputing that
+        preparation 12 times. Keyed on the mesh paths so it survives re-reading the PLYs.
+    """
+    key = (str(a_mesh.path), str(b_mesh.path), int(seed))
+    prepared = None if cache is None else cache.get(key)
+    if prepared is None:
+        idx = _sample_index(a_mesh, config, seed)
+        a, b = standardise(descriptors(a_mesh)[idx], descriptors(b_mesh)[idx])
+        n = int(idx.size)
+        geo = geodesic_matrix(b_mesh.vertices, b_mesh.faces, idx)
+        norm = float(np.sqrt(surface_area(b_mesh.vertices, b_mesh.faces)))
+        mirror, _residual = mirror_indices(b_mesh.vertices, idx)
+        prepared = _PairCache(a=a, b=b, n=n, geo=geo, norm=norm, mirror=mirror)
+        if cache is not None:
+            cache[key] = prepared
+    a, b, n, geo, norm, mirror = prepared.a, prepared.b, prepared.n, prepared.geo, prepared.norm, prepared.mirror
 
     # CN: **每个臂单独算一个 `n×n` 双线性代价**，不物化 `(n, n, K)`。等权臂就是权重向量是常数的特例，
     #     所以下面全部写成"权重向量 + `_cost_matrix`"，不再需要张量。

@@ -45,7 +45,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import read_ply  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -57,6 +57,7 @@ from iot_experiments.harness.records import (  # noqa: E402
 from iot_experiments.harness.faust_match import fit_softmax  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     _evaluate_pair,
+    _PairCache,
     _sample_index,
     default_pairs,
     descriptors,
@@ -65,7 +66,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
 )
 from iot_experiments.studies.real.t1t2.entropic_metric.run import fit_entropic  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "with the hypothesis class held fixed, does the relaxed LP's structure beat a plain supervised "
@@ -102,6 +103,7 @@ class ArmsConfig(RunConfig):
     tau_grid: tuple[float, ...] = (0.01, 0.05, 0.1, 0.5)
     rel_eps_grid: tuple[float, ...] = (0.05, 0.1, 0.25, 0.5)
     sinkhorn_iterations: int = 50
+    master_backend: str = "auto"
 
     @classmethod
     def add_study_arguments(cls, parser) -> None:
@@ -119,12 +121,42 @@ class ArmsConfig(RunConfig):
         parser.add_argument("--tau-grid", type=float, nargs="+", default=[0.01, 0.05, 0.1, 0.5])
         parser.add_argument("--rel-eps-grid", type=float, nargs="+", default=[0.05, 0.1, 0.25, 0.5])
         parser.add_argument("--sinkhorn-iterations", type=int, default=50)
+        parser.add_argument("--master-backend", choices=("auto", "cupdlpx", "highs"), default="auto")
 
 
-def _fit_relaxed(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, max_iterations: int
-                 ) -> Float[np.ndarray, "k"] | None:
+def _resolve_master_backend(requested: str) -> str:
+    """
+    EN: `auto` -> `cupdlpx` only when a CUDA device is actually usable, else `highs`.
+
+        The naive check is not enough: `cupdlpx_available()` (`iot/backends/lp_common.py`) only tests whether
+        the `pycupdlpx` extension **imports**, which it does on a machine whose driver is too old for its torch
+        build. `RegretMasterSolver` then constructs happily and the failure happens inside `solve()`, after the
+        whole hyperparameter selection has been paid for (measured on a driver-11.4 host: `torch.cuda.is_available()`
+        False, `import pycupdlpx` fine). So gate on the device, not the import.
+
+        `highs` is the exact CPU simplex. For this study it is not a downgrade: the question is about the *set*
+        of optimal thetas, which is what `fit_theta`'s own docstring recommends `highs` for. It is recorded in the
+        run log and in the `chosen` record, because the shipped numbers used the first-order GPU path.
+
+    CN: `auto` 只在 CUDA 设备**真的可用**时选 `cupdlpx`，否则用 `highs`。`cupdlpx_available()` 只检查扩展能否
+        **导入**，在驱动过旧的机器上也会返回 True，于是构造成功、到 `solve()` 才炸（实测驱动 11.4：torch 无 CUDA、
+        `import pycupdlpx` 正常）。所以要按设备而不是按导入判断。`highs` 是精确 CPU 单纯形，对本研究不是降级。
+    """
+    choice = str(requested)
+    if choice in {"cupdlpx", "highs"}:
+        return choice
+    try:
+        import torch  # noqa: PLC0415  # only to ask whether a device is usable
+    except ImportError:
+        return "highs"
+    return "cupdlpx" if torch.cuda.is_available() else "highs"
+
+
+def _fit_relaxed(a: Float[np.ndarray, "n k"], b: Float[np.ndarray, "n k"], *, max_iterations: int,
+                 backend: str) -> Float[np.ndarray, "k"] | None:
     """CN: 我们的松弛 LP（simplex-only）。EN: our relaxed LP (simplex-only)."""
-    fit = fit_theta(SquaredDifferenceFeatures(a, b), rel=None, max_iterations=int(max_iterations))
+    fit = fit_theta(SquaredDifferenceFeatures(a, b), rel=None, max_iterations=int(max_iterations),
+                    backend=str(backend))
     return None if fit["theta"] is None else np.asarray(fit["theta"], dtype=np.float64)
 
 
@@ -139,6 +171,11 @@ def main(argv: list[str] | None = None) -> int:
     pre = preflight_check(run_tiny=False, need_gpu=False)
     pre.write(run_dir / "preflight.json")
     log.line(f"preflight ok={pre.ok} mem={pre.mem_available_gb:.1f} GB")
+    master_backend = _resolve_master_backend(str(config.master_backend))
+    log.line(f"master backend: requested={config.master_backend} resolved={master_backend}")
+    if master_backend == "highs" and str(config.master_backend) == "auto":
+        log.line("   note: no usable CUDA device, so the relaxed-LP master runs on the exact CPU simplex; "
+                 "the arms comparison is unaffected but this differs from the shipped first-order GPU runs")
 
     root = Path(config.root)
     train_pair = (int(config.train_pair[0]), int(config.train_pair[1]))
@@ -154,13 +191,21 @@ def main(argv: list[str] | None = None) -> int:
     k = int(a.shape[1])
     log.line(f"train fit: n={idx.size}, K={k}")
 
+    # EN: read the validation meshes ONCE (they were re-read on every score call) and share one preparation cache,
+    #     so the tau / rel_eps sweep pays the descriptors + geodesics once per pair instead of once per candidate.
+    # CN: 验证网格只读一次，并共用一个准备缓存；超参数扫描因此每对只付出一次描述子与测地开销。
+    val_meshes = [
+        (read_ply(root / f"tr_reg_{first:03d}.ply"), read_ply(root / f"tr_reg_{second:03d}.ply"))
+        for first, second in val_pairs
+    ]
+    pair_cache: dict[tuple[str, str, int], _PairCache] = {}
+
     def validation_score(theta: Float[np.ndarray, "k"]) -> float:
         """CN: 在训练受试者的验证对上算 miss@5%。EN: miss@5 % on the training-subject validation pairs."""
         scores = []
-        for pair in val_pairs:
-            va = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
-            vb = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
-            rows = _evaluate_pair(va, vb, config=config, thetas={"cand": theta}, seed=0, baselines=False)
+        for pair, (va, vb) in zip(val_pairs, val_meshes, strict=True):
+            rows = _evaluate_pair(va, vb, config=config, thetas={"cand": theta}, seed=0, baselines=False,
+                                  cache=pair_cache)
             scores.append(rows[0].metrics["miss_5pct"])
         return float(np.mean(scores))
 
@@ -200,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     theta_e, _diag = fit_entropic(a, b, rel_eps=best_eps, max_iterations=int(config.max_iterations))
     thetas["entropic_iot"] = np.asarray(theta_e, dtype=np.float64)
-    theta_lp = _fit_relaxed(a, b, max_iterations=int(config.max_iterations))
+    theta_lp = _fit_relaxed(a, b, max_iterations=int(config.max_iterations), backend=master_backend)
     if theta_lp is None:
         log.line("relaxed_lp FAILED; dropping the arm")
     else:
@@ -214,12 +259,18 @@ def main(argv: list[str] | None = None) -> int:
     for pair in test_pairs:
         va = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
         vb = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
-        rows.extend(_evaluate_pair(va, vb, config=config, thetas=thetas, seed=0, baselines=False))
+        rows.extend(_evaluate_pair(va, vb, config=config, thetas=thetas, seed=0, baselines=False,
+                                   cache=pair_cache))
     rows.append(RunRecord(study=str(config.study), geometry="selection", arm="chosen",
                           k=k, m=int(idx.size), draw=0,
                           metrics={"tau_row": best_tau["row_softmax"],
                                    "tau_rowcol": best_tau["rowcol_softmax"],
                                    "rel_eps": best_eps},
+                          # EN: the master backend is part of the config of any relaxed_lp number, so it is
+                          #     recorded on the selection row as well as in the log.
+                          # CN: master 后端是 relaxed_lp 任何数字的配置之一，因此在选择行与日志里都记录。
+                          extra={"master_backend": master_backend,
+                                 "master_backend_requested": str(config.master_backend)},
                           config=config.to_dict()))
 
     table = summarise(rows, group=("arm",), metrics=("mean", "miss_1pct", "miss_5pct"))

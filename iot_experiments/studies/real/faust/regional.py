@@ -42,6 +42,7 @@ if str(_REPO_ROOT) not in sys.path:
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
+    default_registrations_root,
     pair_geometry,
     read_ply,
     shared_index,
@@ -51,7 +52,7 @@ from iot_experiments.harness.preflight import check as preflight_check  # noqa: 
 from iot_experiments.harness.records import RunLog, RunRecord, write_records  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import default_pairs, fit_theta  # noqa: E402
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "do spatial regions of the body require different descriptor weights? (go/no-go for a "

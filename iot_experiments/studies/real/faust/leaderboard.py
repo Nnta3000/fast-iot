@@ -45,7 +45,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import read_ply, surface_area  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, read_ply, surface_area  # noqa: E402
 from iot_experiments.harness.faust import geodesic_matrix  # noqa: E402
 from iot_experiments.harness.faust_match import cost_matrix, match  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
@@ -56,7 +56,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     standardise,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 THRESHOLDS: tuple[float, ...] = (0.0, 0.01, 0.02, 0.03, 0.05, 0.10)
 
 PROVENANCE: dict[str, object] = {

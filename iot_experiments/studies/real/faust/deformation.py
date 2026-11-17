@@ -41,7 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.faust import FaustMesh, read_ply  # noqa: E402
+from iot_experiments.harness.faust import default_registrations_root, FaustMesh, read_ply  # noqa: E402
 from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -58,7 +58,7 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     standardise,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training/registrations"
+DEFAULT_ROOT = str(default_registrations_root())
 
 PROVENANCE: dict[str, object] = {
     "question": "how fast does correspondence accuracy degrade under a controlled non-isometric deformation?",

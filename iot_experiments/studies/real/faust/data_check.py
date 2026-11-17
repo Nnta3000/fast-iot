@@ -39,6 +39,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.faust import (  # noqa: E402
+    default_registrations_root,
     edge_lengths,
     training_registrations,
     vertex_areas,
@@ -52,7 +53,7 @@ from iot_experiments.harness.records import (  # noqa: E402
     write_records,
 )
 
-DEFAULT_ROOT = "/home/agent/Documents/fast-iot/data/faust_extract/MPI-FAUST/training"
+DEFAULT_ROOT = str(default_registrations_root().parent)
 
 PROVENANCE: dict[str, object] = {
     "question": "do the FAUST training registrations share one vertex ordering, so that pi_hat = I/n is the "
