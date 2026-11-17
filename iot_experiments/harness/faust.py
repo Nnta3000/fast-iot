@@ -23,6 +23,7 @@ from __future__ import annotations
 import dataclasses
 import os
 import struct
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -308,6 +309,72 @@ def geodesic_matrix(vertices: Float[np.ndarray, "vertices 3"], faces: Int[np.nda
     return out
 
 
+@dataclasses.dataclass(frozen=True)
+class DescriptorScaler:
+    """
+    EN: descriptor standardisation fitted on a **fixed set of shapes** (the training shapes) and applied unchanged
+        everywhere else.
+
+        Why this exists: the pairwise proxy used `standardise(a, b)`, which pools the statistics of both sides of
+        the *evaluated* pair. On a symmetric pair that is harmless; under a one-way protocol it means the target's
+        statistics enter the source's feature map -- a transductive leak. Fitting once on training shapes removes
+        it and makes `theta` transferable in the only sense that matters: the same transform on both sides.
+
+    CN: 在**固定形状集合**（训练形状）上拟合的描述子标准化，其余地方原样应用。早先的成对代理用 `standardise(a,b)`
+        把评估对两侧的统计合并；在对称配对下无害，但在单向协议下等于让测试侧统计进入源侧特征（传导式泄漏）。
+        只在训练形状上拟合一次即可消除，并使 θ 在同一变换下真正可迁移。
+    """
+
+    mean: Float[np.ndarray, "k"]
+    std: Float[np.ndarray, "k"]
+
+    @classmethod
+    def fit(cls, arrays: Sequence[Float[np.ndarray, "n k"]]) -> "DescriptorScaler":
+        """
+        EN: pooled mean/std over the supplied descriptor matrices. A zero-variance column gets `std = 1`, so the
+            transform is always well defined (and that column becomes constant, which is visible, not silent).
+
+        CN: 在给定描述子矩阵上取合并均值/标准差；零方差列取 `std = 1`，变换恒有定义（该列变为常数，可见而非静默）。
+        """
+        stacked = np.concatenate([np.asarray(array, dtype=np.float64) for array in arrays], axis=0)
+        mean = stacked.mean(axis=0)
+        std = stacked.std(axis=0)
+        std = np.where(std > 0.0, std, 1.0)
+        return cls(mean=np.ascontiguousarray(mean), std=np.ascontiguousarray(std))
+
+    def transform(self, desc: Float[np.ndarray, "n k"]) -> Float[np.ndarray, "n k"]:
+        """EN: `(desc - mean) / std`. CN: `(desc - mean) / std`。"""
+        value = np.asarray(desc, dtype=np.float64)
+        if value.shape[1] != self.mean.size:
+            raise ValueError(f"expected {self.mean.size} descriptor columns, got {value.shape[1]}")
+        return np.ascontiguousarray((value - self.mean) / self.std, dtype=np.float64)
+
+
+def diameter(vertices: Float[np.ndarray, "vertices d"], *, chunk: int = 2048) -> float:
+    """
+    EN: the mesh **diameter** = the largest Euclidean distance between any two vertices, computed in row blocks so
+        an `n x n` distance matrix is never materialised.
+
+        This is the normaliser FAUST's own evaluation uses (geodesic error divided by the shape's diameter,
+        reported x100). The study's original choice, `sqrt(surface area)`, is a different scale and must not be
+        mixed with it in one table -- drivers report both.
+
+    CN: 网格**直径** = 任意两顶点的最大欧氏距离；按行分块计算，不物化 `n x n` 距离矩阵。这是 FAUST 自身评估使用的
+        归一化尺度（测地误差除以直径，再乘 100）。研究早先使用的 `sqrt(表面积)` 是另一个尺度，两者不能放进同一张表；
+        driver 会同时报告两者。
+    """
+    points = np.asarray(vertices, dtype=np.float64)
+    if points.ndim != 2 or points.shape[0] < 2:
+        raise ValueError("vertices must be a 2D array with at least two rows")
+    best = 0.0
+    for start in range(0, points.shape[0], int(chunk)):
+        block = points[start:start + int(chunk)]
+        difference = block[:, None, :] - points[None, :, :]
+        squared = np.einsum("ijd,ijd->ij", difference, difference)
+        best = max(best, float(squared.max()))
+    return float(np.sqrt(best))
+
+
 def surface_area(vertices: Float[np.ndarray, "vertices 3"], faces: Int[np.ndarray, "faces 3"]) -> float:
     """CN: 网格总面积。EN: total surface area."""
     tri = np.asarray(vertices, dtype=np.float64)[np.asarray(faces, dtype=np.int64)]
@@ -445,8 +512,10 @@ def shared_index(mesh: FaustMesh, count: int, seed: int) -> Int[np.ndarray, "n"]
 __all__ = [
     "HKS_TIMES",
     "FaustError",
+    "DescriptorScaler",
     "FaustMesh",
     "cotangent_laplacian",
+    "diameter",
     "curvature",
     "descriptors",
     "edge_lengths",

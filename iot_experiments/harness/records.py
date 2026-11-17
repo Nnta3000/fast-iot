@@ -60,17 +60,34 @@ def mean_std(values: Sequence[float]) -> tuple[float, float]:
     return float(arr.mean()), float(np.std(arr))
 
 
+def _group_value(record: "RunRecord", name: str) -> str:
+    """
+    EN: the grouping value of `name`: a record field if one exists, otherwise an `extra` entry. Missing keys raise,
+        so a typo cannot silently produce a single pooled bucket.
+    CN: 分组值：优先取记录字段，其次取 `extra`；缺失即报错，避免拼写错误静默合并成一个桶。
+    """
+    if hasattr(record, name):
+        return str(getattr(record, name))
+    if name in record.extra:
+        return str(record.extra[name])
+    raise KeyError(f"group key {name!r} is neither a RunRecord field nor in extra; "
+                   f"available extra keys: {sorted(record.extra)}")
+
+
 def summarise(records: Iterable[RunRecord], *, group: Sequence[str] = ("geometry", "arm"),
               metrics: Sequence[str] = ("hit", "R@1")) -> list[dict[str, object]]:
     """
-    CN: 按 `group` 聚合（排除 `excluded`），每个指标给出 `mean`/`std`/`n`。
-    EN: Aggregate by `group` (excluding `excluded` rows); each metric gets `mean`/`std`/`n`.
+    CN: 按 `group` 聚合（排除 `excluded`），每个指标给出 `mean`/`std`/`n`。分组键先找 `RunRecord` 字段，找不到
+        再找 `extra`（例如协议名、challenge 名这类每行诊断）。
+    EN: Aggregate by `group` (excluding `excluded` rows); each metric gets `mean`/`std`/`n`. A group key is looked
+        up on the record first and then in `extra` -- protocol-level dimensions such as the challenge name live
+        there rather than in a new field.
     """
     buckets: dict[tuple[str, ...], list[RunRecord]] = {}
     for rec in records:
         if rec.excluded:
             continue
-        key = tuple(str(getattr(rec, g)) for g in group)
+        key = tuple(_group_value(rec, g) for g in group)
         buckets.setdefault(key, []).append(rec)
     out: list[dict[str, object]] = []
     for key, recs in sorted(buckets.items()):

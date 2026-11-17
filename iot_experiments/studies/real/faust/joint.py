@@ -1,5 +1,15 @@
 """
-EN: **Many plans, one `theta` -- a block-structured LP with a shared weight vector.**
+EN: **Shared-`theta` machinery, protocol-agnostic.** Block LP over a set of *problems* (each with its own plan,
+    potentials and edge set), plus the max-margin/soft-margin variant, the blocked cost planner, the flatness
+    diagnostic and the uniform-regret scale. Nothing here knows whether the problems are FAUST pairs or
+    template targets; the protocol lives in the driver.
+
+    Originally `multi_pair.py`, which also carried a P1 (pairwise-proxy) driver. That driver has been retired:
+    the protocol is now `challenge.py`, which follows FAUST's own two-group structure (intra/inter, ordered).
+
+CN: **共享 θ 机制，与协议无关**：一组 problem 上的块 LP、最大间隔/软间隔变体、分块代价、平坦度诊断与均匀 regret
+    尺度。这里不关心 problem 是 FAUST 的配对还是模板目标；协议在 driver 里。原为 `multi_pair.py`，其中的 P1
+    （成对代理）driver 已退役，协议改由 `challenge.py` 承担（遵循 FAUST 自身的 intra/inter 两组、有向配对）。
 
     Fitting on a single pair wastes the other pairs, and concatenating pairs into one plan is wrong (it couples
     a source vertex to another pair's targets). The correct relaxation gives every pair its own potentials and
@@ -45,35 +55,14 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.core.edges import EdgeSet  # noqa: E402
 from iot.core.features import FeatureMap  # noqa: E402
-from iot.core.parameters import (  # noqa: E402
-    PruningParameters,
-    RelaxedObjective,
-    SolverParameters,
-)
 from iot.core.problem import InverseOTProblem  # noqa: E402
-from iot.core.theta import SimplexTheta  # noqa: E402
-from iot.relaxed.loop_regret import solve_inverse_ot_regret  # noqa: E402
+
 from iot.relaxed.master_regret import regret_objective  # noqa: E402
-from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
-from iot_experiments.harness.master_probe import RecordingMaster  # noqa: E402
-from iot_experiments.harness.faust import (  # noqa: E402
-    default_registrations_root,
-    geodesic_matrix,
-    read_ply,
-    surface_area,
-)
+from iot_experiments.harness.faust import geodesic_matrix, surface_area  # noqa: E402
 from iot_experiments.harness.faust_match import geodesic_errors, match  # noqa: E402
-from iot_experiments.harness.preflight import check as preflight_check  # noqa: E402
-from iot_experiments.harness.records import (  # noqa: E402
-    RunLog,
-    RunRecord,
-    format_table,
-    summarise,
-    write_records,
-)
+from iot_experiments.harness.records import RunRecord  # noqa: E402
 from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
     _sample_index,
-    default_pairs,
     descriptors,
     standardise,
 )
@@ -82,70 +71,8 @@ from iot_experiments.studies.real.faust.correspondence import (  # noqa: E402
 # CN: 字典定义只有一处。复用 gate 的构造器（私有函数，但唯一真源），保证两个研究不会漂移。
 from iot_experiments.studies.real.faust.oracle_ceiling import _dictionaries  # noqa: E402
 
-DEFAULT_ROOT = str(default_registrations_root())
-
-PROVENANCE: dict[str, object] = {
-    "question": "does a theta shared across several training pairs transfer to held-out pairs better than a "
-                "theta fitted on one pair?",
-    "formulation": "block LP: one shared theta, per-pair (f_p, g_p), per-pair edge set F_p, objective is the mean "
-                   "of the per-pair regrets",
-    "edge_sets": "F_p is the edge set each single-pair loop finished with, NOT regenerated in the joint LP, so "
-                 "theta_multi solves a RESTRICTED master and its regret is a lower bound on the joint optimum",
-    "solver": "scipy HiGHS on the assembled sparse LP (one solve, no constraint generation)",
-    "comparison": "theta_single (fitted on pair 1) vs theta_multi (shared over all P), both evaluated on the "
-                  "same held-out test pairs",
-    "cost_family": "selectable with --family; the definitions are imported from the oracle-ceiling gate so the two "
-                   "studies cannot drift. Default diag13 = the incumbent 13-feature diagonal family",
-    "joint_feasibility": "reported on the FULL edge set with exact POT per pair, NOT as the restricted-master LP "
-                         "objective, which is only a lower bound on the true joint regret",
-    "scales": "the shared object is theta. Each pair's Gaussian bandwidths / hat-basis extent are derived from "
-              "that pair's own nearest-neighbour distances, because they are normalisations, not parameters",
-    "flatness": "every score is reported with the cost's identity gap; a rich family can certify a plan by tying "
-                "all candidates (measured median gap 1e-5), after which the decoded map is an arbitrary optimum",
-}
-
-
 @dataclasses.dataclass(frozen=True)
-class MultiPairConfig(RunConfig):
-    """CN: 旋钮。EN: knobs."""
-
-    study: str = "faust_multi_pair"
-    section: str = "faust_multi_pair"
-    root: str = DEFAULT_ROOT
-    train_pairs: tuple[int, ...] = (0, 13, 2, 41, 5, 88, 7, 52)
-    test_subjects: tuple[int, ...] = (5, 6, 7, 8, 9)
-    test_pair_count: int = 8
-    n_sub: int = 1500
-    max_iterations: int = 30
-    per_pair_backend: str = "cupdlpx"   # the per-pair fits; the joint LP itself is solved by HiGHS
-    # EN: which cost family the shared theta is fitted over. `diag13` is the incumbent; `profile8` is the hat
-    #     basis that was bimodal in the oracle gate (7/24 wins, then catastrophic losses through flat costs).
-    # CN: 共享 θ 所用的代价族。`diag13` 是现有基线；`profile8` 是 oracle 门中呈双峰的帽基（24 行赢 7 行，
-    #     但通过"平代价"惨败）。
-    family: str = "diag13"
-    bands: int = 5
-    basis_size: int = 8
-
-    @classmethod
-    def add_study_arguments(cls, parser) -> None:
-        """CN: 只加本研究特有的参数。EN: only this study's flags."""
-        parser.add_argument("--root", default=DEFAULT_ROOT)
-        parser.add_argument("--train-pairs", type=int, nargs="+",
-                            default=[0, 13, 2, 41, 5, 88, 7, 52])
-        parser.add_argument("--test-subjects", type=int, nargs="+", default=[5, 6, 7, 8, 9])
-        parser.add_argument("--test-pair-count", type=int, default=8)
-        parser.add_argument("--n-sub", type=int, default=1500)
-        parser.add_argument("--max-iterations", type=int, default=30)
-        parser.add_argument("--per-pair-backend", default="cupdlpx", choices=["cupdlpx", "highs"])
-        parser.add_argument("--family", default="diag13",
-                            choices=["diag13", "hinge8", "profile8", "group+diag", "group_gauss",
-                                     "gauss", "gauss+cos"])
-        parser.add_argument("--bands", type=int, default=5)
-        parser.add_argument("--basis-size", type=int, default=8)
-
-
-@dataclasses.dataclass(frozen=True)
-class _PairProblem:
+class PairProblem:
     """CN: 一个训练对：特征族、方案、最终边集。EN: one training pair: family, plan, final edge set."""
 
     features: FeatureMap
@@ -153,9 +80,10 @@ class _PairProblem:
     edges: EdgeSet
     theta_single: np.ndarray
     regret_single: float
+    loss: np.ndarray | None = None
 
 
-def _uniform_regret(pair: _PairProblem) -> float:
+def _uniform_regret(pair: PairProblem) -> float:
     """
     CN: 该对的 `R_uniform`：均匀 θ 与一组可行对偶下的 regret，用作**这一对的尺度**。跨对比较必须用它归一，
         因为原始 regret 的量级随实例差 3 倍（实测 0.00079 / 0.00074 / 0.0024 / 0.0024），直接平均会让最难的两对
@@ -173,7 +101,7 @@ def _uniform_regret(pair: _PairProblem) -> float:
     return value if np.isfinite(value) and value > 0.0 else float("nan")
 
 
-def _solve_multi(pairs: list[_PairProblem], k: int, *, scales: list[float] | None = None
+def _solve_multi(pairs: list[PairProblem], k: int, *, scales: list[float] | None = None
                  ) -> dict[str, object]:
     """
     CN: 装配并求解共享 θ 的块 LP：变量 `[θ | (f_p, g_p) for p]`，每个 `(p, e)` 一条不等式行。
@@ -332,7 +260,7 @@ def _score_pair(a, b, *, family: str, config, thetas: dict[str, np.ndarray], see
     return rows
 
 
-def _cross_regret(pairs: list[_PairProblem], thetas: list[np.ndarray], scales: list[float]
+def _cross_regret(pairs: list[PairProblem], thetas: list[np.ndarray], scales: list[float]
                   ) -> np.ndarray:
     """
     CN: **交叉 regret 矩阵** `M[p, q] = R_p(theta_q) / R_uniform_p`，其中 `R_p(θ) = <θ, φ̄_p> − OT_p(c_p(θ))`
@@ -366,132 +294,137 @@ def _cross_regret(pairs: list[_PairProblem], thetas: list[np.ndarray], scales: l
     return out
 
 
-def main(argv: list[str] | None = None) -> int:
-    """CN: 入口。EN: entry point."""
-    parser = build_parser(MultiPairConfig)
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    config = MultiPairConfig.from_namespace(args, parser)
-    run_dir = config.run_dir
-    run_dir.mkdir(parents=True, exist_ok=True)
-    log = RunLog(run_dir / "run.log")
-    pre = preflight_check(run_tiny=False, need_gpu=False)
-    pre.write(run_dir / "preflight.json")
-    log.line(f"preflight ok={pre.ok} mem={pre.mem_available_gb:.1f} GB")
+def _solve_shared_margin(pairs: list[PairProblem], k: int, losses: list[np.ndarray]
+                         ) -> dict[str, object]:
+    """
+    EN: **joint soft-margin master** — the non-vacuous version of "one theta for many pairs".
 
-    root = Path(config.root)
-    flat = [int(v) for v in config.train_pairs]
-    if len(flat) % 2:
-        raise SystemExit("--train-pairs needs an even number of ids")
-    train_pairs = [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
-    test_pairs = default_pairs(tuple(int(v) for v in config.test_subjects), int(config.test_pair_count))
-    log.line(f"{len(train_pairs)} training pairs {train_pairs}; {len(test_pairs)} held-out pairs")
-    log.line(f"cost family={config.family!r}  bands={config.bands}  basis={config.basis_size}  "
-             f"n_sub={config.n_sub}  per-pair iterations={config.max_iterations}")
+            minimise   sum_p xi_p
+            s.t.       c_ii(theta) - g_i + g_j + loss_ij - c_ij(theta) <= xi_p     for all (i,j) in F_p, i != j
+                       sum_k theta_k = 1,  theta >= 0,  g_p[0] = 0,  xi_p >= 0
 
-    built: list[_PairProblem] = []
-    for pair in train_pairs:
-        a = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
-        b = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
-        idx = _sample_index(a, config, 0)
-        da, db = standardise(descriptors(a)[idx], descriptors(b)[idx])
-        n = int(idx.size)
-        plan = sparse.csr_matrix((np.full(n, 1.0 / n), (np.arange(n), np.arange(n))), shape=(n, n))
-        family = _family(str(config.family), da, db, bands=int(config.bands),
-                         basis_size=int(config.basis_size))
-        problem = InverseOTProblem(features=family, theta_set=SimplexTheta(int(family.n_features)),
-                                   plan=plan)
-        master = RecordingMaster(
-            backend=str(config.per_pair_backend), tie_break=False,
-            params={"time_sec_limit": 300.0} if str(config.per_pair_backend) == "cupdlpx" else None)
-        single = solve_inverse_ot_regret(
-            problem,
-            objective=RelaxedObjective(eps_r_rel=1e-6, check_pot=False, selection="none"),
-            params=SolverParameters(tol=None, gamma=1, max_iterations=int(config.max_iterations),
-                                    pruning=PruningParameters(enabled=False)),
-            master=master)
-        if master.last_edges is None:
-            raise SystemExit(f"pair {pair}: no edge set recorded")
-        built.append(_PairProblem(features=family, problem=problem, edges=master.last_edges,
-                                  theta_single=np.asarray(single.theta, dtype=np.float64),
-                                  regret_single=float(single.regret)))
-        log.line(f"pair {pair}: K={int(family.n_features)} |F|={int(master.last_edges.size)} "
-                 f"regret_single={float(single.regret):.6g}")
+        One `xi` **per pair**, so `xi_p` is how much the loss-scaled margin is violated for pair p, and `sum xi`
+        is the joint infeasibility. `delta = 1` is fixed rather than maximised: the hard-margin version
+        (`xi = 0`, maximise delta) is *infeasible* as soon as any plan is not exactly optimal, which is the usual
+        case — measured on `diag13`, where the fitted theta has regret 1.9e-2 and the hard LP returned
+        "infeasible". A fixed unit margin plus slack is always feasible and gives a **continuous** quantity,
+        which is what a "how many pairs can share one theta" question needs.
 
-    k = int(built[0].features.n_features)
-    scales = [_uniform_regret(piece) for piece in built]
-    log.line("per-pair R_uniform (the normalising scale): "
-             + ", ".join(f"{s:.4g}" for s in scales))
-    if not all(np.isfinite(scales)):
-        log.line("a pair has a non-positive R_uniform; falling back to the unnormalised objective")
-        scales = None  # type: ignore[assignment]
-    multi = _solve_multi(built, k, scales=scales)
-    if not multi.get("ok"):
-        log.line(f"multi-pair LP failed: {multi.get('reason')} (shape {multi.get('shape')})")
-        log.close()
-        return 3
-    theta_multi = np.asarray(multi["theta"], dtype=np.float64)
-    log.line(f"multi LP: shape {multi['shape']} nnz {multi['nnz']:,} objective {multi['objective']:.6g}")
-    log.line(f"theta_multi={np.round(theta_multi, 4).tolist()}")
-    for pair, piece in zip(train_pairs, built):
-        diff = float(np.abs(piece.theta_single - theta_multi).sum())
-        log.line(f"  pair {pair}: L1(theta_single, theta_multi) = {diff:.4f}")
+        The potentials: the observed plan is the identity, a perfect matching, so `f_i + g_i = c_ii` determines
+        `f` once `g` is chosen; substituting removes `f`. `g_p[0] = 0` fixes the remaining global shift.
 
-    rows: list[RunRecord] = []
-    # CN: 交叉 regret 矩阵：行 = 评估用的对，列 = θ 的来源（单对 θ 们 + 共享 θ）。
-    # EN: cross-regret matrix: rows = the pair being evaluated, columns = where the theta came from.
-    thetas_cols = [piece.theta_single for piece in built] + [theta_multi]
-    scale_column = [float(v) if np.isfinite(v) else 1.0 for v in scales] if scales else [1.0] * len(built)
-    matrix = _cross_regret(built, thetas_cols, scale_column)
-    log.line("\ncross-regret R_p(theta_q) / R_uniform_p   (rows = evaluated pair, cols = theta source)")
-    header = "        " + "".join(f"{'th'+str(q):>10}" for q in range(len(thetas_cols)))
-    log.line(header + "   (last column = shared theta)")
-    for p, pair in enumerate(train_pairs):
-        log.line(f"pair{str(pair):<10}" + "".join(f"{matrix[p, q]:>10.4f}" for q in range(len(thetas_cols))))
-    rows.append(RunRecord(study=str(config.study), geometry="cross_regret", arm="matrix", k=k,
-                          m=int(config.n_sub), draw=0, metrics={},
-                          config=config.to_dict(),
-                          extra={"matrix": matrix.tolist(), "train_pairs": [list(p) for p in train_pairs],
-                                 "scales": [float(v) for v in (scales or [])]}))
+        A constant or zero cost gives `theta`-terms of 0 and then `loss_ij <= xi_p` for every edge, so
+        `xi_p >= max_ij loss_ij`: the degenerate direction is *punished* instead of certified. That is the whole
+        point — the regret objective could be satisfied by it, this one cannot.
 
-    # EN: the honest joint-feasibility question, per training pair: the **full-edge** normalised regret of the
-    #     shared theta (NOT the restricted LP value) plus the flatness of the cost it induces. The restricted
-    #     master can only be optimistic, so the LP objective alone must never be reported as "satisfies all".
-    # CN: 逐训练对的诚实联合可行性：共享 θ 在**全边集**上的归一化 regret（不是受限 LP 值），以及它诱导代价的
-    #     平坦度。受限 master 只会偏乐观，故绝不能只凭 LP 目标宣称"满足所有对"。
-    diagnostics: dict[str, dict[str, float]] = {}
-    for p, (pair_id, piece) in enumerate(zip(train_pairs, built)):
-        n_pair = int(piece.problem.n_source)
-        flat_multi = _flatness(_cost_rows(piece.features, theta_multi, n_pair))
-        flat_single = _flatness(_cost_rows(piece.features, piece.theta_single, n_pair))
-        diagnostics[f"pair{list(pair_id)}"] = {
-            "full_edge_regret_multi": float(matrix[p, len(built)]),
-            "full_edge_regret_single": float(matrix[p, p]),
-            **{f"multi_{key}": value for key, value in flat_multi.items()},
-            **{f"single_{key}": value for key, value in flat_single.items()},
-        }
-        log.line(f"  pair {pair_id}: full-edge regret multi={matrix[p, len(built)]:.4f} "
-                 f"single={matrix[p, p]:.4f}  flatness median gap={flat_multi['row_gap_median']:.2e} "
-                 f"tied={flat_multi['tied_fraction_1e6']:.3f}")
-    rows.append(RunRecord(study=str(config.study), geometry="joint_diagnostics", arm="diagnostics",
-                          k=k, m=int(config.n_sub), draw=0, metrics={}, config=config.to_dict(),
-                          extra={"family": str(config.family), "pairs": diagnostics,
-                                 "theta_multi": theta_multi.tolist(),
-                                 "l1_to_uniform": float(np.abs(theta_multi - 1.0 / k).sum())}))
+    CN: **联合软间隔 master**。每对**一个** `xi_p`，`xi_p` 是该对损失缩放间隔的违反量，`sum xi` 是联合不可行度。
+        固定 `delta = 1` 而不是最大化：硬间隔版本（`xi = 0`）只要有一个方案不是精确最优就**不可行**（diag13 实测
+        regret 1.9e-2，硬 LP 返回 infeasible）。固定单位间隔 + 松弛永远可行，并给出**连续**量，这正是"多少对能共享
+        一个 θ"需要的东西。常数或零代价会给出 `loss_ij <= xi_p`，故 `xi_p` 至少是最大损失——退化方向被惩罚而不是
+        被认证。
+    """
+    k = int(k)
+    total_rows = 0
+    for pair in pairs:
+        rows = np.asarray(pair.edges.rows, dtype=np.int64)
+        cols = np.asarray(pair.edges.cols, dtype=np.int64)
+        total_rows += int(np.count_nonzero(rows != cols))
+    n_pairs = len(pairs)
+    ncols = k + n_pairs + int(sum(int(piece.problem.n_target) for piece in pairs))
+    objective = np.zeros(ncols, dtype=np.float64)
+    objective[k:k + n_pairs] = 1.0  # EN: sum of the per-pair slacks. CN: 逐对松弛之和。
 
-    for pair in test_pairs:
-        a = read_ply(root / f"tr_reg_{pair[0]:03d}.ply")
-        b = read_ply(root / f"tr_reg_{pair[1]:03d}.ply")
-        thetas = {"multi": theta_multi, "single": built[0].theta_single}
-        rows.extend(_score_pair(a, b, family=str(config.family), config=config, thetas=thetas, seed=0,
-                                bands=int(config.bands), basis_size=int(config.basis_size)))
+    rows_index: list[np.ndarray] = []
+    cols_index: list[np.ndarray] = []
+    data: list[np.ndarray] = []
+    b_ub_parts: list[np.ndarray] = []
+    eq_rows: list[int] = []
+    eq_cols: list[int] = []
+    eq_values: list[float] = []
+    eq_rhs: list[float] = []
+    for column in range(k):
+        eq_rows.append(0)
+        eq_cols.append(column)
+        eq_values.append(1.0)
+    eq_rhs.append(1.0)
+    next_eq = 1
+    row_base = 0
+    g_offset = k + n_pairs
+    for pair_index, (piece, loss) in enumerate(zip(pairs, losses)):
+        rows = np.asarray(piece.edges.rows, dtype=np.int64)
+        cols = np.asarray(piece.edges.cols, dtype=np.int64)
+        keep = rows != cols
+        rows, cols = rows[keep], cols[keep]
+        n_edges = int(rows.size)
+        base = np.arange(n_edges, dtype=np.int64) + row_base
+        row_base += n_edges
+        phi = np.asarray(piece.features.features(rows, cols), dtype=np.float64)
+        phi_support = np.asarray(piece.features.features(rows, rows), dtype=np.float64)
+        rows_index.append(np.repeat(base, k))
+        cols_index.append(np.tile(np.arange(k, dtype=np.int64), n_edges))
+        data.append((phi_support - phi).reshape(-1))
+        rows_index.append(base)
+        cols_index.append(g_offset + rows)
+        data.append(-np.ones(n_edges, dtype=np.float64))
+        rows_index.append(base)
+        cols_index.append(g_offset + cols)
+        data.append(np.ones(n_edges, dtype=np.float64))
+        # EN: -xi_p on this pair's slack column, and the loss on the right-hand side (b_ub = -loss).
+        # CN: 该对的松弛列取 -1，损失移到右端（b_ub = -loss）。
+        rows_index.append(base)
+        cols_index.append(np.full(n_edges, k + pair_index, dtype=np.int64))
+        data.append(-np.ones(n_edges, dtype=np.float64))
+        b_ub_parts.append(-np.asarray(loss[rows, cols], dtype=np.float64))
+        eq_rows.append(next_eq)
+        eq_cols.append(g_offset)
+        eq_values.append(1.0)
+        eq_rhs.append(0.0)
+        next_eq += 1
+        g_offset += int(piece.problem.n_target)
 
-    table = summarise(rows, group=("arm",), metrics=("mean", "miss_5pct"))
-    log.line("\n" + format_table(table, ("arm", "n_draws", "mean_mean", "miss_5pct_mean")))
-    write_records(run_dir / "records.json", rows, provenance=PROVENANCE)
-    log.line(f"wrote {run_dir / 'records.json'} ({len(rows)} rows)")
-    log.close()
-    return 0
+    a_ub = sparse.coo_matrix((np.concatenate(data),
+                              (np.concatenate(rows_index), np.concatenate(cols_index))),
+                             shape=(total_rows, ncols)).tocsr()
+    a_eq = sparse.coo_matrix((np.asarray(eq_values, dtype=np.float64),
+                              (np.asarray(eq_rows, dtype=np.int64),
+                               np.asarray(eq_cols, dtype=np.int64))),
+                             shape=(next_eq, ncols)).tocsr()
+    bounds = [(0.0, 1.0)] * k + [(0.0, None)] * n_pairs + [(None, None)] * (ncols - k - n_pairs)
+    result = linprog(objective, A_ub=a_ub, b_ub=np.concatenate(b_ub_parts),
+                     A_eq=a_eq, b_eq=np.asarray(eq_rhs, dtype=np.float64),
+                     bounds=bounds, method="highs")
+    if not result.success:
+        return {"ok": False, "reason": str(result.message)[:160],
+                "shape": (total_rows, ncols), "nnz": int(a_ub.nnz)}
+    theta = np.maximum(np.asarray(result.x[:k], dtype=np.float64), 0.0)
+    total = float(theta.sum())
+    theta = theta / total if total > 0 else theta
+    return {"ok": True, "theta": theta,
+            "slack": np.asarray(result.x[k:k + n_pairs], dtype=np.float64),
+            "potentials": np.asarray(result.x[k + n_pairs:], dtype=np.float64),
+            "shape": (total_rows, ncols), "nnz": int(a_ub.nnz)}
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+def _verified_slack(feature_map: FeatureMap, theta: np.ndarray, g: np.ndarray, loss: np.ndarray,
+                    n: int) -> float:
+    """
+    EN: the worst margin violation **on all `n*n` edges**, using the potentials from the restricted master.
+
+        The master only saw `F_p`, so its `xi` is an underestimate of the true joint infeasibility. This
+        evaluates the same inequality everywhere and returns the largest violation (negative or zero means the
+        certificate really holds on every edge):
+        `max_{i != j} [ loss_ij - (c_ij - c_ii + g_i - g_j) ]`.
+
+    CN: 用受限 master 的势函数，在**全部 `n*n` 边**上计算最坏间隔违反量。master 只看到 `F_p`，故其 `xi` 低估了
+        真实的联合不可行度。这里在全边上求最大的违反量（≤0 表示证书在全边上确实成立）。
+    """
+    cost = _cost_rows(feature_map, theta, n)
+    diagonal = np.diag(cost)
+    margin = cost - diagonal[:, None] + g[:, None] - g[None, :]
+    denominator = np.array(loss, dtype=np.float64, copy=True)
+    np.fill_diagonal(denominator, np.inf)
+    violation = denominator - margin
+    np.fill_diagonal(violation, -np.inf)
+    return float(violation.max())
+
+

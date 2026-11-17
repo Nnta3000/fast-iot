@@ -15,12 +15,13 @@ cost fails visibly across poses, and a standard evaluation protocol already exis
 | --- | --- | --- |
 | `data_check.py` | **gate 6.0**: do all 100 registrations share one topology and one vertex order? | `python -m iot_experiments.studies.real.faust.data_check` |
 | `gates.py` | **gates 6.1–6.3**: does position-only fail, does uniform-weight leave room, does an oracle `θ` beat uniform? | `python -m iot_experiments.studies.real.faust.gates --pairs 17 65 1 94 23 74` |
-| `correspondence.py` | **the experiment**: subject-disjoint split, box-width chosen on validation pairs, per-row-argmin control, per-vertex flips | see *Reproduce* below |
+| `challenge.py` | **the protocol (P2)**: FAUST's own structure — ordered pairs, intra- and inter-subject challenges scored separately, error on the *second* shape, diameter and sqrt-area normalisation both reported, descriptor scaler fitted on training shapes only | `--n-sub 800 --family diag13` |
+| `joint.py` | **shared-θ machinery**: block LP over a set of problems, max-margin/soft-margin variant, blocked cost planner, flatness diagnostic. Protocol-agnostic; `challenge.py` is its driver. (Was `multi_pair.py`; the P1 pairwise driver is retired.) | imported, no CLI |
+| `correspondence.py` | **P1 (legacy) pairwise proxy**: subject-disjoint split, box-width chosen on validation pairs, per-row-argmin control, per-vertex flips. Superseded by `challenge.py`; kept because the reports cite it | see *Reproduce* below |
 | `heatmaps.py` | **error heat maps** at full 6890-vertex resolution, plus left/right flip counts | `--pairs 50 66 56 71` |
 | `analyse.py` | **tables and figure captions from the saved records only** (§7.3 / §7.2) | `--study correspondence` or `--study heatmaps` |
 | `arms.py` | **four objectives on one hypothesis class**: one-sided CE, Sinkhorn CE, entropic joint master, regret LP, plus uniform | `python -m iot_experiments.studies.real.faust.arms --n-sub 1500` |
 | | the relaxed-LP arm needs a master: `--master-backend auto` (default) picks `cupdlpx` **only when a CUDA device is usable**, else the exact CPU simplex `highs` | `--master-backend highs` |
-| `multi_pair.py` | **many plans, one θ**: block LP with a shared θ, per-pair normalisation, cross-regret matrix | `--n-sub 1200 --train-pairs 0 13 2 41 5 88 7 52` |
 | `deformation.py` | **deformation sweep**: twist about the vertical axis, vertex identity preserved, θ fitted once at σ=0 | `python -m iot_experiments.studies.real.faust.deformation --n-sub 1500` |
 | `abstention.py` | **where is it wrong?** label-free confidence scores (raw / relative cost margin, OT dual certificate, softmax margin) as risk–coverage | `python -m iot_experiments.studies.real.faust.abstention --n-sub 4000` |
 | `curriculum.py` | **iOT as a teacher**: hard negatives mined from the fitted cost, given to a cheap cross-entropy arm | `python -m iot_experiments.studies.real.faust.curriculum --n-sub 2000` |
@@ -39,7 +40,7 @@ Loader and descriptor primitives live in `iot_experiments/harness/faust.py` (`re
 Everything that more than one driver needs **is defined once**, in the harness, not copied per driver:
 `harness/faust.py` (mesh, descriptors, index subsample), `harness/faust_match.py` (cost matrix in numpy and
 torch, the exact-OT decoder, the geodesic-error metric, `fit_softmax`, paired bootstrap) and
-`harness/master_probe.py` (`RecordingMaster`, used by `corner.py` and `multi_pair.py`). A driver is not a
+`harness/master_probe.py` (`RecordingMaster`, used by `corner.py` and `challenge.py`). A driver is not a
 library: prior revisions had `gates.py`, `heatmaps.py`, `arms.py` and `finalists.py` each re-implementing
 `_cost` / `_match` / `_errors`, and two drivers imported private helpers out of `finalists.py`.
 
