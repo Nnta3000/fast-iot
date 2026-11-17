@@ -1,0 +1,169 @@
+# Kernel / dictionary axis for the cost family
+
+**Status: PLAN (2026-11-17).** Not a result. Nothing here may be cited as a number except the baseline in §3,
+which is measured and cited with its record.
+
+**Why this file exists.** The cost family is the one place where the inverse-OT formulation can be made richer
+without touching the solver, the scan, or the loop. This note fixes the question, the options, and the stop
+rule *before* any code is written, so that a negative answer is recorded rather than argued away.
+
+---
+
+## 1. The observation
+
+Everything in `src/iot` touches the data only through the feature tensor `Φ`, and the cost is linear in the
+parameter: `c_ij(θ) = <φ_ij, θ>`. So **any cost that can be written as a finite linear combination of pairwise
+functions is admissible with no change to the solver**.
+
+That is exactly the shape of the kernel trick, restricted to the finite case:
+
+- for a PSD kernel `k`, the squared feature-space distance is `k(x,x) + k(y,y) - 2k(x,y)`;
+- the first two terms depend on **one** point each, so the OT potentials absorb them (adding `u_i + v_j` to a
+  cost leaves the optimal plan unchanged under fixed marginals);
+- therefore the pair-dependent part of a kernel cost is `-k(x_i, y_j)`.
+
+So a kernel family enters as `φ_ij,k = -k_k(x_i, y_j)` and the solver is untouched.
+
+**What is *not* claimed.** This is not the RKHS/representer version (§4, option D). It is a *finite dictionary*
+of pairwise functions; "kernel" here means "a rich dictionary of PSD pairwise similarities", not an
+infinite-dimensional feature map.
+
+## 2. Options, cheapest first
+
+| id | what | new `K` | cost per tile |
+| --- | --- | --- | --- |
+| **A** | Gaussian kernels at several bandwidths; cosine kernels on descriptors or layers; per-descriptor-group kernels | `K` = number of kernels | `O(n²(d + K))`, one distance matmul + `K` exponentials |
+| **B** | additive per-coordinate profiles: `g_k(|a_ik - b_jk|) = Σ_l θ_kl h_l(·)` with a hat/spline basis | `K` = dims × basis size | `O(n² · dims · basis)` |
+| **C** | explicit approximation of a big kernel (random Fourier features, Nyström) | `K ≈ 10³–10⁴` | `O(n² K)`; capacity then grows with `K`, and the capacity warnings in `SANITY_CHECKS_REPORT.md` apply |
+| **D** | exact RKHS / structured-SVM version with a loss-augmented margin | — | needs a new master, not a new `FeatureMap` |
+
+`A` and `B` are the same solver with a bigger dictionary: **zero risk to the existing path**, which is why they
+come first. `C` is a capacity experiment. `D` is a different formulation and is explicitly out of scope here.
+
+## 3. The gate: measure the oracle ceiling first
+
+**Baseline to beat.** `θ` fitted on the *evaluated pair itself* (oracle, not transferable), 13 features
+(`xyz` + log area + log curvature + 8 HKS), `n = 800`:
+
+```
+learned_selected   miss@5% = 0.1855      out/faust_correspondence_box/  (n=24)   ← transferred θ
+oracle_theta       miss@5% = 0.1945      out/faust_correspondence_box/  (n=24)
+uniform_theta      miss@5% = 0.4202      out/faust_correspondence_box/  (n=36)
+nn_oracle_theta    miss@5% = 0.4951      out/faust_correspondence_box/  (n=24)
+```
+
+**Caveat that changes how the gate must be read.** The transferred `θ` (`learned_selected`, 0.1855) already
+**beats** the oracle (0.1945) on this metric. So the oracle is *not* an upper bound on achievable quality — it is
+the optimum of a **different objective** (the max-margin regret, which maximises `δ`), and `miss@5 %` is not what
+it optimises. Two consequences:
+
+- the gate must be stated against **0.1855**, the best number we have actually achieved, not against 0.1945;
+- an "oracle ceiling" that a transferred fit already exceeds is a warning that the metric and the fitting
+  objective are not aligned, and that a dictionary which merely improves the oracle may be optimising the wrong
+  thing.
+
+**The gate.** For each richer dictionary, fit `θ` on the test pair itself and report `miss@5 %` at `n = 800` on
+the same pairs and the same vertex subsample.
+
+- If the richer dictionary's oracle `miss@5 %` is **not clearly below 0.1855**, the dictionary is not the binding
+  constraint and no kernel machinery will help the transferable case. **Stop.**
+- If it **is** clearly lower, there is headroom, and only then ask whether the extra capacity survives *transfer*.
+
+Because of the caveat above, also report the **oracle-versus-metric** gap: if a richer dictionary closes much of
+the gap between the oracle objective and the metric, that is a statement about the fitting objective, not about
+representation, and must be labelled as such.
+
+This ordering matters: a dictionary that helps the oracle but not the transfer is a capacity increase with no
+generalisation benefit, and we should know which of the two we have before spending more time.
+
+**Reporting rule.** Oracle numbers are never reported as a method result. They are labelled `oracle` everywhere,
+because they are fitted on the evaluated pair.
+
+## 3a. First measurement (smoke: pair 050-066, seed 0, n = 800)
+
+Run before any tuning, and it changed the picture twice.
+
+| dictionary | K | miss@5 % | `L1(theta, uniform)` | note |
+| --- | ---: | ---: | ---: | --- |
+| `diag13` (baseline) | 13 | **0.1163** | 1.326 | reproduces the incumbent |
+| `gauss` (5 bandwidths, one distance) | 5 | 0.5038 | **0.000** | θ unidentifiable |
+| `gauss+cos` | 6 | 0.4875 | 1.667 | θ moves, but worse |
+| `profile8` (hats) | 104 | 0.9925 | **0.000** | degenerate (see below) |
+| `group_gauss` (per descriptor group) | 20 | 0.6850 | **0.000** | θ unidentifiable |
+| `group+diag` | 33 | 0.4688 | **0.000** | θ unidentifiable |
+
+### Finding 1 — several bandwidths of ONE distance cannot help (structural)
+
+Gaussians at different `sigma` on the *same* Euclidean distance are **monotone transforms of one another**, so
+they induce the **same ranking** of candidates. `theta` therefore cannot change the correspondence and the fit
+leaves it at the simplex centroid: `L1(theta, uniform) = 0.000` exactly, in three of the six dictionaries.
+
+This is a theoretical limitation of option A *as literally described* ("Gaussian kernels at several
+bandwidths"), not a tuning problem. It predicts that a bandwidth mixture is *rank-equivalent* to a single
+Gaussian, and the measurement matches: `miss@5 %` 0.50 against the baseline's 0.12.
+
+### Finding 2 — the hat basis was degenerate at the uniform point (my bug, fixed)
+
+A hat basis is a **partition of unity**: `sum_l h_l(t) = 1` for every pair. With uniform `theta` the cost is
+therefore the constant `dim/K` for *every* candidate, `cost_std = 1.5e-17`, and the fit cannot start. Fixed by
+adding a **linear ramp** per coordinate (`RadialProfileFeatures(include_ramp=True)`), after which
+`cost_std = 3.5e-2` at the uniform point. Any radial-basis cost family needs such a term; this is now a
+regression test.
+
+### Finding 3 — kernels carry far less dynamic range than squared Euclidean
+
+`cost_std` at uniform `theta` on the same pair: `diag13` 2.12, `gauss` 0.13, `group_gauss` 0.045. A Gaussian
+similarity is bounded in `[-1, 0]`, whereas squared Euclidean is unbounded above; OT is driven by the *relative*
+costs, so a bounded similarity gives a much flatter landscape. This is a plausible explanation for the size of
+the gap and is independent of `theta` identifiability.
+
+**Status of the gate: not yet decided.** Findings 1 and 2 were defects of the dictionaries as constructed, not
+tests of whether a richer dictionary helps. The measurement that decides the axis is `group+diag` **after** the
+ramp fix and with cross-distance groups, at the full 8 pairs × 3 seeds — that run has not been done.
+
+## 4. What option D would add, and why it is deferred
+
+With `c_w(z) = <w, Φ(z)>`, a loss-augmented margin `ℓ_ij ≥ 0` (zero on the support, positive elsewhere) and
+`μ > 0`, the primal is a structured SVM whose inference is an OT solve, and the dual is over transport plans:
+
+```
+max_{λ ∈ Π(a,b)}  <λ, ℓ> − (1/2μ) ‖E_λ Φ − Φ̄‖²_H,        w* = (1/μ)(E_{λ*} Φ − Φ̄)
+```
+
+Two things it would buy that the current formulation does not have:
+
+1. **a unique `w`** (strict convexity), removing the simplex-corner behaviour we measured repeatedly
+   (`θ` is not identifiable; the optimal set is a cone);
+2. **a graded loss**, so a one-ring miss costs less than a far miss — which is exactly what the FAUST geodesic
+   metric measures and what the exact formulation treats as all-or-nothing.
+
+Two warnings already established by the proposer's own checks: without the margin `ℓ` the problem is degenerate
+(`w = 0`, the observed plan is already feasible, because the regret is homogeneous), and **no convergence rate
+is known and it has not been run on real data**.
+
+**LP-compatible cousin, no kernels:** replace the constraint with `f_i + g_j + δ·ℓ_ij ≤ c_ij(θ)` and the scan
+becomes `h_e = σ_e + δ·ℓ_e`. Everything else is unchanged. For FAUST this is likely more useful than the full
+RKHS machinery, and it is a four-line change to the existing scan rather than a new formulation — so it is the
+natural *second* step, after §3.
+
+## 5. Order of work
+
+1. `KernelMixtureFeatures` (A) and `RadialProfileFeatures` (B) in `src/iot/core/features.py`, each a `FeatureMap`
+   with `features()` and `costs()`. No change to the solver, scan, loop or master.
+2. Oracle-ceiling driver `studies/real/faust/oracle_ceiling.py`: same pairs, same `n = 800`, same subsample as
+   `faust_correspondence_box`, so the comparison against 0.1945 is like-for-like.
+3. **Gate** per §3. Record the verdict here, negative or positive.
+4. Only if the gate passes: transfer evaluation (fit on pair A, evaluate on pair B), then the
+   loss-augmented margin of §4.
+
+## 6. Known risks
+
+- **Capacity, not representation.** If the dictionary is rich enough to fit the training pair trivially, the
+  oracle number improves for the wrong reason: it memorises. Check `θ` sparsity and the gap between oracle and
+  transfer, not just the oracle alone.
+- **The potentials absorb per-point terms.** Any kernel term that is a function of only `x_i` or only `y_j` is
+  invisible under fixed marginals — do not add "confidence" or "region" features to the cost and expect an
+  effect.
+- **`K` is the simplex dimension.** `θ ∈ Δ` with `K = dims × basis` means the uniform point is `1/K`; a large
+  basis dilutes every coordinate, and the learned `θ` may be numerically indistinguishable from uniform. Report
+  the `L1` distance to uniform alongside every fit.

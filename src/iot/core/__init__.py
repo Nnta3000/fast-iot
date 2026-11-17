@@ -7,10 +7,13 @@ EN: The **vocabulary layer** of inverse OT: problem, edge set, parameter set, fe
 from .edges import EdgeSet, edge_keys
 from .features import (
     BilinearPSDFeatures,
+    ConcatFeatures,
     DenseFeatureTensor,
     DiagonalWeightFeatures,
+    KernelMixtureFeatures,
     FeatureMap,
     QuadraticFeatures,
+    RadialProfileFeatures,
     dense_cost_matrix,
 )
 from .problem import InverseOTProblem
@@ -25,9 +28,11 @@ from .theta import (
 
 __all__ = [
     "BilinearPSDFeatures",
+    "ConcatFeatures",
     "BilinearPSDTheta",
     "DenseFeatureTensor",
     "DiagonalWeightFeatures",
+    "KernelMixtureFeatures",
     "EdgeSet",
     "FeatureMap",
     "InverseOTProblem",
@@ -36,6 +41,7 @@ __all__ = [
     "LinearThetaConstraints",
     "LinearThetaSet",
     "QuadraticFeatures",
+    "RadialProfileFeatures",
     "SimplexTheta",
     "ThetaSet",
     "dense_cost_matrix",

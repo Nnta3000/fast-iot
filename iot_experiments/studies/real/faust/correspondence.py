@@ -45,7 +45,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot.core.features import SquaredDifferenceFeatures  # noqa: E402
+from iot.core.features import SquaredDifferenceFeatures  # noqa: E402, FeatureMap
 from iot.core.parameters import (  # noqa: E402
     PruningParameters,
     RelaxedObjective,
@@ -274,7 +274,7 @@ def check_split(train_subjects: tuple[int, ...], test_subjects: tuple[int, ...],
                 raise SystemExit(f"test pair id {vid} has subject {subject_of(vid)}, not in {sorted(te)}")
 
 
-def fit_theta(features: SquaredDifferenceFeatures, *, rel: float | None, max_iterations: int,
+def fit_theta(features: FeatureMap, *, rel: float | None, max_iterations: int,
               backend: str = "cupdlpx", scan_backend: str | None = "torch",
               solver_params: dict[str, object] | None = None) -> dict[str, object]:
     """
