@@ -1,7 +1,8 @@
 # Kernel / dictionary axis for the cost family
 
-**Status: PLAN (2026-11-17).** Not a result. Nothing here may be cited as a number except the baseline in §3,
-which is measured and cited with its record.
+**Status: GATE FAILED (2026-11-17).** The kernel/dictionary axis did **not** clear its own gate. The plan, the
+measurement and the reason are below; the families remain available in `src/iot` for other uses, but the axis is
+closed as a route to a better cost on FAUST.
 
 **Why this file exists.** The cost family is the one place where the inverse-OT formulation can be made richer
 without touching the solver, the scan, or the loop. This note fixes the question, the options, and the stop
@@ -117,9 +118,39 @@ similarity is bounded in `[-1, 0]`, whereas squared Euclidean is unbounded above
 costs, so a bounded similarity gives a much flatter landscape. This is a plausible explanation for the size of
 the gap and is independent of `theta` identifiability.
 
-**Status of the gate: not yet decided.** Findings 1 and 2 were defects of the dictionaries as constructed, not
-tests of whether a richer dictionary helps. The measurement that decides the axis is `group+diag` **after** the
-ramp fix and with cross-distance groups, at the full 8 pairs × 3 seeds — that run has not been done.
+### The deciding run (8 pairs × 3 seeds = 24 rows per dictionary, n = 800, simplex)
+
+| dictionary | K | miss@5 % | Δ vs baseline |
+| --- | ---: | ---: | ---: |
+| **`diag13` (incumbent)** | 13 | **0.1256** | — |
+| `group+diag` (cross-distance + diagonal) | 33 | 0.2428 | +93 % |
+| `profile8` (hats + ramp) | 117 | 0.2667 | +112 % |
+| `gauss` (multi-bandwidth) | 5 | 0.4079 | +225 % |
+| `gauss+cos` | 6 | 0.4111 | +227 % |
+| `group_gauss` (cross-distance only) | 20 | 0.5780 | +360 % |
+
+**Gate: FAIL.** The best richer dictionary is **2× worse** than the incumbent, and the cross-distance mixture —
+the one family that is not rank-equivalent — is still 93 % worse. The 13-feature diagonal family is **not** the
+binding constraint on FAUST at this scale.
+
+**One correction to the gate statement.** `diag13` here scores 0.1256 under the **simplex** (`rel=None`), while the
+0.1945 oracle in `faust_correspondence_box` was fitted with a **box** (`rel=0.25`). The box constrains more, so the
+simplex oracle is stronger; 0.1256 > 0.1855 is therefore a *like-for-like* comparison only within this run (all
+six dictionaries used `rel=None`). That internal comparison is the one the verdict rests on, and it is unaffected.
+
+**Why the richer families lose, in one line each:**
+
+- multi-bandwidth Gaussians on one distance are **rank-equivalent** to a single Gaussian (finding 1), so they add
+  parameters without adding information, and they replace an unbounded cost with a bounded one (finding 3);
+- the hat profile is a **smooth monotone** reparametrisation of per-coordinate absolute differences, so it is
+  again close to rank-equivalent to a weighted L1, but with a much flatter scale;
+- the cross-distance mixture *is* a genuine increase in expressivity, and it still loses — which is the strongest
+  form of the negative result: **the ordering information the diagonal family already extracts is not the
+  bottleneck.**
+
+**What would be a different question.** Whether a richer dictionary helps *transfer* is now moot: it cannot help
+the oracle, so it cannot help transfer. The bottleneck on FAUST is the descriptors and the decision rule, not the
+cost's functional form.
 
 ## 4. What option D would add, and why it is deferred
 
