@@ -2,9 +2,10 @@
 
 **Status: REOPENED (2026-11-17, second revision).** The first verdict in this file — "the axis is closed" — was
 an artefact of **three defects in the dictionaries I wrote**, not a property of richer dictionaries. With them
-fixed, the oracle gate passes on the same pair (0.0325 vs 0.1163 `miss@5 %`) and the full 8-pair × 3-seed gate
-has been relaunched. Sections §3a–§3c record the wrong verdict and why it was wrong; §3d–§3e record the defects
-and the shared-θ result, which is the sharper finding of the two.
+fixed, the oracle gate passes: `hinge8` **0.1041** vs `diag13` **0.1256** over 8 pairs × 3 seeds at n = 800
+(paired mean −0.0215, median −0.0094, 14 wins / 8 losses / 2 ties, 6 of 8 pairs better). Sections §3a–§3c record
+the wrong verdict and why it was wrong; §3d–§3e record the defects and the shared-θ result, which is the sharper
+finding of the two.
 
 **Read §3d before citing anything above it.** Two of the defects were in the *measurement* (a flatness tolerance
 that counted a strictly-better diagonal as "tied"), and one was in the *parameterisation* (a null direction that
@@ -183,6 +184,33 @@ Defect 3 was caught by a test I wrote for defect 2's diagnostic, which is the on
 The hinge normalisation matters as much as the basis: with the nearest-neighbour residual spread as `extent`,
 almost every candidate distance clips to 1 and the cost saturates (`tied = 1.000` at the joint level). The
 99th percentile of `|a-b|` over **random** pairs spans the actual range of candidate distances.
+
+**Full gate** (8 pairs × 3 seeds = 24 rows, n = 800, simplex, identical subsamples):
+
+| dictionary | K | mean `miss@5 %` | median | min | max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **`hinge8`** | 104 | **0.1041** | **0.0969** | 0.0000 | 0.2162 |
+| `diag13` | 13 | 0.1256 | 0.1206 | 0.0000 | 0.2425 |
+| `profile8` | 117 | 0.2667 | 0.1656 | 0.0000 | 0.6937 |
+
+Paired `hinge8 − diag13`: mean **−0.0215**, median −0.0094, **14 wins / 8 losses / 2 ties**. Per pair (3 seeds
+averaged; seeds are repeated measures, so the effective sample is **8 pairs**, not 24 rows):
+
+| pair | `hinge8` | `diag13` | diff |
+| --- | ---: | ---: | ---: |
+| 050-066 | 0.0413 | 0.1346 | **−0.0933** |
+| 053-085 | 0.1125 | 0.1675 | **−0.0550** |
+| 056-071 | 0.1933 | 0.1837 | +0.0096 |
+| 059-099 | 0.0025 | 0.0017 | +0.0008 |
+| 061-086 | 0.1029 | 0.1187 | −0.0158 |
+| 064-072 | 0.0879 | 0.0862 | +0.0017 |
+| 067-091 | 0.2025 | 0.2146 | −0.0121 |
+| 072-085 | 0.0900 | 0.0979 | −0.0079 |
+
+**How much this licenses.** 6 of 8 pairs improve, but two of them carry almost the whole effect, and with 8
+pairs a 6/8 sign test is not significant (p ≈ 0.29). The honest statement is: *the corrected radial profile is
+a modest, directionally consistent improvement in the oracle, not an established one.* It also has to survive
+**transfer** before it means anything for a method — which is the next gate and has not been run.
 
 ## 3e. Shared θ across pairs: "satisfies all plans" is achievable and vacuous
 
