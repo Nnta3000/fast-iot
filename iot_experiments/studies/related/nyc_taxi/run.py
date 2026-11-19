@@ -49,7 +49,12 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.external.metrics import align_to_marginals, flow_scores  # noqa: E402
 from iot.external.methods.gravity import fit_gravity  # noqa: E402
-from iot.relaxed.multi_plan import fit_shared_theta, mixed_features, regret_of  # noqa: E402
+from iot.relaxed.multi_plan import (  # noqa: E402
+    fit_shared_theta,
+    mixed_features,
+    regret_of,
+    regret_share,
+)
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -101,12 +106,13 @@ class NycTaxiConfig(RunConfig):
     family: str = "distance_power"
     imputations: tuple[str, ...] = ("median", "mask")
     scopes: tuple[str, ...] = ("other_windows", "all_train")
+    geometries: tuple[str, ...] = ("real", "shuffled")
     restrict_edges: bool = False
     iterations: int = 200
 
     def __post_init__(self) -> None:
         """EN: normalise and validate. CN: 归一化与校验。"""
-        for name in ("arms", "imputations", "scopes"):
+        for name in ("arms", "imputations", "scopes", "geometries"):
             object.__setattr__(self, name, tuple(str(v) for v in getattr(self, name)))
         if set(self.arms) - {"independence", "gravity", "shared_theta"}:
             raise ValueError(f"unknown arms: {sorted(self.arms)}")
@@ -114,6 +120,8 @@ class NycTaxiConfig(RunConfig):
             raise ValueError(f"imputations must be median/mask; got {self.imputations}")
         if set(self.scopes) - {"other_windows", "all_train"}:
             raise ValueError(f"scopes must be other_windows/all_train; got {self.scopes}")
+        if set(self.geometries) - {"real", "shuffled"}:
+            raise ValueError(f"geometries must be real/shuffled; got {self.geometries}")
         if not Path(self.instance).is_file():
             raise ValueError(f"instance not found: {self.instance} (build it with "
                              f"python -m iot_experiments.studies.related.nyc_taxi.instance)")
@@ -126,6 +134,7 @@ class NycTaxiConfig(RunConfig):
         parser.add_argument("--family", default="distance_power")
         parser.add_argument("--imputations", nargs="+", default=["median", "mask"])
         parser.add_argument("--scopes", nargs="+", default=["other_windows", "all_train"])
+        parser.add_argument("--geometries", nargs="+", default=["real", "shuffled"])
         parser.add_argument("--restrict-edges", action="store_true")
         parser.add_argument("--iterations", type=int, default=200)
 
@@ -183,77 +192,108 @@ def main(argv: list[str] | None = None) -> int:
         if "independence" in config.arms:
             predictions["independence"] = _independence(source, target)
         for scope in config.scopes:
-            distance = _distance(instance, scope, train)
-            unsupported = int(np.count_nonzero(np.isnan(distance)))
-            if "gravity" in config.arms:
-                started = time.perf_counter()
-                fit = fit_gravity(instance.train_flows[train], distance)
-                arm = f"gravity_{scope}"
-                predictions[arm] = fit.predict(source, target, distance)
-                extras[arm] = {"alpha": fit.alpha, "beta": fit.beta, "gamma": fit.gamma,
-                               "distance_fill": fit.distance_fill,
-                               "unsupported_pairs": unsupported,
-                               "seconds": round(time.perf_counter() - started, 3)}
-            if "shared_theta" in config.arms:
-                for imputation in config.imputations:
+            distance_real = _distance(instance, scope, train)
+            for geometry in config.geometries:
+                if geometry == "real":
+                    distance = distance_real
+                else:
+                    # EN: **the shuffle control.** Permute the distance VALUES among the pairs that have a training
+                    #     trip, keeping the support (which pairs are observed) exactly as it is: the flow keeps its real
+                    #     labels and the mask/imputation stay aligned with the data, so the only thing destroyed is the
+                    #     assignment of distances to geography. If the held-out regret share does not move, the number
+                    #     carries no geographic information. (Permuting the NaN pattern too would confound geography with
+                    #     support, which is a property of the data rather than of the map.)
+                    # CN: **置换对照。** 只在**有训练行程**的对之间置换距离**取值**，支撑（哪些对可观测）保持不变：流量保留
+                    #     真实标号，掩码/插补仍与数据对齐，唯一被破坏的是"距离与地理的对应"。若留出 regret share 不动，
+                    #     该数字不含地理信息。（连 NaN 模式一起置换会把地理与支撑混淆，而支撑是数据的性质、不是地图的。）
+                    rng = np.random.default_rng(1000 + held_out)
+                    observed_pairs = ~np.isnan(distance_real)
+                    shuffled = np.full_like(distance_real, np.nan)
+                    values = distance_real[observed_pairs]
+                    shuffled[observed_pairs] = rng.permutation(values)
+                    distance = shuffled
+                unsupported = int(np.count_nonzero(np.isnan(distance)))
+                if "gravity" in config.arms and geometry == "real":
+                    # EN: gravity is a flow predictor, not a regret arm; it is fitted on the real geometry only.
+                    # CN: 引力模型是流量预测器，不是 regret 臂；只在真实几何上拟合。
                     started = time.perf_counter()
-                    fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
-                                                  iterations=int(config.iterations),
+                    fit = fit_gravity(instance.train_flows[train], distance)
+                    arm = f"gravity_{scope}"
+                    predictions[arm] = fit.predict(source, target, distance)
+                    extras[arm] = {"alpha": fit.alpha, "beta": fit.beta, "gamma": fit.gamma,
+                                   "distance_fill": fit.distance_fill,
+                                   "unsupported_pairs": unsupported,
+                                   "seconds": round(time.perf_counter() - started, 3)}
+                if "shared_theta" in config.arms:
+                    for imputation in config.imputations:
+                        started = time.perf_counter()
+                        fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
+                                                      iterations=int(config.iterations),
+                                                      unsupported=str(imputation))
+                        arm = f"shared_theta_{geometry}_{scope}_{imputation}"
+                        predictions[arm] = fit_shared.predict(source, target)
+                        features = mixed_features(distance, train_flows, family=str(config.family),
                                                   unsupported=str(imputation))
-                    arm = f"shared_theta_{scope}_{imputation}"
-                    predictions[arm] = fit_shared.predict(source, target)
-                    features = mixed_features(distance, train_flows, family=str(config.family),
-                                              unsupported=str(imputation))
-                    uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
-                    regret_test = regret_of(fit_shared.theta, features, observed)
-                    regret_uniform = regret_of(uniform_theta, features, observed)
-                    extras[arm] = {
-                        "scope": scope, "imputation": imputation,
-                        "theta": [float(v) for v in fit_shared.theta],
-                        "train_objective": fit_shared.objective,
-                        "regret_test": regret_test, "regret_uniform": regret_uniform,
-                        "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
-                        "unsupported_pairs": unsupported,
-                        "seconds": round(time.perf_counter() - started, 3),
-                    }
-                    log.line(f"[{names[held_out]:>16}] {arm}: theta={np.round(fit_shared.theta, 3).tolist()} "
-                             f"F_train={fit_shared.objective:.4e} ratio={extras[arm]['regret_ratio']:.5f} "
-                             f"unsupported={unsupported}")
-                if bool(config.restrict_edges):
-                    started = time.perf_counter()
-                    fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
-                                                  iterations=int(config.iterations), unsupported="median",
-                                                  restrict_edges=True)
-                    arm = f"shared_theta_{scope}_edges"
-                    predictions[arm] = fit_shared.predict(source, target)
-                    allowed = ~np.isnan(distance)
-                    features = mixed_features(distance, train_flows, family=str(config.family),
-                                              unsupported="median")
-                    uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
-                    regret_test = regret_of(fit_shared.theta, features, observed, allowed=allowed)
-                    regret_uniform = regret_of(uniform_theta, features, observed, allowed=allowed)
-                    forbidden = ~allowed
-                    extras[arm] = {
-                        "scope": scope, "imputation": "median", "edges": "train_support",
-                        "theta": [float(v) for v in fit_shared.theta],
-                        "train_objective": fit_shared.objective,
-                        "forbidden_forward_mass": fit_shared.forbidden_mass,
-                        "test_mass_on_forbidden": float(observed[forbidden].sum()),
-                        "test_mass_fraction_on_forbidden": (float(observed[forbidden].sum())
-                                                            / float(observed.sum()) if observed.sum() else 0.0),
-                        "regret_test": regret_test, "regret_uniform": regret_uniform,
-                        "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
-                        "seconds": round(time.perf_counter() - started, 3),
-                    }
-                    log.line(f"[{names[held_out]:>16}] {arm}: F_train={fit_shared.objective:.4e} "
-                             f"ratio={extras[arm]['regret_ratio']:.5f} "
-                             f"forbidden_mass={fit_shared.forbidden_mass:.3e} "
-                             f"test_mass_on_forbidden={extras[arm]['test_mass_on_forbidden']:.0f}")
+                        uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
+                        regret_test = regret_of(fit_shared.theta, features, observed)
+                        regret_uniform = regret_of(uniform_theta, features, observed)
+                        share, fraction = regret_share(fit_shared.theta, features, observed)
+                        columns = ["s", "s^2", "log1p(s)", "same_zone"]
+                        if str(imputation) == "mask":
+                            columns.append("mask")
+                        extras[arm] = {
+                            "scope": scope, "geometry": geometry, "imputation": imputation,
+                            "theta": [float(v) for v in fit_shared.theta],
+                            "theta_columns": columns,
+                            "selected_column": columns[int(np.argmax(fit_shared.theta))],
+                            "train_objective": fit_shared.objective,
+                            "regret_test": regret_test, "regret_uniform": regret_uniform,
+                            "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
+                            "regret_share": share, "regret_fraction": fraction,
+                            "unsupported_pairs": unsupported,
+                            "seconds": round(time.perf_counter() - started, 3),
+                        }
+                        log.line(f"[{names[held_out]:>16}] {arm}: theta={np.round(fit_shared.theta, 3).tolist()} "
+                                 f"({extras[arm]['selected_column']}) F_train={fit_shared.objective:.4e} "
+                                 f"share={share:.4f} fraction={fraction:.4f} unsupported={unsupported}")
+                    if bool(config.restrict_edges) and geometry == "real":
+                        started = time.perf_counter()
+                        fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
+                                                      iterations=int(config.iterations), unsupported="median",
+                                                      restrict_edges=True)
+                        arm = f"shared_theta_{geometry}_{scope}_edges"
+                        predictions[arm] = fit_shared.predict(source, target)
+                        allowed = ~np.isnan(distance)
+                        features = mixed_features(distance, train_flows, family=str(config.family),
+                                                  unsupported="median")
+                        uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
+                        regret_test = regret_of(fit_shared.theta, features, observed, allowed=allowed)
+                        regret_uniform = regret_of(uniform_theta, features, observed, allowed=allowed)
+                        share, fraction = regret_share(fit_shared.theta, features, observed, allowed=allowed)
+                        forbidden = ~allowed
+                        extras[arm] = {
+                            "scope": scope, "geometry": geometry, "imputation": "median",
+                            "edges": "train_support",
+                            "theta": [float(v) for v in fit_shared.theta],
+                            "train_objective": fit_shared.objective,
+                            "forbidden_forward_mass": fit_shared.forbidden_mass,
+                            "test_mass_on_forbidden": float(observed[forbidden].sum()),
+                            "test_mass_fraction_on_forbidden": (float(observed[forbidden].sum())
+                                                                / float(observed.sum()) if observed.sum() else 0.0),
+                            "regret_test": regret_test, "regret_uniform": regret_uniform,
+                            "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
+                            "regret_share": share, "regret_fraction": fraction,
+                            "seconds": round(time.perf_counter() - started, 3),
+                        }
+                        log.line(f"[{names[held_out]:>16}] {arm}: F_train={fit_shared.objective:.4e} "
+                                 f"share={share:.4f} forbidden_mass={fit_shared.forbidden_mass:.3e}")
         for arm, prediction in predictions.items():
             scores = flow_scores(prediction, observed)
             metrics: dict[str, float] = scores.to_dict()
             if arm in extras and "regret_ratio" in extras[arm]:
                 metrics["regret_ratio"] = float(extras[arm]["regret_ratio"])  # type: ignore[arg-type]
+                metrics["regret_share"] = float(extras[arm]["regret_share"])  # type: ignore[arg-type]
+                metrics["regret_fraction"] = float(extras[arm]["regret_fraction"])  # type: ignore[arg-type]
             records.append(RunRecord(
                 study=str(config.study), geometry=f"holdout_{names[held_out]}", arm=str(arm),
                 k=int(len(extras[arm]["theta"])) if arm in extras and "theta" in extras[arm] else 0,
@@ -261,9 +301,10 @@ def main(argv: list[str] | None = None) -> int:
                 config=config.to_dict(), extra=extras.get(arm, {})))
 
     write_records(run_dir / "records.json", records, provenance=PROVENANCE)
-    table = summarise(records, group=("arm",), metrics=("rmse", "correlation", "cpc", "regret_ratio"))
+    table = summarise(records, group=("arm",), metrics=("rmse", "correlation", "cpc", "regret_ratio",
+                                                         "regret_share", "regret_fraction"))
     log.line("\n" + format_table(table, ("arm", "n_draws", "rmse_mean", "correlation_mean", "cpc_mean",
-                                         "regret_ratio_mean")))
+                                         "regret_ratio_mean", "regret_share_mean")))
     log.line("published reference (their n=100, their month): M-IOT 4.45/0.9989/0.9566, "
              "naive IOT 4.76/0.9988/0.9489, gravity 37.12/0.9076/0.6568")
     log.line(f"wrote {run_dir / 'records.json'} ({len(records)} rows)")

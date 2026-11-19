@@ -49,7 +49,7 @@ import ot
 from jaxtyping import Float
 
 __all__ = ["SharedThetaFit", "distance_features", "fit_shared_theta", "mixed_features",
-           "nonnegative_factors", "regret_of"]
+           "nonnegative_factors", "regret_of", "regret_share"]
 
 
 def nonnegative_factors(flow: Float[np.ndarray, "n n"], *, rank: int, iterations: int = 200,
@@ -84,7 +84,8 @@ def nonnegative_factors(flow: Float[np.ndarray, "n n"], *, rank: int, iterations
 
 def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "distance_power",
                       include_constant: bool = False, unsupported: str = "median",
-                      fill_value: float | None = None) -> Float[np.ndarray, "n n k"]:
+                      fill_value: float | None = None, normalise: bool = True
+                      ) -> Float[np.ndarray, "n n k"]:
     """
     EN: the feature family for a distance-structured cost, as `(n, n, K)` non-negative columns.
 
@@ -153,7 +154,21 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
             columns.append(missing.astype(np.float64))
         if bool(include_constant):
             columns.insert(0, np.ones_like(normalised))
-        return np.ascontiguousarray(np.stack(columns, axis=2), dtype=np.float64)
+        tensor = np.stack(columns, axis=2)
+        if bool(normalise):
+            # EN: **scale gauge.** `R(alpha c) = alpha R(c)`, so over unnormalised columns the simplex can lower the
+            #     regret by selecting the column with the smallest entries, with no better explanation. Scaling every
+            #     column to unit Frobenius norm removes exactly that direction; the recovered scale is not reported
+            #     because the cost is only identified up to it.
+            # CN: **尺度规范。** `R(alpha c) = alpha R(c)`，故在未归一化的列上，单纯形可以通过选择元素最小的列来降低
+            #     regret，而解释并未变好。把每列缩放到单位 Frobenius 范数恰好去掉这个方向；恢复出的尺度不报告，因为代价只在
+            #     该意义下可辨识。
+            flat = tensor.reshape(-1, tensor.shape[2])
+            norms = np.linalg.norm(flat, axis=0)
+            if np.any(norms <= 0.0):
+                raise ValueError("a feature column is identically zero")
+            tensor = tensor / norms[None, None, :]
+        return np.ascontiguousarray(tensor, dtype=np.float64)
     raise ValueError(f"unknown feature family {family!r}")
 
 
@@ -245,6 +260,38 @@ def regret_of(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"
     cols = flow.sum(axis=0)
     forward = _forward_plan(cost, rows, cols, allowed)
     return float(np.sum(cost * flow) - np.sum(cost * forward))
+
+
+def regret_share(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"],
+                 plan: Float[np.ndarray, "n n"], *, allowed: np.ndarray | None = None) -> tuple[float, float]:
+    """
+    EN: `(share, fraction)` — two scale-free readings of the same regret.
+
+        `share = R(plan) / R(independent plan)`: the independent plan is the product of the marginals, i.e. "pickup and
+        drop-off are unrelated". 0 means the observed flow is as cheap as the forward optimum, 1 means it is as
+        wasteful as the unrelated plan. A share above 1 means the observation is *more* wasteful than independence.
+
+        `fraction = R(plan) / <c, plan>`: the regret expressed as a share of the flow's own transport cost, which is
+        the "how much of the total cost is waste" reading.
+
+        Both are invariant to `c -> alpha c` for `alpha > 0`, so neither can be lowered by shrinking the cost — the
+        bias a bare `R` has on a simplex over features of different magnitudes.
+
+    CN: `(share, fraction)` —— 同一个 regret 的两种无量纲读法。`share = R(计划)/R(独立计划)`：独立计划是 marginal 的乘积，
+        即"上车与下车无关"。0 表示观测流量与前向最优一样便宜，1 表示它与无关计划一样浪费；大于 1 表示比独立还浪费。
+        `fraction = R(计划)/<c,计划>`：把 regret 表示为该流量自身运输代价的一部分，即"总代价里有多少是浪费"。两者对
+        `c -> alpha c`（`alpha>0`）不变，故不能靠缩小代价来降低 —— 这正是裸 `R` 在不同幅度特征上的偏差。
+    """
+    rows = np.asarray(plan, dtype=np.float64).sum(axis=1)
+    cols = np.asarray(plan, dtype=np.float64).sum(axis=0)
+    independent = np.outer(rows, cols) / float(rows.sum())
+    own = regret_of(theta, features, plan, allowed=allowed)
+    unrelated = regret_of(theta, features, independent, allowed=allowed)
+    cost = np.tensordot(features, np.asarray(theta, dtype=np.float64), axes=([2], [0]))
+    transport = float(np.sum(cost * np.asarray(plan, dtype=np.float64)))
+    share = own / unrelated if unrelated > 0.0 else float("nan")
+    fraction = own / transport if transport > 0.0 else float("nan")
+    return float(share), float(fraction)
 
 
 def fit_shared_theta(

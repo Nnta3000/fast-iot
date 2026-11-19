@@ -23,37 +23,62 @@ degeneracy: a **constant** (a constant cost makes every plan optimal, so `min_θ
 as the main configuration, the **mask** (with `θ ≥ 0` it can only raise the cost of unexplored pairs; it also admits a
 near-trivial `θ = e_mask`, `F_train ≈ 3` on this instance).
 
-## Results (6 folds, `out/related_nyc_taxi_imputation/records.json`)
+## Results
 
-| arm | RMSE | Pearson | CPC | regret ratio |
+**Status: the first version of this table was scale-biased and is superseded.** `R(αc) = αR(c)`, so over
+unnormalised features the simplex can lower the regret by selecting the column with the smallest entries. Every
+feature column is now scaled to unit Frobenius norm, and the metric reported is a **share**, not a ratio:
+
+- `share = R_test / R_independent`: 0 means the held-out flow is as cheap as the forward optimum, 1 means it is as
+  wasteful as the "pickup and drop-off are unrelated" plan (a product of the marginals under the *same* cost);
+- `fraction = R_test / ⟨c, π̂⟩`: the regret as a share of the flow's own transport cost.
+
+Both are invariant to `c → αc`, so neither can be lowered by shrinking the cost.
+
+**The control that settles it** (`--geometries shuffled`): permute the distance *values* among the pairs that have a
+training trip, keeping the support and the mask exactly as they are. The flow keeps its real labels, so the only
+thing destroyed is the assignment of distances to geography.
+
+Six leave-one-window-out folds, strict scope, `out/related_nyc_taxi_shuffle2/records.json`:
+
+| arm | RMSE | Pearson | CPC | share (mean) |
 | --- | ---: | ---: | ---: | ---: |
-| gravity (strict scope) | 13.90 | 0.9215 | 0.8257 | — |
-| gravity (all-train, sensitivity) | 13.87 | 0.9215 | 0.8258 | — |
+| gravity | 13.90 | 0.9215 | 0.8257 | — |
 | independence (`IPF(ones)`) | 20.07 | 0.8207 | 0.6816 | — |
-| relaxed, **median + strict** (main) | 122.28 | 0.3537 | 0.1107 | **0.0045** |
-| relaxed, median + all-train | 122.66 | 0.3517 | 0.1094 | 0.0024 |
-| relaxed, mask + strict | 122.38 | 0.3526 | 0.1109 | 0.1043 |
-| relaxed, mask + all-train | 123.03 | 0.3501 | 0.1102 | 0.0743 |
-| relaxed, edges + strict | 122.28 | 0.3537 | 0.1107 | 0.0045 |
-| relaxed, edges + all-train | 122.66 | 0.3517 | 0.1094 | 0.0024 |
+| relaxed, median, **real** geometry | 122.21 | 0.3541 | 0.1107 | 1.4568 |
+| relaxed, median, **shuffled** distance | 126.56 | 0.1678 | 0.0471 | 0.9000 |
+| relaxed, mask, real geometry | 122.38 | 0.3526 | 0.1109 | 0.2693 |
+| relaxed, mask, shuffled distance | 126.13 | 0.1719 | 0.0485 | 0.2699 |
 
-Per-fold, the strict-scope median arm gives `θ = (0, 1, 0, 0)` every fold — the pure `s = d / max(d)` column — with
-ratios 0.0007, 0.0014, 0.0016, 0.0034, 0.0063, 0.0138. The mask arm always picks `θ = e_mask`.
+Per fold, median arm (real → shuffled): am 0.340 → 1.119, midday 6.801 → 1.198, pm 0.534 → 1.743,
+night 0.535 → 0.629, weekend_day 0.201 → 0.300, weekend_night 0.330 → 0.411. `θ` is the pure `s²` column on
+every fold; `fraction ≈ 0.99–1.00` on every fold.
 
-## What the table shows
+## What the table shows, read carefully
 
-1. **The imputation moves the regret metric by 20–40×** (0.0045 → 0.1043 for median → mask, strict scope). It does not
-   move the flow metrics at all (122.3 → 122.4 RMSE), because those are set by the decoder: an exact-OT plan has at
-   most `m + n − 1 = 525` nonzeros against ~9 000 occupied cells.
-2. **The scope moves it by ~1.9× on average and by 15× on one fold** (`weekday_midday`: 0.0138 strict vs 0.00088
-   all-train, `F_train` 1443 vs 172). The leak was not uniform across windows.
-3. **The edge restriction is inert here**: bit-identical to `median`, with zero mass placed on forbidden pairs, and
-   183–613 held-out trips (0.06–0.18 %) that the predicted plan cannot carry. Median imputation already places those
-   pairs at 7.66 mi, so forbidding them changes nothing.
-4. **Gravity is robust to both knobs** (13.87 vs 13.90 RMSE, identical correlation and CPC) and improved from 14.46
-   once the distance matrix stopped using a zero sentinel.
-5. M-IOT itself is **not implemented**; its published `4.45 / 0.9989 / 0.9566` is quoted as the regime, not
-   reproduced.
+1. **The old ratio was scale.** Normalising the features moved the main configuration from `ratio 0.0045` to
+   `share 1.46` — i.e. *worse* than the unrelated plan — and changed the selected column from `s` to `s²`. The column
+   `s` had simply been the one with the smallest entries.
+2. **One fold dominates the mean.** Real geometry beats the shuffled control on **5 of 6** folds (0.34 vs 1.12, 0.53
+   vs 1.74, 0.53 vs 0.63, 0.20 vs 0.30, 0.33 vs 0.41) but reverses on `weekday_midday` (6.80 vs 1.20), which carries
+   the mean. That fold is also the one where the strict distance scope changed the training objective from 172 to
+   1419: removing its train trips turns many pairs into `NaN`, the median imputation places them at 7.5 mi, and the
+   forward OT uses them as new routes, so `OT(c)` falls and `R` rises.
+3. **The mask arm carries no geographic information at all**: real 0.2693 vs shuffled 0.2699, identical per fold to
+   three decimals. Its number is set by the support, not by the map.
+4. **`fraction ≈ 1`**: the fitted cost admits a nearly free forward plan (`OT(c) ≈ 0`, because `θ = e_{s²}` makes
+   staying near one's own zone almost free) while the observed flow pays close to its full cost. The observation does
+   not look efficient under the fitted cost.
+5. **The flow columns do not move** across the four cells (122.2–126.6 RMSE, correlation 0.17–0.35): they are
+   decoder-limited, an exact-OT plan having at most 525 nonzeros against ~9 000 occupied cells. Gravity wins them.
+6. M-IOT is **not implemented**; its published `4.45 / 0.9989 / 0.9566` is the regime, not a reproduction.
+
+## What this cannot answer
+
+A dense trip-count matrix is not an optimal-transport plan, so it cannot test whether the relaxed formulation
+recovers a *cost*. The clean test of generalisation is a planted instance: several marginals whose observed plans are
+exactly optimal at one shared `θ*`, some windows held out, scored by `R` on the held-out windows and by whether the
+fitted cost's plan matches theirs. That is not in this study yet.
 
 ## Reproduce
 
