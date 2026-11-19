@@ -43,6 +43,7 @@ CN: **FAUST 自身的协议：有向的 scan-to-scan 配对，两个 challenge�
 from __future__ import annotations
 
 import dataclasses
+import json
 import sys
 import time
 from pathlib import Path
@@ -211,6 +212,22 @@ class ChallengeConfig(RunConfig):
         parser.add_argument("--per-pair-backend", default="highs", choices=["cupdlpx", "highs"])
 
 
+def _append_rows(path: Path, rows: list[RunRecord]) -> None:
+    """
+    EN: append finished rows to a JSONL checkpoint **as they are produced**.
+
+        Why: the driver previously wrote `records.json` only after the last test pair, so a run killed in the
+        middle (OOM, session restart) left nothing -- that has already happened twice on this study. A partial
+        file turns a kill from "no data" into "n rows", and `records.json` is still written at the end.
+
+    CN: 每产出一批行就追加到 JSONL 检查点。原实现只在最后一对之后写 `records.json`，中途被杀（OOM、会话重启）
+        就什么都不剩——本研究已经发生过两次。部分文件把"被杀"从"没有数据"变成"有 n 行"，结束时仍写完整文件。
+    """
+    with path.open("a", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row.to_dict(), sort_keys=True) + "\n")
+
+
 def _evaluate(pair: tuple[int, int], *, thetas: dict[str, np.ndarray], scaler: DescriptorScaler,
               config: ChallengeConfig, index: Int[np.ndarray, "n"], geo: Float[np.ndarray, "n n"],
               norm_diameter: float, norm_area: float, kind: str) -> list[RunRecord]:
@@ -340,8 +357,10 @@ def main(argv: list[str] | None = None) -> int:
                      f"max={float(slack.max()):.4e} nonzero={int((margin_theta > 1e-9).sum())}/{k}")
 
     rows: list[RunRecord] = []
+    checkpoint = run_dir / "records.partial.jsonl"
+    checkpoint.write_text("", encoding="utf-8")
     started = time.perf_counter()
-    for a_id, b_id, kind in test_pairs:
+    for position, (a_id, b_id, kind) in enumerate(test_pairs):
         a_mesh = read_ply(Path(config.root) / f"tr_reg_{a_id:03d}.ply")
         b_mesh = read_ply(Path(config.root) / f"tr_reg_{b_id:03d}.ply")
         geo = geodesic_matrix(b_mesh.vertices, b_mesh.faces, index)
@@ -362,8 +381,13 @@ def main(argv: list[str] | None = None) -> int:
             thetas["shared"] = shared_theta
         if margin_theta is not None:
             thetas["shared_margin"] = margin_theta
-        rows.extend(_evaluate((a_id, b_id), thetas=thetas, scaler=scaler, config=config, index=index,
-                              geo=geo, norm_diameter=norm_diameter, norm_area=norm_area, kind=kind))
+        produced = _evaluate((a_id, b_id), thetas=thetas, scaler=scaler, config=config, index=index,
+                             geo=geo, norm_diameter=norm_diameter, norm_area=norm_area, kind=kind)
+        rows.extend(produced)
+        _append_rows(checkpoint, produced)
+        if position % 5 == 0 or position == len(test_pairs) - 1:
+            log.line(f"  scored {position + 1}/{len(test_pairs)} ({kind} {a_id}->{b_id}) "
+                     f"in {time.perf_counter() - started:.0f}s")
 
     table = summarise(rows, group=("challenge", "arm"), metrics=("mean_diam", "miss_5pct_diam"))
     log.line("\n" + format_table(table, ("challenge", "arm", "n_draws", "mean_diam_mean",
