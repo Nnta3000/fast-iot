@@ -50,7 +50,11 @@ def test_features_are_non_negative_and_exclude_the_constant_by_default() -> None
     assert float(features.min()) >= 0.0
     with_constant = distance_features(distance, include_constant=True)
     assert with_constant.shape == (9, 9, 5)
-    np.testing.assert_allclose(with_constant[:, :, 0], 1.0)
+    # EN: the gauge scales every column to unit Frobenius norm, so the constant column is `1/n`, not `1`; what
+    #     identifies it is being constant across cells.
+    # CN: 规范把每列缩放到单位 Frobenius 范数，故常数列是 `1/n` 而不是 `1`；识别它的是"跨格子相同"。
+    np.testing.assert_allclose(with_constant[:, :, 0], with_constant[0, 0, 0])
+    assert float(np.linalg.norm(with_constant[:, :, 0])) == pytest.approx(1.0)
 
 
 def test_planted_shared_theta_drives_the_objective_to_zero() -> None:

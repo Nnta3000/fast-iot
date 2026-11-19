@@ -218,7 +218,7 @@ class SharedThetaFit:
     """
 
     theta: Float[np.ndarray, "k"]
-    features: Float[np.ndarray, "n n k"]
+    feature_maps: tuple[Float[np.ndarray, "n n k"], ...]
     objective: float
     history: tuple[float, ...] = field(default=())
     iterations: int = 0
@@ -229,16 +229,41 @@ class SharedThetaFit:
         """EN: `K`. CN: `K`。"""
         return int(self.theta.size)
 
-    def cost(self) -> Float[np.ndarray, "n n"]:
-        """EN: the fitted cost matrix. CN: 拟合出的代价矩阵。"""
-        return np.tensordot(self.features, self.theta, axes=([2], [0]))
+    @property
+    def features(self) -> Float[np.ndarray, "n n k"]:
+        """EN: the feature tensor of the first window (all of them when the geometry is shared). CN: 第一个窗的特征张量。"""
+        return self.feature_maps[0]
 
-    def predict(self, source_mass: Float[np.ndarray, "n"], target_mass: Float[np.ndarray, "n"]
+    def cost(self, window: int = 0) -> Float[np.ndarray, "n n"]:
+        """
+        EN: the fitted cost on window `window`'s geometry.
+
+            With a shared geometry every window gives the same matrix; with fresh points per window they differ,
+            and the cost *function* is the same while its values are not.
+
+        CN: 在窗 `window` 的几何上的拟合代价。几何共享时各窗相同；每窗新取点时不同 —— 代价**函数**相同而取值不同。
+        """
+        return np.tensordot(self.feature_maps[int(window)], self.theta, axes=([2], [0]))
+
+    def predict(self, source_mass: Float[np.ndarray, "n"], target_mass: Float[np.ndarray, "n"], *,
+                window: int = 0, features: Float[np.ndarray, "n n k"] | None = None
                 ) -> Float[np.ndarray, "n n"]:
-        """EN: exact OT plan at the fitted cost and the given marginals. CN: 拟合代价与给定 marginal 下的精确 OT 计划。"""
+        """
+        EN: exact OT plan at the fitted cost and the given marginals.
+
+            `features` is the geometry to score on when it is not one the fit saw — a held-out window whose points
+            were never given to `fit_shared_theta` has no entry in `feature_maps`, so the caller passes its feature
+            tensor here. Without it, `window` selects one of the training geometries.
+
+        CN: 拟合代价与给定 marginal 下的精确 OT 计划。当被预测的几何不在拟合所见之内（留出窗的点从未交给
+            `fit_shared_theta`，故 `feature_maps` 里没有它），由调用方在 `features` 传入其特征张量；不给时用 `window`
+            选择某个训练几何。
+        """
         rows = np.asarray(source_mass, dtype=np.float64).reshape(-1)
         cols = np.asarray(target_mass, dtype=np.float64).reshape(-1)
-        return np.asarray(ot.emd(rows, cols, self.cost(), numItermax=2_000_000), dtype=np.float64)
+        cost = (np.tensordot(np.asarray(features, dtype=np.float64), self.theta, axes=([2], [0]))
+                if features is not None else self.cost(window))
+        return np.asarray(ot.emd(rows, cols, cost, numItermax=2_000_000), dtype=np.float64)
 
 
 def regret_of(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"],
@@ -296,7 +321,7 @@ def regret_share(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n
 
 def fit_shared_theta(
     flows: Float[np.ndarray, "windows n n"],
-    distance: Float[np.ndarray, "n n"],
+    distance: Float[np.ndarray, "n n"] | tuple[Float[np.ndarray, "n n"], ...],
     *,
     family: str = "distance_power",
     rank: int = 4,
@@ -330,14 +355,23 @@ def fit_shared_theta(
         raise ValueError("flows must be non-negative")
     if int(iterations) < 1:
         raise ValueError("iterations must be at least 1")
-    features = mixed_features(distance, observed, family=str(family), rank=int(rank),
-                              unsupported=str(unsupported))
-    allowed = ~np.isnan(np.asarray(distance, dtype=np.float64)) if bool(restrict_edges) else None
+    maps = _feature_maps(distance, observed, family=str(family), rank=int(rank),
+                         unsupported=str(unsupported))
+    if len(maps) not in {1, int(observed.shape[0])}:
+        raise ValueError(f"got {len(maps)} distance matrices for {observed.shape[0]} windows; "
+                         "pass one matrix or one per window")
+    if len(maps) == 1:
+        maps = maps * int(observed.shape[0])
+    alloweds: list[np.ndarray | None] = [None] * len(maps)
+    if bool(restrict_edges):
+        alloweds = [~np.isnan(np.asarray(d, dtype=np.float64))
+                    for d in ([distance] if np.ndim(distance) == 2 else list(distance))]
+    features = maps[0]
     n_windows = int(observed.shape[0])
     k = int(features.shape[2])
     theta = np.full(k, 1.0 / k, dtype=np.float64)
     history: list[float] = []
-    objective = _summed_regret(theta, features, observed, n_windows, allowed)
+    objective = _summed_regret(theta, maps, observed, alloweds)
     history.append(objective)
     for step in range(1, int(iterations) + 1):
         gradient = np.zeros(k, dtype=np.float64)
@@ -345,34 +379,61 @@ def fit_shared_theta(
             plan = observed[window]
             rows = plan.sum(axis=1)
             cols = plan.sum(axis=0)
-            cost = np.tensordot(features, theta, axes=([2], [0]))
-            forward = _forward_plan(cost, rows, cols, allowed)
-            gradient += np.tensordot(features, plan - forward, axes=([0, 1], [0, 1]))
+            window_features = maps[window]
+            cost = np.tensordot(window_features, theta, axes=([2], [0]))
+            forward = _forward_plan(cost, rows, cols, alloweds[window])
+            gradient += np.tensordot(window_features, plan - forward, axes=([0, 1], [0, 1]))
         vertex = np.zeros(k, dtype=np.float64)
         vertex[int(np.argmin(gradient))] = 1.0
         step_size = 2.0 / (step + 2.0)
         candidate = (1.0 - step_size) * theta + step_size * vertex
-        candidate_value = _summed_regret(candidate, features, observed, n_windows, allowed)
+        candidate_value = _summed_regret(candidate, maps, observed, alloweds)
         # EN: FW with a 2/(t+2) step is monotone for a convex objective up to rounding; keep the better point.
         # CN: 凸目标下 2/(t+2) 步长的 FW 在舍入误差内单调；保留更好的点。
         if candidate_value <= objective:
             theta, objective = candidate, candidate_value
         history.append(objective)
     forbidden_mass = 0.0
-    if allowed is not None:
+    if any(allowed is not None for allowed in alloweds):
         # EN: report the mass the forward plan places on forbidden pairs; a nonzero value means the restriction is
         #     not binding as stated (the LP needed those edges), which must not be silently accepted.
         # CN: 报告前向计划落在被禁对上的质量；非零说明限制并不像声明的那样生效（LP 需要那些边），不能静默接受。
-        cost = np.tensordot(features, theta, axes=([2], [0]))
-        forbidden_mass = float(sum(
-            _forward_plan(cost, observed[w].sum(axis=1), observed[w].sum(axis=0), allowed)[~allowed].sum()
-            for w in range(int(observed.shape[0]))))
-    return SharedThetaFit(theta=theta, features=features, objective=float(objective),
+        masses = []
+        for w in range(int(observed.shape[0])):
+            if alloweds[w] is None:
+                continue
+            cost = np.tensordot(maps[w], theta, axes=([2], [0]))
+            plan = _forward_plan(cost, observed[w].sum(axis=1), observed[w].sum(axis=0), alloweds[w])
+            masses.append(float(plan[~alloweds[w]].sum()))
+        forbidden_mass = float(sum(masses))
+    return SharedThetaFit(theta=theta, feature_maps=tuple(maps), objective=float(objective),
                           history=tuple(history), iterations=int(iterations),
                           forbidden_mass=forbidden_mass)
 
 
 FORBIDDEN_COST: float = 1e3
+
+
+def _feature_maps(distance: Float[np.ndarray, "n n"] | tuple[Float[np.ndarray, "n n"], ...],
+                  flows: Float[np.ndarray, "windows n n"], *, family: str, rank: int, unsupported: str
+                  ) -> list[Float[np.ndarray, "n n k"]]:
+    """
+    EN: one feature tensor per window, from one shared distance matrix or one matrix per window.
+
+        The low-rank family needs a single geometry (its factors are built from the pooled flows), so a per-window
+        distance list is rejected for it rather than silently averaged.
+
+    CN: 每窗一个特征张量；输入可以是共享的一个距离矩阵，也可以是每窗一个。低秩族需要单一几何（其因子由汇总流量构造），
+        故对逐窗距离列表直接报错，而不是悄悄平均。
+    """
+    if np.ndim(distance) == 2:
+        return [mixed_features(np.asarray(distance, dtype=np.float64), flows, family=str(family),
+                               rank=int(rank), unsupported=str(unsupported))]
+    matrices = [np.asarray(d, dtype=np.float64) for d in distance]           # type: ignore[union-attr]
+    if str(family) != "distance_power":
+        raise ValueError(f"family {family!r} needs one shared geometry; got {len(matrices)} distance matrices")
+    return [mixed_features(d, flows, family=str(family), rank=int(rank), unsupported=str(unsupported))
+            for d in matrices]
 
 
 def _forward_plan(cost: Float[np.ndarray, "n n"], rows: Float[np.ndarray, "n"], cols: Float[np.ndarray, "n"],
@@ -394,9 +455,9 @@ def _forward_plan(cost: Float[np.ndarray, "n n"], rows: Float[np.ndarray, "n"], 
                              numItermax=2_000_000), dtype=np.float64)
 
 
-def _summed_regret(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"],
-                   observed: Float[np.ndarray, "windows n n"], n_windows: int,
-                   allowed: np.ndarray | None = None) -> float:
+def _summed_regret(theta: Float[np.ndarray, "k"], feature_maps: list[Float[np.ndarray, "n n k"]],
+                   observed: Float[np.ndarray, "windows n n"],
+                   alloweds: list[np.ndarray | None]) -> float:
     """
     EN: `F(theta) = sum_l [<c, pi_hat_l> - OT_l(c)]`, one forward solve per window.
 
@@ -406,12 +467,12 @@ def _summed_regret(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n
     CN: `F(theta) = sum_l [<c,pi_hat_l> - OT_l(c)]`，每窗一次前向求解。两项对 `theta` 分别线性与凹，故 `F` 凸且
         `F>=0`；`F=0` 恰当全部观测计划都在 `c(theta)` 处最优。
     """
-    cost = np.tensordot(features, theta, axes=([2], [0]))
     total = 0.0
-    for window in range(n_windows):
+    for window in range(int(observed.shape[0])):
+        cost = np.tensordot(feature_maps[window], theta, axes=([2], [0]))
         plan = observed[window]
         rows = plan.sum(axis=1)
         cols = plan.sum(axis=0)
-        forward = _forward_plan(cost, rows, cols, allowed)
+        forward = _forward_plan(cost, rows, cols, alloweds[window])
         total += float(np.sum(cost * plan) - np.sum(cost * forward))
     return float(total)
