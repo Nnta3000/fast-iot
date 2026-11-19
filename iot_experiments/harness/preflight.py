@@ -87,6 +87,30 @@ def _mem_available_gb() -> float:
     return float("nan")
 
 
+def cuda_usable() -> bool:
+    """
+    EN: whether a CUDA device can be used **now**, as opposed to whether the CUDA code imports.
+
+        The distinction matters for the LP masters: `pycupdlpx` imports on a host whose NVIDIA driver is older
+        than its torch build, so `cupdlpx_available()` is True there while every `solve()` fails. Anything that
+        chooses between the GPU and the exact CPU path should ask this question, not the import question.
+
+    CN: **当前**是否真的能用 CUDA 设备（区别于 CUDA 代码能否导入）。驱动比 torch 构建旧时 `pycupdlpx` 仍可导入，
+        `cupdlpx_available()` 为 True 而每次 `solve()` 都失败；选择 GPU / 精确 CPU 路径时应问这里。
+
+    CN: 注意 `torch.cuda.is_available()` 在驱动过旧时返回 False 而不是抛错；外层的 try 只是防御。
+    EN: `torch.cuda.is_available()` returns False rather than raising on a driver mismatch; the try is defensive.
+    """
+    try:
+        import torch  # noqa: PLC0415
+    except ImportError:
+        return False
+    try:
+        return bool(torch.cuda.is_available())
+    except Exception:  # noqa: BLE001 - a broken CUDA install must read as "not usable", never as a crash
+        return False
+
+
 def check(*, run_tiny: bool = True, need_gpu: bool = False) -> Preflight:
     """
     CN: 跑一次自检。`need_gpu=True` 时，看不到 GPU 或 `pycupdlpx` 不可用都算失败；
