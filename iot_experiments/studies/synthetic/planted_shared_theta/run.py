@@ -89,8 +89,8 @@ PROVENANCE: dict[str, object] = {
                  "exact OT forward model",
     "readings": "R_test; share = R/R_independent; plan_l1 and plan_cost_rel against the planted held-out plan; "
                 "cost_rel_scaled = min_alpha ||alpha c_hat - c*||/||c*||; theta_l1; diagonal mass of both plans",
-    "control": "the same pipeline with plans from c* + 0.5*s^3 (outside the family); readings that cannot separate "
-               "the two arms are not diagnostic",
+    "control": "the same pipeline with plans from c* plus a seeded random symmetric cost (no small family can "
+               "represent it); readings that cannot separate the two arms are not diagnostic",
     "status": "this is a sanity check: it says the pipeline is not broken and can learn a cost when its assumptions "
               "hold. It does not say the method predicts real trip flows (the taxi study addresses that, and it "
               "does not).",
@@ -104,7 +104,8 @@ class PlantedConfig(RunConfig):
     study: str = "planted_shared_theta"
     section: str = "planted_shared_theta"
     arms: tuple[str, ...] = ("planted", "control")
-    n: int = 40
+    ns: tuple[int, ...] = (40,)
+    widths: tuple[int, ...] = (4,)
     windows: int = 6
     iterations: int = 300
     seeds: tuple[int, ...] = (0, 1, 2)
@@ -117,14 +118,18 @@ class PlantedConfig(RunConfig):
         """EN: normalise and validate. CN: 归一化与校验。"""
         object.__setattr__(self, "arms", tuple(str(v) for v in self.arms))
         object.__setattr__(self, "seeds", tuple(int(v) for v in self.seeds))
+        object.__setattr__(self, "ns", tuple(int(v) for v in self.ns))
+        object.__setattr__(self, "widths", tuple(int(v) for v in self.widths))
         object.__setattr__(self, "same_zone_weight", float(self.same_zone_weight))
         object.__setattr__(self, "diagonal_offset", float(self.diagonal_offset))
         if float(self.diagonal_offset) < 0.0:
             raise ValueError("diagonal_offset must be non-negative")
         if set(self.arms) - {"planted", "control"}:
             raise ValueError(f"unknown arms: {sorted(self.arms)}")
-        if int(self.n) < 4 or int(self.windows) < 2:
-            raise ValueError("n >= 4 and windows >= 2 are required")
+        if any(int(v) < 4 for v in self.ns) or int(self.windows) < 2:
+            raise ValueError("every n >= 4 and windows >= 2 are required")
+        if any(int(v) not in {4, 8} for v in self.widths):
+            raise ValueError(f"widths must be 4 or 8; got {self.widths}")
         if not 0.0 <= float(self.same_zone_weight) <= 1.0:
             raise ValueError("same_zone_weight must be in [0, 1]")
 
@@ -132,7 +137,8 @@ class PlantedConfig(RunConfig):
     def add_study_arguments(cls, parser) -> None:
         """EN: only this study's flags. CN: 只加本研究特有的参数。"""
         parser.add_argument("--arms", nargs="+", default=["planted", "control"])
-        parser.add_argument("--n", type=int, default=40)
+        parser.add_argument("--ns", type=int, nargs="+", default=[40])
+        parser.add_argument("--widths", type=int, nargs="+", default=[4])
         parser.add_argument("--windows", type=int, default=6)
         parser.add_argument("--iterations", type=int, default=300)
         parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
@@ -142,7 +148,7 @@ class PlantedConfig(RunConfig):
         parser.add_argument("--recovery-only", action="store_true")
 
 
-def theta_star(same_zone_weight: float) -> np.ndarray:
+def theta_star(same_zone_weight: float, width: int = 4) -> np.ndarray:
     """
     EN: the planted parameter, normalised to the simplex: `(0.10, 0.55, 0.35, w_same)` scaled to sum to 1.
 
@@ -152,7 +158,10 @@ def theta_star(same_zone_weight: float) -> np.ndarray:
     CN: 植入参数，归一化到单纯形：`(0.10, 0.55, 0.35, w_same)` 除以和。默认 `w_same=0` 去掉同 zone 分量，因为带该分量时
         植入计划会避开对角线，而仅惩罚对角线的退化代价同样能解释它们。
     """
-    weights = np.array([0.10, 0.55, 0.35, float(same_zone_weight)])
+    # EN: padded to `width`: the extra profiles of the 8-column family carry zero weight, so the *cost function* is
+    #     the same in both cells and the sweep measures only what extra parameters do.
+    # CN: 补零到 `width`：8 列族中多出的剖面权重为 0，故两个格子的**代价函数**相同，扫描只测量多出的参数带来的影响。
+    weights = np.array([0.10, 0.55, 0.35, float(same_zone_weight), 0.0, 0.0, 0.0, 0.0])[: int(width)]
     return weights / weights.sum()
 
 
@@ -180,21 +189,29 @@ def marginals(n: int, windows: int, seed: int) -> list[tuple[np.ndarray, np.ndar
 
 
 def observed_plans(distances: list[np.ndarray], theta: np.ndarray,
-                   pairs: list[tuple[np.ndarray, np.ndarray]], *, outside: bool
+                   pairs: list[tuple[np.ndarray, np.ndarray]], *, outside: bool, width: int = 4,
+                   seed: int = 0
                    ) -> list[np.ndarray]:
     """
-    EN: `P_l = EMD(a_l, b_l; c)` on window `l`'s geometry; `outside=True` adds `0.5*s^3`, a direction the family
-        does not contain, so no `theta` makes those plans optimal.
-    CN: 在窗 `l` 的几何上取 `P_l = EMD(a_l,b_l;c)`；`outside=True` 加上族内没有的 `0.5*s³`，使任何 `theta` 都无法让
-        这些计划最优。
+    EN: `P_l = EMD(a_l, b_l; c)` on window `l`'s geometry. `outside=True` uses a different cost for the plans: a
+        seeded **random symmetric** matrix added to `c`, which no small feature family can represent.
+
+        The first version added `0.5*s^3`; that was valid for the 4-column family (where `s^3` is not a column) but
+        **not** for the 8-column one, where `s^3` *is* a column — the "control" then became representable and its
+        plans were reproduced exactly, which is why the control is now a random cost.
+
+    CN: 在窗 `l` 的几何上取 `P_l = EMD(a_l,b_l;c)`；`outside=True` 时用不同的代价生成计划：在 `c` 上加一个带种子的
+        **随机对称**矩阵，任何小特征族都无法表示它。第一版加的是 `0.5*s³`：对 4 列族有效（`s³` 不是列），但对 8 列族
+        **无效**（`s³` 正是其中一列），"对照"因此变得可表示、计划被精确复现 —— 故改用随机代价。
     """
     plans = []
-    for distance, (source, target) in zip(distances, pairs, strict=True):
-        features = distance_features(distance)
+    for position, (distance, (source, target)) in enumerate(zip(distances, pairs, strict=True)):
+        features = distance_features(distance, width=int(width))
         cost = np.tensordot(features, theta, axes=([2], [0]))
         if outside:
-            normalised = distance / float(distance.max()) if distance.max() > 0 else distance
-            cost = cost + 0.5 * normalised ** 3
+            rng = np.random.default_rng((int(seed), int(position), 4242))
+            noise = rng.random(cost.shape)
+            cost = cost + 0.5 * (noise + noise.T)
         plans.append(np.asarray(ot.emd(source, target, cost, numItermax=2_000_000), dtype=np.float64))
     return plans
 
@@ -205,76 +222,66 @@ def diagonal_mass(plan: np.ndarray) -> float:
     return float(np.trace(np.asarray(plan, dtype=np.float64)) / total) if total > 0 else float("nan")
 
 
-def main(argv: list[str] | None = None) -> int:
-    """EN: entry point. CN: 入口。"""
-    parser = build_parser(PlantedConfig)
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    config = PlantedConfig.from_namespace(args, parser)
-    run_dir = config.run_dir
-    run_dir.mkdir(parents=True, exist_ok=True)
-    log = RunLog(run_dir / "run.log")
-    planted = theta_star(float(config.same_zone_weight))
-    log.line(f"n={config.n} windows={config.windows} seeds={config.seeds} arms={config.arms} "
-             f"iterations={config.iterations} same_zone_weight={config.same_zone_weight:g} "
-             f"diagonal_offset={config.diagonal_offset:g} fresh_points={config.fresh_points} "
-             f"recovery_only={config.recovery_only}")
-    log.line(f"theta*={np.round(planted, 4).tolist()}")
+def _evaluate_cell(
+    n: int, width: int, seed: int, config: "PlantedConfig", planted: np.ndarray,
+    *, log: RunLog,
+) -> list[RunRecord]:
+    """
+    EN: one `(n, width, seed)` cell: build the geometry and plans for each arm, then score every fold (or fit on all
+        windows when `--recovery-only`).
 
+    CN: 一个 `(n, width, seed)` 格子：为每个臂构造几何与计划，然后对每折打分（`--recovery-only` 时在全窗上拟合）。
+    """
+    distances = [geometry(int(n), int(seed), w, fresh=bool(config.fresh_points),
+                          diagonal_offset=float(config.diagonal_offset))
+                 for w in range(int(config.windows))]
+    pairs = marginals(int(n), int(config.windows), int(seed))
     records: list[RunRecord] = []
-    for seed in config.seeds:
-        distances = [geometry(int(config.n), int(seed), w, fresh=bool(config.fresh_points),
-                              diagonal_offset=float(config.diagonal_offset))
-                     for w in range(int(config.windows))]
-        pairs = marginals(int(config.n), int(config.windows), int(seed))
-        for arm in config.arms:
-            plans = observed_plans(distances, planted, pairs, outside=(arm == "control"))
-            for plan in plans:
-                log.line(f"[seed {seed} {arm:>7}] plan diagonal mass {diagonal_mass(plan):.4f} "
-                         f"support {int(np.count_nonzero(plan))}")
-            if bool(config.recovery_only):
-                # EN: fit on every window; the question is parameter recovery, not a held-out plan.
-                # CN: 在全窗上拟合；问的是参数恢复，不是留出计划。
-                started = time.perf_counter()
-                fit = fit_shared_theta(np.stack(plans), tuple(distances), iterations=int(config.iterations))
-                features = distance_features(distances[0])
-                truth = np.tensordot(features, planted, axes=([2], [0]))
-                cost_hat = np.tensordot(features, fit.theta, axes=([2], [0]))
-                alpha = float(np.sum(cost_hat * truth) / np.sum(cost_hat ** 2))
-                metrics = {
-                    "train_objective": float(fit.objective),
-                    "theta_l1": float(np.abs(fit.theta - planted).sum()),
-                    "cost_rel_scaled": float(np.linalg.norm(alpha * cost_hat - truth)
-                                             / np.linalg.norm(truth)),
-                }
-                records.append(RunRecord(
-                    study=str(config.study), geometry=f"seed{seed}_w{int(config.windows)}", arm=str(arm),
-                    k=int(fit.n_features), m=int(config.n), draw=0, metrics=metrics,
-                    config=config.to_dict(),
-                    extra={"theta": [float(v) for v in fit.theta],
-                           "theta_star": [float(v) for v in planted],
-                           "seconds": round(time.perf_counter() - started, 3)}))
-                log.line(f"[seed {seed} {arm:>7} all {len(plans)} windows] F={fit.objective:.3e} "
-                         f"theta_l1={metrics['theta_l1']:.4f} cost_rel={metrics['cost_rel_scaled']:.4f} "
-                         f"theta={np.round(fit.theta, 3).tolist()}")
-                continue
-            for held_out in range(len(plans)):
-                train = [k for k in range(len(plans)) if k != held_out]
-                started = time.perf_counter()
-                fit = fit_shared_theta(np.stack([plans[k] for k in train]),
-                                       tuple(distances[k] for k in train),
-                                       iterations=int(config.iterations))
-                source, target = pairs[held_out]
-                observed = plans[held_out]
-                # EN: the held-out window's geometry was never given to the fit, so its feature tensor is passed in.
-                # CN: 留出窗的几何从未交给拟合，故在这里传入其特征张量。
-                features = distance_features(distances[held_out])
-                predicted = fit.predict(source, target, features=features)
-                truth = np.tensordot(features, planted, axes=([2], [0]))
-                cost_hat = np.tensordot(features, fit.theta, axes=([2], [0]))
-                alpha = float(np.sum(cost_hat * truth) / np.sum(cost_hat ** 2))
-                optimum = float(ot.emd2(source, target, truth, numItermax=2_000_000))
-                share, _fraction = regret_share(fit.theta, features, observed)
-                metrics = {
+    label = f"n{n}_k{width}_seed{seed}"
+    for arm in config.arms:
+        plans = observed_plans(distances, planted, pairs, outside=(arm == "control"), width=int(width),
+                               seed=int(seed))
+        masses = [diagonal_mass(plan) for plan in plans]
+        log.line(f"[{label} {arm:>7}] diagonal mass min/median/max "
+                 f"{min(masses):.3f}/{float(np.median(masses)):.3f}/{max(masses):.3f}")
+        if bool(config.recovery_only):
+            started = time.perf_counter()
+            fit = fit_shared_theta(np.stack(plans), tuple(distances), iterations=int(config.iterations),
+                                   width=int(width))
+            features = distance_features(distances[0], width=int(width))
+            truth = np.tensordot(features, planted, axes=([2], [0]))
+            cost_hat = np.tensordot(features, fit.theta, axes=([2], [0]))
+            alpha = float(np.sum(cost_hat * truth) / np.sum(cost_hat ** 2))
+            records.append(RunRecord(
+                study=str(config.study), geometry=label, arm=str(arm), k=int(fit.n_features), m=int(n),
+                draw=0,
+                metrics={"train_objective": float(fit.objective),
+                         "theta_l1": float(np.abs(fit.theta - planted).sum()),
+                         "cost_rel_scaled": float(np.linalg.norm(alpha * cost_hat - truth)
+                                                  / np.linalg.norm(truth))},
+                config=config.to_dict(),
+                extra={"theta": [float(v) for v in fit.theta], "theta_star": [float(v) for v in planted],
+                       "seconds": round(time.perf_counter() - started, 3)}))
+            continue
+        for held_out in range(len(plans)):
+            train = [k for k in range(len(plans)) if k != held_out]
+            started = time.perf_counter()
+            fit = fit_shared_theta(np.stack([plans[k] for k in train]),
+                                   tuple(distances[k] for k in train),
+                                   iterations=int(config.iterations), width=int(width))
+            source, target = pairs[held_out]
+            observed = plans[held_out]
+            features = distance_features(distances[held_out], width=int(width))
+            predicted = fit.predict(source, target, features=features)
+            truth = np.tensordot(features, planted, axes=([2], [0]))
+            cost_hat = np.tensordot(features, fit.theta, axes=([2], [0]))
+            alpha = float(np.sum(cost_hat * truth) / np.sum(cost_hat ** 2))
+            optimum = float(ot.emd2(source, target, truth, numItermax=2_000_000))
+            share, _fraction = regret_share(fit.theta, features, observed)
+            records.append(RunRecord(
+                study=str(config.study), geometry=label, arm=str(arm), k=int(fit.n_features), m=int(n),
+                draw=int(held_out),
+                metrics={
                     "train_objective": float(fit.objective),
                     "regret_test": float(regret_of(fit.theta, features, observed)),
                     "regret_share": float(share),
@@ -286,23 +293,37 @@ def main(argv: list[str] | None = None) -> int:
                     "theta_l1": float(np.abs(fit.theta - planted).sum()),
                     "diagonal_mass_observed": diagonal_mass(observed),
                     "diagonal_mass_predicted": diagonal_mass(predicted),
-                }
-                records.append(RunRecord(
-                    study=str(config.study), geometry=f"seed{seed}", arm=str(arm),
-                    k=int(fit.n_features), m=int(config.n), draw=int(held_out), metrics=metrics,
-                    config=config.to_dict(),
-                    extra={"theta": [float(v) for v in fit.theta],
-                           "theta_star": [float(v) for v in planted],
-                           "seconds": round(time.perf_counter() - started, 3)}))
-                log.line(f"[seed {seed} {arm:>7} fold {held_out}] F={fit.objective:.2e} "
-                         f"share={share:.4f} plan_l1={metrics['plan_l1']:.3e} "
-                         f"plan_cost_rel={metrics['plan_cost_rel']:.2e} "
-                         f"cost_rel={metrics['cost_rel_scaled']:.3f} theta_l1={metrics['theta_l1']:.3f} "
-                         f"diag(obs/pred)={metrics['diagonal_mass_observed']:.3f}/"
-                         f"{metrics['diagonal_mass_predicted']:.3f}")
+                },
+                config=config.to_dict(),
+                extra={"theta": [float(v) for v in fit.theta], "theta_star": [float(v) for v in planted],
+                       "seconds": round(time.perf_counter() - started, 3)}))
+    return records
+
+
+def main(argv: list[str] | None = None) -> int:
+    """EN: entry point. CN: 入口。"""
+    parser = build_parser(PlantedConfig)
+    args = parser.parse_args(list(argv) if argv is not None else None)
+    config = PlantedConfig.from_namespace(args, parser)
+    run_dir = config.run_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log = RunLog(run_dir / "run.log")
+    log.line(f"ns={config.ns} widths={config.widths} windows={config.windows} seeds={config.seeds} "
+             f"arms={config.arms} iterations={config.iterations} "
+             f"same_zone_weight={config.same_zone_weight:g} diagonal_offset={config.diagonal_offset:g} "
+             f"fresh_points={config.fresh_points} recovery_only={config.recovery_only}")
+
+    records: list[RunRecord] = []
+    for n in config.ns:
+        for width in config.widths:
+            planted = theta_star(float(config.same_zone_weight), int(width))
+            log.line(f"--- n={n} K={width}: theta*={np.round(planted, 4).tolist()}")
+            for seed in config.seeds:
+                records.extend(_evaluate_cell(int(n), int(width), int(seed), config, planted, log=log))
 
     write_records(run_dir / "records.json", records, provenance=PROVENANCE)
-    group = ("arm", "geometry") if bool(config.recovery_only) else ("arm",)
+    group = ("arm", "geometry") if (bool(config.recovery_only) or len(config.ns) * len(config.widths) > 1) \
+        else ("arm",)
     table = summarise(records, group=group,
                       metrics=("train_objective", "regret_share", "plan_l1", "plan_cost_rel",
                                "cost_rel_scaled", "theta_l1", "diagonal_mass_observed"))

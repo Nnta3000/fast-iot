@@ -48,7 +48,7 @@ import numpy as np
 import ot
 from jaxtyping import Float
 
-__all__ = ["SharedThetaFit", "distance_features", "fit_shared_theta", "mixed_features",
+__all__ = ["DISTANCE_PROFILES", "SharedThetaFit", "distance_features", "fit_shared_theta", "mixed_features",
            "nonnegative_factors", "regret_of", "regret_share"]
 
 
@@ -82,9 +82,12 @@ def nonnegative_factors(flow: Float[np.ndarray, "n n"], *, rank: int, iterations
     return u, v
 
 
+DISTANCE_PROFILES: tuple[str, ...] = ("s", "s2", "log1p", "same_zone", "s3", "sqrt", "exp", "s4")
+
+
 def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "distance_power",
                       include_constant: bool = False, unsupported: str = "median",
-                      fill_value: float | None = None, normalise: bool = True
+                      fill_value: float | None = None, normalise: bool = True, width: int = 4
                       ) -> Float[np.ndarray, "n n k"]:
     """
     EN: the feature family for a distance-structured cost, as `(n, n, K)` non-negative columns.
@@ -144,12 +147,22 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
         raise ValueError("distance is identically zero")
     normalised = spacing / scale
     if str(family) == "distance_power":
-        columns = [
-            normalised,
-            normalised ** 2,
-            np.log1p(normalised),
-            np.eye(spacing.shape[0], dtype=np.float64),
-        ]
+        if int(width) not in {4, 8}:
+            raise ValueError(f"width must be 4 or 8; got {width!r}")
+        identity = np.eye(spacing.shape[0], dtype=np.float64)
+        profiles = {
+            "s": normalised,
+            "s2": normalised ** 2,
+            "log1p": np.log1p(normalised),
+            "same_zone": identity,
+            "s3": normalised ** 3,
+            "sqrt": np.sqrt(normalised),
+            "exp": np.exp(-normalised),
+            "s4": normalised ** 4,
+        }
+        # EN: the list is ordered, so `width` is a prefix: 4 reproduces the original family, 8 adds four profiles.
+        # CN: 列表有序，故 `width` 取前缀：4 即原族，8 再加四种剖面。
+        columns = [profiles[name] for name in DISTANCE_PROFILES[: int(width)]]
         if treatment == "mask":
             columns.append(missing.astype(np.float64))
         if bool(include_constant):
@@ -175,7 +188,7 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
 def mixed_features(distance: Float[np.ndarray, "n n"], flows: Float[np.ndarray, "windows n n"], *,
                    family: str = "distance_power", rank: int = 4,
                    include_constant: bool = False, unsupported: str = "median",
-                   fill_value: float | None = None) -> Float[np.ndarray, "n n k"]:
+                   fill_value: float | None = None, width: int = 4) -> Float[np.ndarray, "n n k"]:
     """
     EN: the feature tensor for a family, built from the given (training) flows.
 
@@ -191,7 +204,7 @@ def mixed_features(distance: Float[np.ndarray, "n n"], flows: Float[np.ndarray, 
         之间的分配是形状选择而不是幅度选择（与本研究其它地方的规范一致）。传入训练流量正是因子不泄漏的原因：留出窗从不参与。
     """
     base = distance_features(distance, family="distance_power", include_constant=include_constant,
-                             unsupported=str(unsupported), fill_value=fill_value)
+                             unsupported=str(unsupported), fill_value=fill_value, width=int(width))
     if str(family) == "distance_power":
         return base
     if str(family) != "distance_lowrank":
@@ -328,6 +341,7 @@ def fit_shared_theta(
     iterations: int = 200,
     unsupported: str = "median",
     restrict_edges: bool = False,
+    width: int = 4,
 ) -> SharedThetaFit:
     """
     EN: Frank–Wolfe on the simplex for the summed regret.
@@ -356,7 +370,7 @@ def fit_shared_theta(
     if int(iterations) < 1:
         raise ValueError("iterations must be at least 1")
     maps = _feature_maps(distance, observed, family=str(family), rank=int(rank),
-                         unsupported=str(unsupported))
+                         unsupported=str(unsupported), width=int(width))
     if len(maps) not in {1, int(observed.shape[0])}:
         raise ValueError(f"got {len(maps)} distance matrices for {observed.shape[0]} windows; "
                          "pass one matrix or one per window")
@@ -415,8 +429,8 @@ FORBIDDEN_COST: float = 1e3
 
 
 def _feature_maps(distance: Float[np.ndarray, "n n"] | tuple[Float[np.ndarray, "n n"], ...],
-                  flows: Float[np.ndarray, "windows n n"], *, family: str, rank: int, unsupported: str
-                  ) -> list[Float[np.ndarray, "n n k"]]:
+                  flows: Float[np.ndarray, "windows n n"], *, family: str, rank: int, unsupported: str,
+                  width: int = 4) -> list[Float[np.ndarray, "n n k"]]:
     """
     EN: one feature tensor per window, from one shared distance matrix or one matrix per window.
 
@@ -428,11 +442,12 @@ def _feature_maps(distance: Float[np.ndarray, "n n"] | tuple[Float[np.ndarray, "
     """
     if np.ndim(distance) == 2:
         return [mixed_features(np.asarray(distance, dtype=np.float64), flows, family=str(family),
-                               rank=int(rank), unsupported=str(unsupported))]
+                               rank=int(rank), unsupported=str(unsupported), width=int(width))]
     matrices = [np.asarray(d, dtype=np.float64) for d in distance]           # type: ignore[union-attr]
     if str(family) != "distance_power":
         raise ValueError(f"family {family!r} needs one shared geometry; got {len(matrices)} distance matrices")
-    return [mixed_features(d, flows, family=str(family), rank=int(rank), unsupported=str(unsupported))
+    return [mixed_features(d, flows, family=str(family), rank=int(rank), unsupported=str(unsupported),
+                           width=int(width))
             for d in matrices]
 
 

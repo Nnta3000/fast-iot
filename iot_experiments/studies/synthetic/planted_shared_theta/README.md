@@ -30,36 +30,83 @@ contain. A reading that cannot separate the control from the planted case is not
 | `--diagonal-offset` (default 0.0) | with no same-zone weight the diagonal is *free* (`d = 0`), so the planted plans put **0.62** of their mass in place and the control becomes hard to separate (`cost_rel` 0.067 vs 0.082). The offset adds a constant to every distance, so staying put costs a typical trip |
 | `--fresh-points` | every window gets its own point cloud (same `θ*`), so the held-out plan is for a **new geometry** — generalisation to new pairs, not just to new marginals of the same points |
 
-## Results (n = 40, 6 windows, 3 seeds, 18 folds per arm, CPU, seconds)
+## Results
 
-Planted arm, `cost_rel_scaled` (lower is better) and `θ_l1` to the planted parameter:
+**The control had to be fixed before these numbers meant anything.** The first version generated the control's plans
+from `c* + 0.5·s³`. That is outside the 4-column family, but for the 8-column family `s³` **is a column** — so in the
+`K = 8` cells the "control" was representable and its plans were reproduced exactly. The control now adds a seeded
+**random symmetric** cost, which no small family can represent. All numbers below use it.
 
-| planted cost | `diagonal mass` (planted plans) | `plan_l1` planted / control | `cost_rel_scaled` planted / control | `θ_l1` planted / control |
+### The sweep over `n` and the number of features (the headline)
+
+6 windows, 3 seeds, 18 observations per cell, `--diagonal-offset 0.52`, no same-zone weight, 120 Frank–Wolfe
+iterations. Medians; `ratio` is control / planted, i.e. how much worse a misspecified cost does.
+
+| `n` | `K` | planted `cost_rel_scaled` | control | ratio | planted `plan_l1` | control | ratio |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 4 | 0.0502 | 0.1595 | 3.2 | 0.0663 | 1.7665 | 26.6 |
+| 20 | 8 | 0.0433 | 0.3312 | 7.7 | 0.0852 | 1.8364 | 21.6 |
+| 40 | 4 | 0.0167 | 0.1462 | 8.8 | 0.0290 | 1.9032 | 65.7 |
+| 40 | 8 | 0.0444 | 0.3266 | 7.4 | 0.0322 | 1.9163 | 59.4 |
+| 80 | 4 | 0.0207 | 0.1435 | 6.9 | 0.0301 | 1.9371 | 64.4 |
+| 80 | 8 | 0.0358 | 0.3311 | 9.3 | 0.0500 | 1.9629 | 39.2 |
+| 160 | 4 | 0.0184 | 0.1405 | 7.6 | 0.0322 | 1.9738 | 61.4 |
+| 160 | 8 | 0.0347 | 0.3239 | 9.3 | 0.0425 | 1.9793 | 46.6 |
+
+Three readings:
+
+1. **The planted arm stays separated from a misspecified cost at every `n`**: 3–9× on the recovered-cost error and
+   22–66× on plan distance. Nothing collapses as `n` grows; the failure the exact method shows at small `n` then
+   large `n` is not reproduced here.
+2. **Recovered-cost error saturates, it does not fall to zero**: 0.050 at `n = 20`, then 0.017–0.021 for
+   `K = 4` — flat from `n = 40` to 160. More points do not identify the cost (the plans pin a cone).
+3. **Four extra feature columns hurt**: `K = 8` is worse on the recovered cost at every `n` (0.035–0.044 vs
+   0.017–0.021) and slightly worse on `plan_l1`, and the gap does not close with `n`. The extra profiles carry zero
+   weight in the planted cost, so this is a pure cost of the larger parameterisation.
+
+### The two holes, and the knobs that close them
+
+Planted arm at `n = 40`, 6 windows, 3 seeds, new control:
+
+| planted cost | diagonal mass (planted plans) | `plan_l1` planted / control | `cost_rel_scaled` planted / control | `share` planted / control |
 | --- | ---: | ---: | ---: | ---: |
-| `w_same = 0.30`, offset 0 (first version) | **0.0000** | 0.015 / 0.094 | 0.460 / 0.956 | 0.58 / 1.53 |
-| `w_same = 0`, offset 0 | 0.618 | 0.114 / 0.277 | 0.067 / 0.082 | 0.55 / 0.57 |
-| `w_same = 0`, offset 0.52 | 0.660 | 0.031 / 0.162 | **0.018 / 0.045** | 0.26 / 0.75 |
+| `w_same = 0.30`, offset 0 (first version) | **0.0000** | 0.015 / 1.898 | 0.460 / 0.957 | 0.000 / 2.72 |
+| `w_same = 0`, offset 0 | 0.618 | 0.114 / 1.896 | 0.067 / 0.549 | 0.000 / 2.00 |
+| `w_same = 0`, offset 0.52 | 0.660 | 0.031 / 1.891 | **0.018 / 0.146** | 0.000 / 0.90 |
 
-The middle row is the one to note: removing the same-zone weight as asked does **not** strengthen the test on its own —
-it swaps a penalised diagonal for a free one, the plans pile up in place, and the control's cost error approaches the
-planted one (0.082 vs 0.067). The offset is what closes both holes.
+The first row is the confound: with 0.30 on the same-zone column the planted plans never touch the diagonal, and a
+cost supported only on that column makes any diagonal-free plan optimal. The middle row is the second hole: removing
+that weight makes the diagonal **free** (`d = 0`), the plans put 0.62 of their mass in place, and the control comes
+closest to the planted arm (0.067 vs 0.549 on cost, but only 0.114 vs 1.896 on plan distance). `--diagonal-offset`
+adds a constant to every distance so staying put costs a typical trip; the diagonal stays in play and the separation
+returns.
 
-**Does `θ` converge with more windows?** No. Fitting on all windows (`--recovery-only`, offset 0.52), planted arm:
+**Correction to an earlier statement.** I had written that `share` is 0 in both arms and therefore cannot detect a
+wrong model. That was true of the old `s³` control, whose plans were diagonal-free and hence optimal under the
+same-zone-only cost the fit collapsed to. With the random-cost control, whose plans do use the diagonal, `share`
+separates cleanly: 0.000 planted against 0.90–2.72 control. The metric is diagnostic once the control is genuinely
+out of family, and its readings above 1 mean the observed plan is *more* wasteful than the unrelated plan.
 
-| windows | `cost_rel_scaled` (three seeds) | `θ_l1` (three seeds) |
-| ---: | --- | --- |
-| 6 | 0.0096 / 0.0184 / 0.0068 | 0.210 / 0.264 / 0.171 |
-| 12 | 0.0145 / 0.0182 / 0.0119 | 0.192 / 0.265 / 0.231 |
-| 25 | 0.0148 / 0.0149 / 0.0149 | 0.229 / 0.250 / 0.251 |
-| 50 | 0.0148 / 0.0138 / 0.0252 | 0.229 / 0.247 / 0.289 |
+### Does `θ` converge with more windows?
 
-The parameter does not approach `θ*`; the residual is flat from 6 to 50 windows. The plans pin the cost down to a cone
-and more marginals of the *same* points add little. (This is the identifiability statement, not a defect — but it means
-"more data will identify the cost" is not supported.)
+No. Fitting on all windows (`--recovery-only`), planted arm, three seeds:
 
-**New points per window** (`--fresh-points`, offset 0.52, planted): `plan_l1` 0.041, `cost_rel_scaled` 0.017,
-`θ_l1` 0.23 — statistically the same as the shared-geometry case (0.031 / 0.018 / 0.26). So the arm also transfers to
-a held-out *geometry*.
+| windows | `cost_rel_scaled` | `θ_l1` to `θ*` | control `cost_rel_scaled` |
+| ---: | --- | --- | --- |
+| 6 | 0.0096 / 0.0184 / 0.0068 | 0.210 / 0.264 / 0.171 | 0.138–0.151 |
+| 12 | 0.0145 / 0.0182 / 0.0119 | 0.192 / 0.265 / 0.231 | 0.138–0.152 |
+| 25 | 0.0148 / 0.0149 / 0.0149 | 0.229 / 0.250 / 0.251 | 0.138–0.151 |
+| 50 | 0.0148 / 0.0138 / 0.0252 | 0.229 / 0.247 / 0.289 | 0.138–0.151 |
+
+Flat from 6 to 50 windows: more marginals of the *same* points do not identify the cost further. What does grow with
+windows is the control's *training* objective (0.04 → 0.36) while the planted one stays at 0 — a misspecification
+becomes more visible with more data even though the parameter does not become identified.
+
+### New points per window
+
+`--fresh-points` (same `θ*`, a new point cloud in every window), offset 0.52: planted `plan_l1` 0.041,
+`cost_rel_scaled` 0.017, control 1.903 / 0.150. Statistically the same as the shared-geometry case
+(0.031 / 0.018), so the arm transfers to a held-out **geometry**, not only to new marginals.
 
 ## What the numbers do and do not say
 
