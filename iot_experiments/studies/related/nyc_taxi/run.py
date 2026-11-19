@@ -1,32 +1,37 @@
 """
-EN: **NYC taxi: leave-one-window-out** — the comparison table for the construct in `instance.py`, with the gravity
-    baseline from `src/iot/external/methods` and our **relaxed** shared-`theta` arm from `src/iot/relaxed/multi_plan`.
+EN: **NYC taxi: leave-one-window-out**, with the *distance-imputation* and *distance-scope* knobs made explicit.
 
-    Protocol, one fold per held-out time window:
+    Two decisions were implicit in the first version of this study and both change the numbers:
 
-      1. fit on the flows of the other five windows;
-      2. predict the held-out window at its own marginals;
-      3. score two ways:
-           `rmse`, `correlation`, `cpc` — the flow metrics M-IOT's Table 1 reports, so the arms are comparable to
-             each other and to the published regime;
-           `regret` and `regret_ratio = R_test / R_uniform` — the relaxed formulation's own quantity: how far the
-             held-out flow is from being optimal under the cost fitted on the other windows, relative to the cost
-             at uniform `theta`. This is the arm's native generalisation measure and does not depend on a decoder.
-      4. average over the six folds.
+      * **Scope.** The pairwise distance is a mean over trips. `other_windows` (default) builds it from the training
+        trips of the **five other** windows only, so a held-out window contributes nothing to the features it is
+        scored on; `all_train` uses all six windows' training trips, which leaks the held-out window's *support*
+        (its 20 % test trips never enter). Measured: 709-1767 pairs per fold differ in support between the two, and
+        they carry 0.06-0.18 % of each held-out window's trip mass.
+      * **Unsupported pairs.** 46 428 of 69 169 pairs (67 %) have no training trip. `median` (default) fills their
+        distance with the median observed distance — one stated assumption. `mask` keeps the distance columns at 0
+        there and adds one indicator column equal to 1 exactly on those pairs; since `theta >= 0` the mask can only
+        *add* cost, so it can never make an unexplored pair cheaper than an observed one, and it is reported as a
+        sensitivity rather than as the model.
 
-    The forward model is exact OT throughout: a predicted plan has at most `m + n - 1` positive entries, which is a
-    real restriction against a flow that occupies thousands of cells. It is reported as it is; the formulation's own
-    question is the regret column, not the flow metrics.
+    A third variant, `--restrict-edges`, forbids every pair with no training trip (the edge-set formulation, and the
+    analogue of the graph restriction in Stuart & Wolfram). Held-out windows do contain trips on pairs outside the
+    training support, so those cannot be carried by the predicted plan; the fraction of held-out mass on forbidden
+    pairs is recorded per fold.
 
-CN: **纽约出租车：留一时间窗** —— `instance.py` 构造实例上的比较表，基线为 `src/iot/external/methods` 中的引力模型，我们
-    的**松弛**共享 `theta` 臂来自 `src/iot/relaxed/multi_plan`。协议（每个留出窗一个折）：在其余五窗上拟合；在留出窗自身
-    marginal 下预测；两种打分 —— `rmse`/`correlation`/`cpc`（M-IOT 表 1 的流量指标，使各臂之间及其与已发表区间可比），
-    以及 `regret` 与 `regret_ratio = R_test/R_uniform`（松弛形式自身的量：留出流量在其余窗拟合出的代价下离最优有多远，
-    相对均匀 `theta` 归一；这是该臂的原生泛化度量，不依赖解码器）；六折平均。前向模型始终是精确 OT：预测计划最多
-    `m+n-1` 个正元素，对占据数千格子的流量是真实限制，如实报告；该形式自身的问题是 regret 那一列。
+    Scoring is unchanged: `rmse`, `correlation`, `cpc` (the columns M-IOT's Table 1 reports) and the formulation's own
+    `regret_ratio = R_test / R_uniform`, with `R` computed on the same feature matrix and edge set the fit used.
+
+CN: **纽约出租车：留一时间窗**，把**距离插补**与**距离口径**两个此前隐含的决定显式化。`other_windows`（默认）只用其余
+    五个窗的训练行程构造成对距离，故留出窗对它被评分的特征没有任何贡献；`all_train` 用全部六窗的训练行程，会泄漏留出窗的
+    **支撑**（其 20% 测试行程从不进入）。实测：每折 709–1767 对在两口径下支撑不同，承载该窗 0.06–0.18% 的行程量。
+    无训练行程的对 46 428/69 169（67%）：`median`（默认）用观测距离中位数补齐（一个明确假设）；`mask` 让距离列在这些对上为
+    0 并追加一列指示（这些对上为 1），因 `theta>=0` 掩码只能**增加**代价、绝不能让未探索的对更便宜，故作为敏感性报告。
+    第三种 `--restrict-edges` 禁止所有无训练行程的对（边集形式，Stuart & Wolfram 图限制的类比）；留出窗确实有落在训练支撑
+    之外的行程，那些无法被预测计划承载，故每折记录被禁对上的留出质量比例。
 
     Run / 用法:
-        python -m iot_experiments.studies.related.nyc_taxi.run --instance data/nyc_taxi/instance_n263_k6.npz
+        python -m iot_experiments.studies.related.nyc_taxi.run --study related_nyc_taxi_imputation
 """
 
 from __future__ import annotations
@@ -59,20 +64,27 @@ DEFAULT_INSTANCE = "data/nyc_taxi/instance_n263_k6.npz"
 
 PROVENANCE: dict[str, object] = {
     "question": "does the relaxed (regret) formulation generalise across time windows on NYC taxi flows, and how "
-                "does the cost it fits score on a flow metric against a gravity baseline?",
-    "protocol": "leave-one-window-out over six windows; fit on five; predict the sixth at its own marginals; "
-                "average over the six folds",
+                "much of the answer is the distance imputation rather than the method?",
+    "protocol": "leave-one-window-out over six windows; fit on five; predict the sixth at its own marginals; average "
+                "over the six folds",
     "estimator": "relaxed shared-theta arm (src/iot/relaxed/multi_plan): min sum_l [<c,pi_hat_l> - OT_l(c)] over "
                  "theta on the simplex, Frank-Wolfe, exact OT forward model",
-    "native_metric": "regret_ratio = R_test / R_uniform on the held-out window, R = <c,pi_hat> - OT(c); 0 would "
-                     "mean the held-out flow is optimal under the fitted cost, 1 means no better than uniform theta",
-    "flow_metrics": "RMSE, Pearson correlation and CPC (iot.external.metrics), the columns M-IOT's Table 1 reports",
+    "distance_scope": "other_windows (default, leak-free: the held-out window contributes no trips to the distance) "
+                      "vs all_train (sensitivity: all six windows' train trips, leaks the held-out support)",
+    "unsupported_pairs": "median (default) fills the 46 428 pairs with no training trip at the median observed "
+                         "distance; mask (sensitivity) keeps them at zero distance and adds an indicator column, "
+                         "which with theta >= 0 can only raise their cost",
+    "edge_restriction": "--restrict-edges forbids pairs with no training trip (large finite cost); the mass the "
+                        "forward plan places there and the held-out mass on forbidden pairs are both recorded",
+    "native_metric": "regret_ratio = R_test / R_uniform on the held-out window, R = <c,pi_hat> - OT(c) on the same "
+                     "feature matrix and edge set as the fit",
+    "flow_metrics": "RMSE, Pearson correlation, CPC (iot.external.metrics), the columns M-IOT's Table 1 reports",
     "published_reference": "NYC taxi, n=100, K=6 (Bao, Li & Sun 2026, Table 1): M-IOT 4.45 / 0.9989 / 0.9566; "
                            "naive average IOT 4.76 / 0.9988 / 0.9489; gravity 37.12 / 0.9076 / 0.6568",
     "instance": "n_zones=263 (official TLC ids; the paper's n=100 merge rule is not stated), 2016-01, 80/20 split "
-                "within each window, distance = mean reported trip_distance per pair over TRAIN trips",
-    "gauge": "theta on the simplex, features non-negative: it excludes the zero cost and fixes one linear functional. "
-             "The cost is therefore identified only up to that choice, which is stated rather than assumed",
+                "within each window",
+    "gauge": "theta on the simplex with non-negative features: it excludes the zero cost and, with the constant "
+             "column off, the constant cost. The cost is identified only up to that choice, which is stated",
     "caveat": "absolute RMSE is not comparable to the published table (different n, month, preprocessing); "
               "correlation and CPC are the scale-free columns",
 }
@@ -86,18 +98,22 @@ class NycTaxiConfig(RunConfig):
     section: str = "related_nyc_taxi"
     instance: str = DEFAULT_INSTANCE
     arms: tuple[str, ...] = ("independence", "gravity", "shared_theta")
-    families: tuple[str, ...] = ("distance_power", "distance_lowrank")
-    rank: int = 4
+    family: str = "distance_power"
+    imputations: tuple[str, ...] = ("median", "mask")
+    scopes: tuple[str, ...] = ("other_windows", "all_train")
+    restrict_edges: bool = False
     iterations: int = 200
 
     def __post_init__(self) -> None:
         """EN: normalise and validate. CN: 归一化与校验。"""
-        object.__setattr__(self, "arms", tuple(str(v) for v in self.arms))
-        object.__setattr__(self, "families", tuple(str(v) for v in self.families))
-        allowed = {"independence", "gravity", "shared_theta"}
-        unknown = set(self.arms) - allowed
-        if unknown:
-            raise ValueError(f"unknown arms: {sorted(unknown)}; known: {sorted(allowed)}")
+        for name in ("arms", "imputations", "scopes"):
+            object.__setattr__(self, name, tuple(str(v) for v in getattr(self, name)))
+        if set(self.arms) - {"independence", "gravity", "shared_theta"}:
+            raise ValueError(f"unknown arms: {sorted(self.arms)}")
+        if set(self.imputations) - {"median", "mask"}:
+            raise ValueError(f"imputations must be median/mask; got {self.imputations}")
+        if set(self.scopes) - {"other_windows", "all_train"}:
+            raise ValueError(f"scopes must be other_windows/all_train; got {self.scopes}")
         if not Path(self.instance).is_file():
             raise ValueError(f"instance not found: {self.instance} (build it with "
                              f"python -m iot_experiments.studies.related.nyc_taxi.instance)")
@@ -107,15 +123,38 @@ class NycTaxiConfig(RunConfig):
         """EN: only this study's flags. CN: 只加本研究特有的参数。"""
         parser.add_argument("--instance", default=DEFAULT_INSTANCE)
         parser.add_argument("--arms", nargs="+", default=["independence", "gravity", "shared_theta"])
-        parser.add_argument("--families", nargs="+", default=["distance_power", "distance_lowrank"])
-        parser.add_argument("--rank", type=int, default=4)
+        parser.add_argument("--family", default="distance_power")
+        parser.add_argument("--imputations", nargs="+", default=["median", "mask"])
+        parser.add_argument("--scopes", nargs="+", default=["other_windows", "all_train"])
+        parser.add_argument("--restrict-edges", action="store_true")
         parser.add_argument("--iterations", type=int, default=200)
+
+
+def _distance(instance: Instance, scope: str, train: list[int]) -> np.ndarray:
+    """
+    EN: the pairwise mean distance for one fold under one scope; `NaN` where no training trip supports the pair.
+
+        `other_windows` sums the stored per-window moments of the five training windows, `all_train` sums all six.
+        Both leave the held-out window's **test** trips out by construction; they differ only in whether its *train*
+        trips are used, which is exactly the leak being measured.
+
+    CN: 某折在某口径下的成对平均距离；无训练行程支撑的对为 `NaN`。`other_windows` 汇总五个训练窗的逐窗矩，`all_train`
+        汇总全部六窗。两者按构造都不含留出窗的**测试**行程；差别只在于是否使用它的**训练**行程，这正是被测量的泄漏。
+    """
+    if scope == "other_windows":
+        sums = instance.window_distance_sum[train].sum(axis=0)
+        counts = instance.window_distance_count[train].sum(axis=0)
+    elif scope == "all_train":
+        sums = instance.window_distance_sum.sum(axis=0)
+        counts = instance.window_distance_count.sum(axis=0)
+    else:
+        raise ValueError(f"unknown scope {scope!r}")
+    return np.divide(sums, counts, out=np.full_like(sums, np.nan), where=counts > 0)
 
 
 def _independence(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     """EN: `IPF(ones)` — the no-information model. CN: `IPF(ones)`，无信息模型。"""
-    ones = np.ones((source.size, target.size), dtype=np.float64)
-    return align_to_marginals(ones, source, target)
+    return align_to_marginals(np.ones((source.size, target.size), dtype=np.float64), source, target)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -128,7 +167,8 @@ def main(argv: list[str] | None = None) -> int:
     log = RunLog(run_dir / "run.log")
     instance = Instance.load(Path(config.instance))
     log.line(f"instance {config.instance}: n_zones={instance.n_zones} windows={instance.n_windows}")
-    log.line(f"arms={config.arms} folds={instance.n_windows} (leave-one-window-out); forward model: exact OT")
+    log.line(f"arms={config.arms} scopes={config.scopes} imputations={config.imputations} "
+             f"restrict_edges={config.restrict_edges}; forward model: exact OT")
 
     names = [name for name, *_ in WINDOWS]
     records: list[RunRecord] = []
@@ -142,41 +182,73 @@ def main(argv: list[str] | None = None) -> int:
         extras: dict[str, dict[str, object]] = {}
         if "independence" in config.arms:
             predictions["independence"] = _independence(source, target)
-        if "gravity" in config.arms:
-            started = time.perf_counter()
-            fit = fit_gravity(instance.train_flows[train], instance.distance)
-            predictions["gravity"] = fit.predict(source, target, instance.distance)
-            extras["gravity"] = {"alpha": fit.alpha, "beta": fit.beta, "gamma": fit.gamma,
-                                 "seconds": round(time.perf_counter() - started, 3)}
-            log.line(f"[{names[held_out]:>16}] gravity fit: alpha={fit.alpha:.3f} beta={fit.beta:.3f} "
-                     f"gamma={fit.gamma:.3f}")
-        if "shared_theta" in config.arms:
-            for family in config.families:
+        for scope in config.scopes:
+            distance = _distance(instance, scope, train)
+            unsupported = int(np.count_nonzero(np.isnan(distance)))
+            if "gravity" in config.arms:
                 started = time.perf_counter()
-                fit_shared = fit_shared_theta(train_flows, instance.distance, family=str(family),
-                                              rank=int(config.rank), iterations=int(config.iterations))
-                arm = f"shared_theta_{family}"
-                predictions[arm] = fit_shared.predict(source, target)
-                # EN: the formulation's own held-out reading, with the SAME features the fit used (for the
-                #     low-rank family those depend on this fold's training flows, so they are rebuilt here).
-                # CN: 该形式自身的留出读数，使用与拟合相同的特征（低秩族的特征依赖本折训练流量，故在此重建）。
-                features = mixed_features(instance.distance, train_flows, family=str(family),
-                                          rank=int(config.rank))
-                uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
-                regret_test = regret_of(fit_shared.theta, features, observed)
-                regret_uniform = regret_of(uniform_theta, features, observed)
-                extras[arm] = {
-                    "family": str(family),
-                    "theta": [float(v) for v in fit_shared.theta],
-                    "train_objective": fit_shared.objective,
-                    "regret_test": regret_test,
-                    "regret_uniform": regret_uniform,
-                    "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
-                    "seconds": round(time.perf_counter() - started, 3),
-                }
-                log.line(f"[{names[held_out]:>16}] {arm}: theta={np.round(fit_shared.theta, 3).tolist()} "
-                         f"F_train={fit_shared.objective:.4e} R_test={regret_test:.4e} "
-                         f"R_uniform={regret_uniform:.4e} ratio={extras[arm]['regret_ratio']:.5f}")
+                fit = fit_gravity(instance.train_flows[train], distance)
+                arm = f"gravity_{scope}"
+                predictions[arm] = fit.predict(source, target, distance)
+                extras[arm] = {"alpha": fit.alpha, "beta": fit.beta, "gamma": fit.gamma,
+                               "distance_fill": fit.distance_fill,
+                               "unsupported_pairs": unsupported,
+                               "seconds": round(time.perf_counter() - started, 3)}
+            if "shared_theta" in config.arms:
+                for imputation in config.imputations:
+                    started = time.perf_counter()
+                    fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
+                                                  iterations=int(config.iterations),
+                                                  unsupported=str(imputation))
+                    arm = f"shared_theta_{scope}_{imputation}"
+                    predictions[arm] = fit_shared.predict(source, target)
+                    features = mixed_features(distance, train_flows, family=str(config.family),
+                                              unsupported=str(imputation))
+                    uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
+                    regret_test = regret_of(fit_shared.theta, features, observed)
+                    regret_uniform = regret_of(uniform_theta, features, observed)
+                    extras[arm] = {
+                        "scope": scope, "imputation": imputation,
+                        "theta": [float(v) for v in fit_shared.theta],
+                        "train_objective": fit_shared.objective,
+                        "regret_test": regret_test, "regret_uniform": regret_uniform,
+                        "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
+                        "unsupported_pairs": unsupported,
+                        "seconds": round(time.perf_counter() - started, 3),
+                    }
+                    log.line(f"[{names[held_out]:>16}] {arm}: theta={np.round(fit_shared.theta, 3).tolist()} "
+                             f"F_train={fit_shared.objective:.4e} ratio={extras[arm]['regret_ratio']:.5f} "
+                             f"unsupported={unsupported}")
+                if bool(config.restrict_edges):
+                    started = time.perf_counter()
+                    fit_shared = fit_shared_theta(train_flows, distance, family=str(config.family),
+                                                  iterations=int(config.iterations), unsupported="median",
+                                                  restrict_edges=True)
+                    arm = f"shared_theta_{scope}_edges"
+                    predictions[arm] = fit_shared.predict(source, target)
+                    allowed = ~np.isnan(distance)
+                    features = mixed_features(distance, train_flows, family=str(config.family),
+                                              unsupported="median")
+                    uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
+                    regret_test = regret_of(fit_shared.theta, features, observed, allowed=allowed)
+                    regret_uniform = regret_of(uniform_theta, features, observed, allowed=allowed)
+                    forbidden = ~allowed
+                    extras[arm] = {
+                        "scope": scope, "imputation": "median", "edges": "train_support",
+                        "theta": [float(v) for v in fit_shared.theta],
+                        "train_objective": fit_shared.objective,
+                        "forbidden_forward_mass": fit_shared.forbidden_mass,
+                        "test_mass_on_forbidden": float(observed[forbidden].sum()),
+                        "test_mass_fraction_on_forbidden": (float(observed[forbidden].sum())
+                                                            / float(observed.sum()) if observed.sum() else 0.0),
+                        "regret_test": regret_test, "regret_uniform": regret_uniform,
+                        "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
+                        "seconds": round(time.perf_counter() - started, 3),
+                    }
+                    log.line(f"[{names[held_out]:>16}] {arm}: F_train={fit_shared.objective:.4e} "
+                             f"ratio={extras[arm]['regret_ratio']:.5f} "
+                             f"forbidden_mass={fit_shared.forbidden_mass:.3e} "
+                             f"test_mass_on_forbidden={extras[arm]['test_mass_on_forbidden']:.0f}")
         for arm, prediction in predictions.items():
             scores = flow_scores(prediction, observed)
             metrics: dict[str, float] = scores.to_dict()
@@ -187,8 +259,6 @@ def main(argv: list[str] | None = None) -> int:
                 k=int(len(extras[arm]["theta"])) if arm in extras and "theta" in extras[arm] else 0,
                 m=instance.n_zones, draw=held_out, metrics=metrics,
                 config=config.to_dict(), extra=extras.get(arm, {})))
-            log.line(f"[{names[held_out]:>16}] {arm:>26} rmse={scores.rmse:9.2f} corr={scores.correlation:.4f} "
-                     f"cpc={scores.cpc:.4f}")
 
     write_records(run_dir / "records.json", records, provenance=PROVENANCE)
     table = summarise(records, group=("arm",), metrics=("rmse", "correlation", "cpc", "regret_ratio"))

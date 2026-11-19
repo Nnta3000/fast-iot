@@ -83,7 +83,8 @@ def nonnegative_factors(flow: Float[np.ndarray, "n n"], *, rank: int, iterations
 
 
 def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "distance_power",
-                      include_constant: bool = False) -> Float[np.ndarray, "n n k"]:
+                      include_constant: bool = False, unsupported: str = "median",
+                      fill_value: float | None = None) -> Float[np.ndarray, "n n k"]:
     """
     EN: the feature family for a distance-structured cost, as `(n, n, K)` non-negative columns.
 
@@ -93,6 +94,13 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
         preference between them (measured on another instance in `notes/KERNEL_DICTIONARY_AXIS.md`). A weighted
         *sum* of `1, s, s^2, log(1+s)` changes the ranking.
 
+        **Pairs with no training trip carry `NaN`, and are never silently zero.** Two declared treatments:
+        `unsupported="median"` replaces them by `fill_value` (the median observed distance when that is `None`), a
+        single stated assumption; `unsupported="mask"` keeps the distance columns at zero there and appends one
+        indicator column equal to 1 on exactly those pairs. The mask can only *add* cost where theta >= 0, so it can
+        never make an unexplored pair cheaper than an observed one -- it is reported as a sensitivity, not as the
+        model.
+
         **A constant column is excluded by default, and that is a measured decision, not a tidiness one.** Adding a
         constant to a cost leaves every OT plan unchanged, so a constant column looks like a harmless gauge
         direction. It is not, under `min_theta R`: a *constant cost* makes every plan matching the marginals
@@ -100,6 +108,11 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
         returned `theta = e_constant` and `R_test / R_uniform = 5e-5` on all six held-out windows — a perfect
         "generalisation" that says nothing about the data. The column is therefore off unless explicitly requested,
         and the degeneracy is documented where the fit is reported.
+
+    CN: **无训练行程的对存 `NaN`，绝不静默置零。** 两种声明式处理：`unsupported="median"` 用 `fill_value`（未给出时取
+        观测距离的中位数）替换，是一个明确陈述的假设；`unsupported="mask"` 让距离列在这些对上取 0，并追加一列指示（恰在这些
+        对上为 1）。由于 `theta>=0`，掩码只能**增加**代价，永远不能让未探索的对比已观测的对更便宜 —— 故作为敏感性报告，而不是
+        主模型。
 
     CN: 距离结构代价的特征族，`(n, n, K)` 的非负列。`distance_power` 用 `{s, s², log(1+s)}`（`s=d/max(d)`）加同
         zone 指示列。刻意不是单一核的多带宽：不同 `sigma` 的 `exp(-d/sigma)` 互为单调变换，排序相同，`theta` 无法表达
@@ -111,8 +124,20 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
     spacing = np.asarray(distance, dtype=np.float64)
     if spacing.ndim != 2 or spacing.shape[0] != spacing.shape[1]:
         raise ValueError(f"distance must be square; got {spacing.shape}")
-    if np.any(spacing < 0.0):
-        raise ValueError("distance must be non-negative")
+    missing = np.isnan(spacing)
+    observed = ~missing
+    if np.any(spacing[observed] < 0.0):
+        raise ValueError("distance must be non-negative where observed")
+    if not np.any(observed):
+        raise ValueError("distance has no observed entry")
+    treatment = str(unsupported)
+    if treatment not in {"median", "mask"}:
+        raise ValueError(f"unsupported must be 'median' or 'mask'; got {unsupported!r}")
+    fill = float(fill_value) if fill_value is not None else float(np.median(spacing[observed]))
+    if treatment == "median":
+        spacing = np.where(missing, fill, spacing)
+    else:
+        spacing = np.where(missing, 0.0, spacing)
     scale = float(spacing.max())
     if scale <= 0.0:
         raise ValueError("distance is identically zero")
@@ -124,6 +149,8 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
             np.log1p(normalised),
             np.eye(spacing.shape[0], dtype=np.float64),
         ]
+        if treatment == "mask":
+            columns.append(missing.astype(np.float64))
         if bool(include_constant):
             columns.insert(0, np.ones_like(normalised))
         return np.ascontiguousarray(np.stack(columns, axis=2), dtype=np.float64)
@@ -132,7 +159,8 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
 
 def mixed_features(distance: Float[np.ndarray, "n n"], flows: Float[np.ndarray, "windows n n"], *,
                    family: str = "distance_power", rank: int = 4,
-                   include_constant: bool = False) -> Float[np.ndarray, "n n k"]:
+                   include_constant: bool = False, unsupported: str = "median",
+                   fill_value: float | None = None) -> Float[np.ndarray, "n n k"]:
     """
     EN: the feature tensor for a family, built from the given (training) flows.
 
@@ -147,7 +175,8 @@ def mixed_features(distance: Float[np.ndarray, "n n"], flows: Float[np.ndarray, 
         列 `u_r(i)v_r(j)`，由对**传入流量之和**做非负分解得到。每列缩放到单位 Frobenius 范数，使 `theta` 在距离块与交互块
         之间的分配是形状选择而不是幅度选择（与本研究其它地方的规范一致）。传入训练流量正是因子不泄漏的原因：留出窗从不参与。
     """
-    base = distance_features(distance, family="distance_power", include_constant=include_constant)
+    base = distance_features(distance, family="distance_power", include_constant=include_constant,
+                             unsupported=str(unsupported), fill_value=fill_value)
     if str(family) == "distance_power":
         return base
     if str(family) != "distance_lowrank":
@@ -178,6 +207,7 @@ class SharedThetaFit:
     objective: float
     history: tuple[float, ...] = field(default=())
     iterations: int = 0
+    forbidden_mass: float = 0.0
 
     @property
     def n_features(self) -> int:
@@ -197,23 +227,24 @@ class SharedThetaFit:
 
 
 def regret_of(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"],
-              plan: Float[np.ndarray, "n n"]) -> float:
+              plan: Float[np.ndarray, "n n"], *, allowed: np.ndarray | None = None) -> float:
     """
-    EN: `R(theta) = <c(theta), pi_hat> - OT(c(theta))` for one plan, at the plan's own marginals.
+    EN: `R(theta) = <c(theta), pi_hat> - OT_E(c(theta))` for one plan, at the plan's own marginals.
 
-        `R >= 0` and `R = 0` exactly when the plan is optimal at `c(theta)`; it is the formulation's own measure of
-        how far the observation is from being explained. Reported on held-out windows, normalised by the value at
-        the uniform `theta` so the number is comparable across instances.
+        `R >= 0` and `R = 0` exactly when the plan is optimal at `c(theta)` (over `E` when `allowed` is given). It is
+        the formulation's own measure of how far the observation is from being explained. Reported on held-out
+        windows, normalised by the value at the uniform `theta`.
 
-    CN: 单个计划在自身 marginal 下的 `R(theta) = <c(theta),pi_hat> - OT(c(theta))`。`R>=0`，且 `R=0` 恰当计划
-        在 `c(theta)` 处最优；它是该形式自身的"观测被解释到什么程度"的度量。在留出窗上报告，并用均匀 `theta` 处的值归一，
-        使跨实例可比。
+    CN: 单个计划在自身 marginal 下的 `R(theta) = <c(theta),pi_hat> - OT_E(c(theta))`（给出 `allowed` 时在 `E` 上取
+        OT）。`R>=0`，且 `R=0` 恰当计划在 `c(theta)` 处最优。它是该形式自身的"观测被解释到什么程度"的度量；在留出窗上报告，
+        并用均匀 `theta` 处的值归一。
     """
     cost = np.tensordot(features, np.asarray(theta, dtype=np.float64), axes=([2], [0]))
     flow = np.asarray(plan, dtype=np.float64)
     rows = flow.sum(axis=1)
     cols = flow.sum(axis=0)
-    return float(np.sum(cost * flow) - ot.emd2(rows, cols, cost, numItermax=2_000_000))
+    forward = _forward_plan(cost, rows, cols, allowed)
+    return float(np.sum(cost * flow) - np.sum(cost * forward))
 
 
 def fit_shared_theta(
@@ -223,12 +254,24 @@ def fit_shared_theta(
     family: str = "distance_power",
     rank: int = 4,
     iterations: int = 200,
+    unsupported: str = "median",
+    restrict_edges: bool = False,
 ) -> SharedThetaFit:
     """
     EN: Frank–Wolfe on the simplex for the summed regret.
 
         Each iteration needs one exact OT solve per window, so the iteration count is kept modest and the objective
         trace is returned: a reader can see whether the run stopped at a plateau or hit the cap.
+
+    EN: `restrict_edges=True` forbids every pair that had no training trip, which is the edge-set formulation (E
+        strictly inside the full grid) and the analogue of the graph restriction in Stuart & Wolfram. Forbidden
+        pairs are given a large finite cost rather than an infinite one, so the LP stays finite; the mass the forward
+        plan places on forbidden pairs is reported by `SharedThetaFit.forbidden_mass` and must be zero for the
+        restriction to be doing what it says.
+
+    CN: `restrict_edges=True` 禁止所有没有训练行程的对，这正是边集形式（E 严格包含于全网格），也是 Stuart & Wolfram
+        图限制的类比。被禁的对给一个**大而有限**的代价而不是无穷，使 LP 保持有限；前向计划落在被禁对上的质量由
+        `SharedThetaFit.forbidden_mass` 报告，必须为 0 才算限制真正生效。
 
     CN: 单纯形上的 Frank–Wolfe，最小化求和 regret。每次迭代每窗一次精确 OT 求解，故迭代数取得适中，并返回目标轨迹：
         读者能看出是到平台还是被迭代上限截断。`family` 选择假设类，`rank` 只对 `distance_lowrank` 有意义。
@@ -240,12 +283,14 @@ def fit_shared_theta(
         raise ValueError("flows must be non-negative")
     if int(iterations) < 1:
         raise ValueError("iterations must be at least 1")
-    features = mixed_features(distance, observed, family=str(family), rank=int(rank))
+    features = mixed_features(distance, observed, family=str(family), rank=int(rank),
+                              unsupported=str(unsupported))
+    allowed = ~np.isnan(np.asarray(distance, dtype=np.float64)) if bool(restrict_edges) else None
     n_windows = int(observed.shape[0])
     k = int(features.shape[2])
     theta = np.full(k, 1.0 / k, dtype=np.float64)
     history: list[float] = []
-    objective = _summed_regret(theta, features, observed, n_windows)
+    objective = _summed_regret(theta, features, observed, n_windows, allowed)
     history.append(objective)
     for step in range(1, int(iterations) + 1):
         gradient = np.zeros(k, dtype=np.float64)
@@ -254,24 +299,57 @@ def fit_shared_theta(
             rows = plan.sum(axis=1)
             cols = plan.sum(axis=0)
             cost = np.tensordot(features, theta, axes=([2], [0]))
-            forward = np.asarray(ot.emd(rows, cols, cost, numItermax=2_000_000), dtype=np.float64)
+            forward = _forward_plan(cost, rows, cols, allowed)
             gradient += np.tensordot(features, plan - forward, axes=([0, 1], [0, 1]))
         vertex = np.zeros(k, dtype=np.float64)
         vertex[int(np.argmin(gradient))] = 1.0
         step_size = 2.0 / (step + 2.0)
         candidate = (1.0 - step_size) * theta + step_size * vertex
-        candidate_value = _summed_regret(candidate, features, observed, n_windows)
+        candidate_value = _summed_regret(candidate, features, observed, n_windows, allowed)
         # EN: FW with a 2/(t+2) step is monotone for a convex objective up to rounding; keep the better point.
         # CN: 凸目标下 2/(t+2) 步长的 FW 在舍入误差内单调；保留更好的点。
         if candidate_value <= objective:
             theta, objective = candidate, candidate_value
         history.append(objective)
+    forbidden_mass = 0.0
+    if allowed is not None:
+        # EN: report the mass the forward plan places on forbidden pairs; a nonzero value means the restriction is
+        #     not binding as stated (the LP needed those edges), which must not be silently accepted.
+        # CN: 报告前向计划落在被禁对上的质量；非零说明限制并不像声明的那样生效（LP 需要那些边），不能静默接受。
+        cost = np.tensordot(features, theta, axes=([2], [0]))
+        forbidden_mass = float(sum(
+            _forward_plan(cost, observed[w].sum(axis=1), observed[w].sum(axis=0), allowed)[~allowed].sum()
+            for w in range(int(observed.shape[0]))))
     return SharedThetaFit(theta=theta, features=features, objective=float(objective),
-                          history=tuple(history), iterations=int(iterations))
+                          history=tuple(history), iterations=int(iterations),
+                          forbidden_mass=forbidden_mass)
+
+
+FORBIDDEN_COST: float = 1e3
+
+
+def _forward_plan(cost: Float[np.ndarray, "n n"], rows: Float[np.ndarray, "n"], cols: Float[np.ndarray, "n"],
+                  allowed: np.ndarray | None) -> Float[np.ndarray, "n n"]:
+    """
+    EN: exact OT plan, restricted to `allowed` pairs when given.
+
+        Forbidden pairs get `FORBIDDEN_COST` (large but finite) instead of infinity: POT's network simplex works with
+        finite costs, and a large one keeps the problem feasible. `SharedThetaFit.forbidden_mass` reports whether any
+        mass still landed there.
+
+    CN: 精确 OT 计划；给出 `allowed` 时限制在这些对上。被禁对用 `FORBIDDEN_COST`（大而有限）而不是无穷：POT 的网络单纯形
+        使用有限代价，大的有限值使问题保持可行。是否有质量仍落在那里由 `SharedThetaFit.forbidden_mass` 报告。
+    """
+    cost = np.asarray(cost, dtype=np.float64)
+    if allowed is not None:
+        cost = np.where(np.asarray(allowed, dtype=bool), cost, FORBIDDEN_COST)
+    return np.asarray(ot.emd(np.asarray(rows, dtype=np.float64), np.asarray(cols, dtype=np.float64), cost,
+                             numItermax=2_000_000), dtype=np.float64)
 
 
 def _summed_regret(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n n k"],
-                   observed: Float[np.ndarray, "windows n n"], n_windows: int) -> float:
+                   observed: Float[np.ndarray, "windows n n"], n_windows: int,
+                   allowed: np.ndarray | None = None) -> float:
     """
     EN: `F(theta) = sum_l [<c, pi_hat_l> - OT_l(c)]`, one forward solve per window.
 
@@ -287,5 +365,6 @@ def _summed_regret(theta: Float[np.ndarray, "k"], features: Float[np.ndarray, "n
         plan = observed[window]
         rows = plan.sum(axis=1)
         cols = plan.sum(axis=0)
-        total += float(np.sum(cost * plan) - ot.emd2(rows, cols, cost, numItermax=2_000_000))
+        forward = _forward_plan(cost, rows, cols, allowed)
+        total += float(np.sum(cost * plan) - np.sum(cost * forward))
     return float(total)

@@ -47,6 +47,7 @@ class GravityFit:
     beta: float
     gamma: float
     distance_floor: float
+    distance_fill: float = 0.0
 
     def predict(
         self,
@@ -71,6 +72,11 @@ class GravityFit:
         spacing = np.asarray(distance, dtype=np.float64)
         if spacing.shape != (rows.size, cols.size):
             raise ValueError(f"distance shape {spacing.shape} does not match ({rows.size}, {cols.size})")
+        # EN: a pair with no training trip has no distance (`NaN`); it is filled with the declared `distance_fill`
+        #     (the median observed distance) before the floor is applied. NaN must not reach `log`.
+        # CN: 无训练行程的对没有距离（`NaN`），先用声明的 `distance_fill`（观测距离中位数）补齐，再取下限；NaN 绝不能进入
+        #     `log`。
+        spacing = np.where(np.isnan(spacing), float(self.distance_fill), spacing)
         safe_distance = np.maximum(spacing, float(self.distance_floor))
         log_rows = np.log(np.maximum(rows, 1e-300))[:, None]
         log_cols = np.log(np.maximum(cols, 1e-300))[None, :]
@@ -101,6 +107,7 @@ def fit_gravity(
         than answered with an arbitrary solution.
 
     CN: 对 `log T = c + α log O + β log D − γ log d` 做最小二乘。只有 `T>0` 且 `d>0` 的元素进入回归（零的对数不是观测）。
+        无训练行程的对（距离为 `NaN`）不进入回归，预测时用观测距离中位数补齐（`distance_fill`）。
         设计矩阵为 `[1, log O, log D, log d]`，返回的 `γ = −coef(log d)` 以保持论文的符号约定（`gamma` 为正表示随距离衰减）。
         可用元素少于五个时问题欠定，直接报错而不是给出任意解。
     """
@@ -113,6 +120,10 @@ def fit_gravity(
     if np.any(flows < 0.0):
         raise ValueError("train_flows must be non-negative")
     floor = float(distance_floor) if distance_floor is not None else _default_floor(spacing)
+    # EN: the imputation for pairs with no training trip: the median observed distance, one stated assumption.
+    # CN: 无训练行程对的插补值：观测距离的中位数，一个明确陈述的假设。
+    observed_distances = spacing[~np.isnan(spacing)]
+    fill = float(np.median(observed_distances)) if observed_distances.size else 0.0
 
     rows_source = flows.sum(axis=2)          # (windows, n)
     rows_target = flows.sum(axis=1)          # (windows, n)
@@ -140,7 +151,7 @@ def fit_gravity(
     coefficients, *_ = np.linalg.lstsq(a, y, rcond=None)
     intercept, alpha, beta, log_distance = (float(value) for value in coefficients)
     return GravityFit(intercept=intercept, alpha=alpha, beta=beta, gamma=-log_distance,
-                      distance_floor=floor)
+                      distance_floor=floor, distance_fill=fill)
 
 
 def _default_floor(distance: Float[np.ndarray, "n n"]) -> float:

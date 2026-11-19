@@ -176,7 +176,12 @@ def accumulate_distance(pickup: Int[np.ndarray, "trips"], dropoff: Int[np.ndarra
     flat = pickup * n + dropoff
     sums = np.bincount(flat, weights=distance, minlength=n * n).reshape(n, n)
     counts = np.bincount(flat, minlength=n * n).reshape(n, n).astype(np.float64)
-    mean = np.divide(sums, counts, out=np.zeros_like(sums), where=counts > 0)
+    # EN: **no zero sentinel.** A pair with no trip has no distance; storing 0 would mean "same location" and
+    #     silently makes it the cheapest pair in any cost built from it. NaN forces each consumer to say what it
+    #     does (impute, mask, or forbid the edge).
+    # CN: **不用 0 哨兵。** 没有行程的对没有距离；存 0 等于"同一地点"，会让它成为任何代价里最便宜的一对。存 NaN 迫使
+    #     每个使用方声明做法（插补、掩码或禁止该边）。
+    mean = np.divide(sums, counts, out=np.full_like(sums, np.nan), where=counts > 0)
     return mean, counts
 
 
@@ -195,6 +200,8 @@ class Instance:
     test_target: Float[np.ndarray, "windows zones"]
     distance: Float[np.ndarray, "zones zones"]
     distance_count: Float[np.ndarray, "zones zones"]
+    window_distance_sum: Float[np.ndarray, "windows zones zones"]
+    window_distance_count: Float[np.ndarray, "windows zones zones"]
     manifest: dict[str, object] = field(default_factory=dict)
 
     @property
@@ -216,6 +223,7 @@ class Instance:
             train_source=self.train_source, train_target=self.train_target,
             test_source=self.test_source, test_target=self.test_target,
             distance=self.distance, distance_count=self.distance_count,
+            window_distance_sum=self.window_distance_sum, window_distance_count=self.window_distance_count,
         )
         path.with_suffix(".manifest.json").write_text(json.dumps(self.manifest, indent=2, sort_keys=True))
         return path
@@ -235,6 +243,8 @@ class Instance:
             test_target=np.asarray(arrays["test_target"], dtype=np.float64),
             distance=np.asarray(arrays["distance"], dtype=np.float64),
             distance_count=np.asarray(arrays["distance_count"], dtype=np.float64),
+            window_distance_sum=np.asarray(arrays["window_distance_sum"], dtype=np.float64),
+            window_distance_count=np.asarray(arrays["window_distance_count"], dtype=np.float64),
             manifest=manifest,
         )
 
@@ -283,11 +293,23 @@ def build(path: Path, *, test_fraction: float = TEST_FRACTION, seed: int = SPLIT
         "note": "n=263 is the official TLC zone discretisation; the cited paper's n=100 merge rule is not stated, "
                 "so no merge is applied.",
     }
+    # EN: per-window distance moments over the TRAIN trips of that window, so a fold can build the distance from
+    #     the other five windows only (`other_windows`) or from all six (`all_train`).
+    # CN: 逐窗（该窗训练行程）的距离矩，使一个折既能只用其余五窗构造距离（`other_windows`），也能用全部六窗
+    #     （`all_train`）。
+    window_sum = np.zeros((len(WINDOWS), N_ZONES, N_ZONES), dtype=np.float64)
+    window_count = np.zeros_like(window_sum)
+    for k in range(len(WINDOWS)):
+        selected = (~is_test) & (window == k)
+        mean_k, count_k = accumulate_distance(pickup[selected], dropoff[selected], distance[selected])
+        window_count[k] = count_k
+        window_sum[k] = np.where(count_k > 0, mean_k * count_k, 0.0)
     return Instance(
         train_flows=train_flows, test_flows=test_flows,
         train_source=train_flows.sum(axis=2), train_target=train_flows.sum(axis=1),
         test_source=test_flows.sum(axis=2), test_target=test_flows.sum(axis=1),
         distance=distance_mean, distance_count=distance_count,
+        window_distance_sum=window_sum, window_distance_count=window_count,
         manifest=manifest,
     )
 
