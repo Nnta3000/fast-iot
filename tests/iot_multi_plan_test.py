@@ -19,7 +19,8 @@ import numpy as np
 import ot
 import pytest
 
-from iot.relaxed.multi_plan import SharedThetaFit, distance_features, fit_shared_theta, regret_of
+from iot.relaxed.multi_plan import (SharedThetaFit, distance_features, fit_shared_theta,
+                                    mixed_features, regret_of)
 
 
 def _geometry(n: int = 9, seed: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -146,3 +147,30 @@ def test_a_constant_feature_makes_the_regret_trivially_zero() -> None:
         vertex = np.zeros(without_constant.shape[2])
         vertex[k] = 1.0
         assert regret_of(vertex, without_constant, rank_one) > 0.0
+
+
+def test_lowrank_family_adds_non_negative_interaction_columns_from_the_given_flows() -> None:
+    """
+    EN: the low-rank block is built from the flows passed in, is non-negative, and adds exactly `rank` columns.
+
+        A per-zone term `a_i + b_j` would be absorbed by the OT duals and change no plan, so the block must be an
+        *interaction* `u_i v_j`, which is why the factors are not summed into per-zone potentials. The test also
+        checks the leakage property that is checkable without a held-out window: two different flow tensors give two
+        different feature tensors.
+
+    CN: 低秩块由传入流量构造、非负、且恰好增加 `rank` 列。形如 `a_i + b_j` 的逐 zone 项会被 OT 对偶吸收、不改变任何计划，
+        故该块必须是**交互** `u_i v_j`，这也是因子不被求和成逐 zone 势的原因。测试还检查一个无需留出窗即可检查的不泄漏性质：
+        不同的流量张量给出不同的特征张量。
+    """
+    _points, distance, source, target = _geometry()
+    first = np.stack([np.outer(source, target)])
+    second = np.stack([np.outer(target, source)])
+    features_first = mixed_features(distance, first, family="distance_lowrank", rank=3)
+    features_second = mixed_features(distance, second, family="distance_lowrank", rank=3)
+    assert features_first.shape[2] == 4 + 3
+    assert float(features_first.min()) >= 0.0
+    # EN: each appended column has unit Frobenius norm (the gauge), so theta's split is a shape choice.
+    # CN: 追加的每列是单位 Frobenius 范数（规范），故 theta 的分配是形状选择。
+    for k in range(4, 7):
+        assert float(np.linalg.norm(features_first[:, :, k])) == pytest.approx(1.0)
+    assert not np.allclose(features_first, features_second), "the factors must depend on the flows passed in"

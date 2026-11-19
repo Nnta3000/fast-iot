@@ -14,6 +14,17 @@ EN: **One parameter, several observed plans** — the shared-`theta` arm for a m
 
     one exact OT solve per window. The solver is Frank–Wolfe on the simplex with the standard `2/(t+2)` step.
 
+    **Two hypothesis classes.** `distance_power` uses only inter-zone distance. A cost built from distance alone
+    cannot express zone-level structure, and measured on NYC taxi it collapsed onto one distance column
+    (`theta = (0,1,0,0)`), i.e. "trips are short" and nothing else. `distance_lowrank` adds `R` non-negative
+    rank-one terms `u_r(i) v_r(j)` obtained by a non-negative factorisation of the **training** flows, so the cost
+    can be cheap between a specific origin and a specific destination for reasons other than distance. The factors
+    are computed from the flows passed in, so nothing from a held-out window enters them.
+
+    Note what the low-rank terms are *not*: a term of the form `a_i + b_j` (a per-zone attractiveness) would be
+    absorbed by the OT duals and would leave every plan unchanged — only genuine interactions `u_i v_j` move the
+    optimum. That is also why "add per-zone potentials" is not a bigger hypothesis class here.
+
     The forward model is exact OT, so a predicted plan is a basic feasible solution with at most `m + n - 1`
     positive entries. On a flow instance that is a real restriction and it is reported, not worked around: the
     question this arm answers is whether the relaxed formulation's own quantity — the excess cost of the observed
@@ -37,7 +48,38 @@ import numpy as np
 import ot
 from jaxtyping import Float
 
-__all__ = ["SharedThetaFit", "distance_features", "fit_shared_theta", "regret_of"]
+__all__ = ["SharedThetaFit", "distance_features", "fit_shared_theta", "mixed_features",
+           "nonnegative_factors", "regret_of"]
+
+
+def nonnegative_factors(flow: Float[np.ndarray, "n n"], *, rank: int, iterations: int = 200,
+                        seed: int = 0) -> tuple[Float[np.ndarray, "n rank"], Float[np.ndarray, "n rank"]]:
+    """
+    EN: non-negative factorisation `flow ~ U V^T` by Lee–Seung multiplicative updates (Frobenius objective).
+
+        Used to turn the training flows into interaction features. Non-negative is not cosmetic: `theta` is on the
+        simplex, so every feature column must be non-negative for the cost to stay non-negative. A signed SVD would
+        produce columns that cannot be combined this way.
+
+    CN: 用 Lee–Seung 乘性更新（Frobenius 目标）做非负分解 `flow ~ U Vᵀ`，把训练流量变成交互特征。非负不是装饰：`theta`
+        在单纯形上，特征列必须非负才能保证代价非负；带符号的 SVD 无法这样组合。
+    """
+    matrix = np.asarray(flow, dtype=np.float64)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"flow must be square; got {matrix.shape}")
+    if np.any(matrix < 0.0):
+        raise ValueError("flow must be non-negative")
+    if int(rank) < 1:
+        raise ValueError("rank must be at least 1")
+    rng = np.random.default_rng(int(seed))
+    n = matrix.shape[0]
+    scale = float(matrix.max()) if matrix.max() > 0 else 1.0
+    u = rng.random((n, int(rank))) * 0.1 * scale + 1e-12
+    v = rng.random((n, int(rank))) * 0.1 * scale + 1e-12
+    for _ in range(int(iterations)):
+        v *= (matrix.T @ u) / np.maximum(v @ (u.T @ u), 1e-300)
+        u *= (matrix @ v) / np.maximum(u @ (v.T @ v), 1e-300)
+    return u, v
 
 
 def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "distance_power",
@@ -86,6 +128,42 @@ def distance_features(distance: Float[np.ndarray, "n n"], *, family: str = "dist
             columns.insert(0, np.ones_like(normalised))
         return np.ascontiguousarray(np.stack(columns, axis=2), dtype=np.float64)
     raise ValueError(f"unknown feature family {family!r}")
+
+
+def mixed_features(distance: Float[np.ndarray, "n n"], flows: Float[np.ndarray, "windows n n"], *,
+                   family: str = "distance_power", rank: int = 4,
+                   include_constant: bool = False) -> Float[np.ndarray, "n n k"]:
+    """
+    EN: the feature tensor for a family, built from the given (training) flows.
+
+        `distance_power` is the distance block only. `distance_lowrank` appends `rank` non-negative interaction
+        columns `u_r(i) v_r(j)` from `nonnegative_factors` applied to the **sum of the flows passed in**. Each column
+        is scaled to unit Frobenius norm, so `theta`'s split between the distance block and the interaction block is
+        a shape choice rather than a magnitude choice (the same gauge as elsewhere in this study).
+
+        Passing the training flows is what keeps the factors leakage-free: a held-out window is never seen here.
+
+    CN: 某个族的特征张量，由给定（训练）流量构造。`distance_power` 只有距离块；`distance_lowrank` 追加 `rank` 个非负交互
+        列 `u_r(i)v_r(j)`，由对**传入流量之和**做非负分解得到。每列缩放到单位 Frobenius 范数，使 `theta` 在距离块与交互块
+        之间的分配是形状选择而不是幅度选择（与本研究其它地方的规范一致）。传入训练流量正是因子不泄漏的原因：留出窗从不参与。
+    """
+    base = distance_features(distance, family="distance_power", include_constant=include_constant)
+    if str(family) == "distance_power":
+        return base
+    if str(family) != "distance_lowrank":
+        raise ValueError(f"unknown family {family!r}")
+    observed = np.asarray(flows, dtype=np.float64)
+    if observed.ndim != 3:
+        raise ValueError(f"flows must be (windows, n, n); got {observed.shape}")
+    u, v = nonnegative_factors(observed.sum(axis=0), rank=int(rank))
+    columns = [base]
+    for r in range(int(rank)):
+        column = u[:, r][:, None] * v[:, r][None, :]
+        norm = float(np.linalg.norm(column))
+        if norm <= 0.0:
+            raise ValueError(f"low-rank column {r} is identically zero")
+        columns.append((column / norm)[:, :, None])
+    return np.ascontiguousarray(np.concatenate(columns, axis=2), dtype=np.float64)
 
 
 @dataclass(frozen=True)
@@ -143,6 +221,7 @@ def fit_shared_theta(
     distance: Float[np.ndarray, "n n"],
     *,
     family: str = "distance_power",
+    rank: int = 4,
     iterations: int = 200,
 ) -> SharedThetaFit:
     """
@@ -152,7 +231,7 @@ def fit_shared_theta(
         trace is returned: a reader can see whether the run stopped at a plateau or hit the cap.
 
     CN: 单纯形上的 Frank–Wolfe，最小化求和 regret。每次迭代每窗一次精确 OT 求解，故迭代数取得适中，并返回目标轨迹：
-        读者能看出是到平台还是被迭代上限截断。
+        读者能看出是到平台还是被迭代上限截断。`family` 选择假设类，`rank` 只对 `distance_lowrank` 有意义。
     """
     observed = np.asarray(flows, dtype=np.float64)
     if observed.ndim != 3:
@@ -161,7 +240,7 @@ def fit_shared_theta(
         raise ValueError("flows must be non-negative")
     if int(iterations) < 1:
         raise ValueError("iterations must be at least 1")
-    features = distance_features(distance, family=str(family))
+    features = mixed_features(distance, observed, family=str(family), rank=int(rank))
     n_windows = int(observed.shape[0])
     k = int(features.shape[2])
     theta = np.full(k, 1.0 / k, dtype=np.float64)

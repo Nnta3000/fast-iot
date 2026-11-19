@@ -44,7 +44,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from iot.external.metrics import align_to_marginals, flow_scores  # noqa: E402
 from iot.external.methods.gravity import fit_gravity  # noqa: E402
-from iot.relaxed.multi_plan import distance_features, fit_shared_theta, regret_of  # noqa: E402
+from iot.relaxed.multi_plan import fit_shared_theta, mixed_features, regret_of  # noqa: E402
 from iot_experiments.harness.config import RunConfig, build_parser  # noqa: E402
 from iot_experiments.harness.records import (  # noqa: E402
     RunLog,
@@ -86,12 +86,14 @@ class NycTaxiConfig(RunConfig):
     section: str = "related_nyc_taxi"
     instance: str = DEFAULT_INSTANCE
     arms: tuple[str, ...] = ("independence", "gravity", "shared_theta")
-    features: str = "distance_power"
+    families: tuple[str, ...] = ("distance_power", "distance_lowrank")
+    rank: int = 4
     iterations: int = 200
 
     def __post_init__(self) -> None:
         """EN: normalise and validate. CN: 归一化与校验。"""
         object.__setattr__(self, "arms", tuple(str(v) for v in self.arms))
+        object.__setattr__(self, "families", tuple(str(v) for v in self.families))
         allowed = {"independence", "gravity", "shared_theta"}
         unknown = set(self.arms) - allowed
         if unknown:
@@ -105,7 +107,8 @@ class NycTaxiConfig(RunConfig):
         """EN: only this study's flags. CN: 只加本研究特有的参数。"""
         parser.add_argument("--instance", default=DEFAULT_INSTANCE)
         parser.add_argument("--arms", nargs="+", default=["independence", "gravity", "shared_theta"])
-        parser.add_argument("--features", default="distance_power")
+        parser.add_argument("--families", nargs="+", default=["distance_power", "distance_lowrank"])
+        parser.add_argument("--rank", type=int, default=4)
         parser.add_argument("--iterations", type=int, default=200)
 
 
@@ -128,11 +131,10 @@ def main(argv: list[str] | None = None) -> int:
     log.line(f"arms={config.arms} folds={instance.n_windows} (leave-one-window-out); forward model: exact OT")
 
     names = [name for name, *_ in WINDOWS]
-    features_all = distance_features(instance.distance, family=str(config.features))
-    uniform_theta = np.full(features_all.shape[2], 1.0 / features_all.shape[2])
     records: list[RunRecord] = []
     for held_out in range(instance.n_windows):
         train = [k for k in range(instance.n_windows) if k != held_out]
+        train_flows = np.stack([instance.train_flows[k] for k in train])
         source = instance.test_source[held_out]
         target = instance.test_target[held_out]
         observed = instance.test_flows[held_out]
@@ -149,27 +151,32 @@ def main(argv: list[str] | None = None) -> int:
             log.line(f"[{names[held_out]:>16}] gravity fit: alpha={fit.alpha:.3f} beta={fit.beta:.3f} "
                      f"gamma={fit.gamma:.3f}")
         if "shared_theta" in config.arms:
-            started = time.perf_counter()
-            fit_shared = fit_shared_theta(np.stack([instance.train_flows[k] for k in train]),
-                                          instance.distance, family=str(config.features),
-                                          iterations=int(config.iterations))
-            predictions["shared_theta"] = fit_shared.predict(source, target)
-            # EN: the formulation's own held-out reading: the fitted cost on the unseen flow, normalised by the
-            #     uniform-theta reference so the number is not just the instance's scale.
-            regret_test = regret_of(fit_shared.theta, features_all, observed)
-            regret_uniform = regret_of(uniform_theta, features_all, observed)
-            extras["shared_theta"] = {
-                "theta": [float(v) for v in fit_shared.theta],
-                "train_objective": fit_shared.objective,
-                "train_objective_first": fit_shared.history[0] if fit_shared.history else None,
-                "regret_test": regret_test,
-                "regret_uniform": regret_uniform,
-                "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
-                "seconds": round(time.perf_counter() - started, 3),
-            }
-            log.line(f"[{names[held_out]:>16}] shared_theta: theta={np.round(fit_shared.theta, 4).tolist()} "
-                     f"F_train={fit_shared.objective:.4e} R_test={regret_test:.4e} "
-                     f"R_uniform={regret_uniform:.4e} ratio={extras['shared_theta']['regret_ratio']:.4f}")
+            for family in config.families:
+                started = time.perf_counter()
+                fit_shared = fit_shared_theta(train_flows, instance.distance, family=str(family),
+                                              rank=int(config.rank), iterations=int(config.iterations))
+                arm = f"shared_theta_{family}"
+                predictions[arm] = fit_shared.predict(source, target)
+                # EN: the formulation's own held-out reading, with the SAME features the fit used (for the
+                #     low-rank family those depend on this fold's training flows, so they are rebuilt here).
+                # CN: 该形式自身的留出读数，使用与拟合相同的特征（低秩族的特征依赖本折训练流量，故在此重建）。
+                features = mixed_features(instance.distance, train_flows, family=str(family),
+                                          rank=int(config.rank))
+                uniform_theta = np.full(features.shape[2], 1.0 / features.shape[2])
+                regret_test = regret_of(fit_shared.theta, features, observed)
+                regret_uniform = regret_of(uniform_theta, features, observed)
+                extras[arm] = {
+                    "family": str(family),
+                    "theta": [float(v) for v in fit_shared.theta],
+                    "train_objective": fit_shared.objective,
+                    "regret_test": regret_test,
+                    "regret_uniform": regret_uniform,
+                    "regret_ratio": regret_test / regret_uniform if regret_uniform > 0 else float("nan"),
+                    "seconds": round(time.perf_counter() - started, 3),
+                }
+                log.line(f"[{names[held_out]:>16}] {arm}: theta={np.round(fit_shared.theta, 3).tolist()} "
+                         f"F_train={fit_shared.objective:.4e} R_test={regret_test:.4e} "
+                         f"R_uniform={regret_uniform:.4e} ratio={extras[arm]['regret_ratio']:.5f}")
         for arm, prediction in predictions.items():
             scores = flow_scores(prediction, observed)
             metrics: dict[str, float] = scores.to_dict()
@@ -177,9 +184,10 @@ def main(argv: list[str] | None = None) -> int:
                 metrics["regret_ratio"] = float(extras[arm]["regret_ratio"])  # type: ignore[arg-type]
             records.append(RunRecord(
                 study=str(config.study), geometry=f"holdout_{names[held_out]}", arm=str(arm),
-                k=int(features_all.shape[2]), m=instance.n_zones, draw=held_out, metrics=metrics,
+                k=int(len(extras[arm]["theta"])) if arm in extras and "theta" in extras[arm] else 0,
+                m=instance.n_zones, draw=held_out, metrics=metrics,
                 config=config.to_dict(), extra=extras.get(arm, {})))
-            log.line(f"[{names[held_out]:>16}] {arm:>13} rmse={scores.rmse:9.2f} corr={scores.correlation:.4f} "
+            log.line(f"[{names[held_out]:>16}] {arm:>26} rmse={scores.rmse:9.2f} corr={scores.correlation:.4f} "
                      f"cpc={scores.cpc:.4f}")
 
     write_records(run_dir / "records.json", records, provenance=PROVENANCE)
