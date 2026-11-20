@@ -28,8 +28,8 @@ python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode 
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode benchmark --iterations 10 --max-seconds 45
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode sanity
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.diagnose --mode ramp \
-    --n 40 --seeds 0 1 2 3 4 5 6 7 8 9 --ks 10 40 80 --ls 5 20 --iterations 40 --tag ramp3   # ~4.5 min
-python -m iot_experiments.studies.synthetic.multi_observation_sparse.analyse_ramp                    # the table
+    --n 40 --seeds 0 1 2 3 4 5 6 7 8 9 --ks 10 40 80 --ls 5 20 --iterations 40 --tag ramp4   # ~12 min
+python -m iot_experiments.studies.synthetic.multi_observation_sparse.analyse_ramp --tag ramp4        # the table
 ```
 
 ## Results (all in `iot_experiments/out/multi_observation_sparse/`)
@@ -65,17 +65,31 @@ takes 66 s and grows like `n²`, so `n=12800` is ≈17 min per window per outer 
 the out-of-family control gives `F = 0.04–0.71` and agreement `0.24–0.27`. θ is not recovered (`θ_l1` 0.2–0.8) while
 the plans are: the identifiability cone, as expected. Not evidence about quality.
 
-**Ramp (hinge) basis** (`K ∈ {10,40,80}`, `L ∈ {5,20}`, `n=40`, 10 seeds, 40-iteration cap; records
-`out/multi_observation_sparse/diagnose/ramp3/`, table from `analyse_ramp.py`): the joint fit's held-out agreement is
-0.887–0.995 and averaging single fits gives 0.912–0.960; `cost_rel` is 0.140–0.193 for the joint fit and
-0.096–0.157 for averaging. Going from `L=5` to `L=20` lowers `‖θ−θ*‖₁` by only 7–16 %, while the error grows with
-`K` (0.61 → 1.29 → 1.54 at `L=5`). The joint fit keeps its weight on ramps that carry observed mass (0.000–0.070 on
-zero-mass ramps); averaging puts 27–42 % of its weight on ramps that are zero on every observed edge. Full table and
-the correction of an earlier wrong claim about monotone bases: `notes/MULTI_OBSERVATION_SPARSE_BUNDLE.md`,
-Addendum 2.
+**Ramp basis, discriminating instances** (`K ∈ {10,40,80}`, `L ∈ {5,20}`, `n=40`, 10 seeds; records
+`out/multi_observation_sparse/diagnose/ramp4/`, table by `analyse_ramp.py --tag ramp4`): the basis is first-difference
+hinges on quantile thresholds (chosen on conditioning: min correlation eigenvalue 1.75e-02 at `K=20` versus 5.15e-05
+for nested hinges), and `theta*` is rejection-sampled so that a fresh instance's **neutral** plan reproduces at most
+half of it. Neutral held-out agreement is 0.52–0.70 (the earlier hinge run had 0.87–0.93, which is why its gains were
+unreadable). Against neutral: at `K=10` the joint fit goes from **−0.128** (`L=5`) to **+0.158** (`L=20`), while
+averaging stays at +0.130/+0.115; at `K≥40` the joint fit hits the 40-iteration cap in 10/10 seeds with a gap of
+1e-2–7e-2, so those rows are **not** a certified optimum and cannot compare the arms. Averaging with versus without
+the windows that are already optimal at uniform θ changes the result at `K=10` (0.828 vs 0.715 at `L=5`), so the two
+are reported separately. Full table, basis/rule diagnostics and defects:
+`notes/MULTI_OBSERVATION_SPARSE_BUNDLE.md`, Addendum 2c. θ error is a diagnostic only.
+
+**Arms grid G3** (`K ∈ {10,20}`, `L ∈ {1,5,10}`, `p ∈ {0,0.2}`, uniform marginals, no control, 5 seeds; records
+`arms/g3/`, `arms/g3_big/`, `arms/g3_deep/`, table by `analyse_arms.py`): `theta*` is rejection-sampled on the bump
+basis (neutral held-out agreement 0.040 at `K=10`, 0.015 at `K=20`). Gains over neutral are large for every arm
+(+0.13 to +0.94), `A = B = C` exactly at `L = 1` (sanity), and `A_single` is below both `B` and `C` at `L ≥ 5`. The
+joint fit is **capped at 40 iterations in 9 of 12 cells** (gap 2.4e-03–1.2e-01), so its column is not a certified
+optimum; the C−B contrast is therefore unreliable except where checked. Re-running the one cell `K10 L5 p0` with 200
+iterations lets C converge (67.6 iterations, gap ≈ 0): C 0.960 vs B 0.855, `C−B = +0.105 ± 0.182`, `cost_rel` 0.223 vs
+0.339. The bounded big-plan arm (`n′ = 40/80/200`) appears to collapse at `K=20` but is capped 5/5 there with gap
+5e-03–1.8e-02; at `K20 L2 p0` the training objective is 8.6e-06, i.e. one plan does not identify θ. Details:
+`notes/MULTI_OBSERVATION_SPARSE_BUNDLE.md`, Addendum 3.
 
 ## Files
 
 `run.py` (four modes), `reference.py` (dense joint LP + dense FW), `diagnose.py` (degeneracy / fix / ramp modes),
-`analyse_ramp.py` (the ramp table), `../../../../src/iot/sparse/{features,sparse_ot,bundle_multi}.py`,
+`analyse_ramp.py` (the ramp table), `analyse_arms.py` (the arms table), `../../../../src/iot/sparse/{features,sparse_ot,bundle_multi}.py`,
 tests `tests/iot_sparse_ot_test.py`, `tests/iot_bundle_multi_test.py`.

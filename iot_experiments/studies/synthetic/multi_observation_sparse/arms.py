@@ -177,12 +177,121 @@ def _readings(theta: np.ndarray, planted: np.ndarray, held_features: FeatureMap,
     return Readings(agreement=agreement, excess_cost=excess, cost_rel=cost_rel)
 
 
+def _overlap(first: np.ndarray, second: np.ndarray) -> float:
+    """EN: mass overlap `Σ min(P, Q) / Σ P`. CN: 质量重叠 `Σ min(P,Q)/Σ P`。"""
+    total = float(np.asarray(first).sum())
+    return float(np.minimum(first, second).sum() / total) if total > 0 else float("nan")
+
+
+def _neutral_agreement(features: FeatureMap, theta: np.ndarray, n: int) -> float:
+    """
+    EN: on one instance, the share of the `theta` plan that the **neutral** (uniform-θ) plan also reproduces.
+
+        This is the quantity the acceptance rule thresholds: an instance whose neutral plan already reproduces most of
+        the planted plan cannot discriminate between arms.
+
+    CN: 在同一实例上，**中性**（均匀 θ）计划复现了 `theta` 计划的多大比例。接受规则就以此量设阈：中性计划已复现
+        大部分植入计划的实例无法区分各臂。
+    """
+    rows = np.repeat(np.arange(n, dtype=np.int64), n)
+    cols = np.tile(np.arange(n, dtype=np.int64), n)
+    mass = np.full(n, 1.0 / n)
+    uniform = np.full(int(features.n_features), 1.0 / float(features.n_features))
+    planted_plan = np.asarray(ot.emd(mass, mass, np.asarray(features.costs(theta, rows, cols)).reshape(n, n),
+                                     numItermax=2_000_000))
+    neutral_plan = np.asarray(ot.emd(mass, mass, np.asarray(features.costs(uniform, rows, cols)).reshape(n, n),
+                                     numItermax=2_000_000))
+    return _overlap(planted_plan, neutral_plan)
+
+
+def sample_discriminating_theta(*, k: int, n: int, seed: int | tuple[int, int], make_features,
+                                alpha: float = 0.5,
+                                max_agreement: float = 0.5, max_draws: int = 200
+                                ) -> tuple[np.ndarray, int]:
+    """
+    EN: rejection-sample `theta* ~ Dirichlet(alpha·1_K)` until a **fresh** instance's neutral plan reproduces at most
+        `max_agreement` of the `theta*` plan.
+
+        The rule is fixed before any arm is fitted: `alpha = 0.5`, `max_agreement = 0.5`, at most `max_draws` draws,
+        and a fresh point cloud for every candidate. The number of draws is returned so the acceptance rate can be
+        reported; a failure to accept raises rather than silently keeping a non-discriminating instance.
+
+    CN: 拒绝采样 `theta* ~ Dirichlet(alpha·1_K)`，直到某个**全新**实例的中性计划最多复现 `max_agreement` 比例的
+        `theta*` 计划。规则在任何臂被拟合之前固定：`alpha=0.5`、`max_agreement=0.5`、最多 `max_draws` 次，每个候选
+        用全新点云。返回抽样次数以便报告接受率；无法接受时报错，而不是悄悄保留不可区分的实例。
+    """
+    rng = np.random.default_rng(seed)
+    for draw in range(1, int(max_draws) + 1):
+        theta = rng.dirichlet(np.full(int(k), float(alpha)))
+        features = make_features(np.random.default_rng((seed, draw)))
+        if _neutral_agreement(features, theta, n) <= float(max_agreement):
+            return np.asarray(theta), draw
+    raise RuntimeError(f"no discriminating theta* in {max_draws} draws (k={k}, seed={seed})")
+
+
+def weight_on_zero_mass_bins(theta: np.ndarray, maps: list[FeatureMap], plans: list[sparse.csr_matrix],
+                             k: int) -> tuple[float, int]:
+    """
+    EN: the share of `theta` placed on bins that carry **zero** observed mass, and how many such bins are weighted.
+
+        Bins are the nearest of `k` evenly spaced distance centres (the same construction `diagnose._bin_mass` uses);
+        mass is `sum_l sum_edges phi_k(i,j) pi_hat_l,ij` with `phi` the nearest-centre indicator.
+
+    CN: `theta` 中落在**零**观测质量箱上的比例，以及被加权的零质量箱个数。箱为 `k` 个等距距离中心中最近者（与
+        `diagnose._bin_mass` 同一构造）；质量为 `sum_l sum_edges phi_k(i,j) pi_hat_l,ij`，`phi` 为最近中心指示。
+    """
+    centres = np.linspace(0.0, 1.0, int(k))
+    mass = np.zeros(int(k), dtype=np.float64)
+    for features, plan in zip(maps, plans, strict=True):
+        coo = plan.tocoo()
+        difference = features.source_points[coo.row.astype(np.int64)] - features.target_points[
+            coo.col.astype(np.int64)]
+        spacing = np.sqrt(np.einsum("ed,ed->e", difference, difference))
+        bins = np.abs(spacing[:, None] - centres[None, :]).argmin(axis=1)
+        np.add.at(mass, bins, coo.data.astype(np.float64))
+    weights = np.asarray(theta, dtype=np.float64)
+    return float(weights[mass <= 0.0].sum()), int(np.sum((weights > 1e-6) & (mass <= 0.0)))
+
+
+def _big_plan_records(*, n: int, bumps: int, n_observations: int, noise: float, marginal_mode: str,
+                      seed: int, control: str, planted: np.ndarray, theta_draws: int,
+                      iterations: int) -> list[RunRecord]:
+    """EN: the `A_single_big` record: one plan of `L·n` points, evaluated on the same fresh held-out instance. CN: `A_single_big` 记录：一个含 `L·n` 点的计划，在同一留出实例上评估。"""
+    base_seed = 10_000 + int(seed)
+    big_n = int(n_observations) * int(n)
+    big_features, big_plan = _observation(big_n, bumps, planted, seed, 20_000, marginal_mode=marginal_mode,
+                                          noise=noise, outside=control == "outside", base_seed=base_seed)
+    held_features, held_plan = _observation(n, bumps, planted, seed, 10_000, marginal_mode=marginal_mode,
+                                            noise=0.0, outside=False, base_seed=base_seed)
+    big = solve_bundle_multi([big_plan], [big_features], tol=1e-6, max_iterations=int(iterations), inner_tol=1e-9)
+    readings = _readings(big.theta, planted, held_features, held_plan)
+    weight, zero = weight_on_zero_mass_bins(big.theta, [big_features], [big_plan], int(bumps))
+    return [RunRecord(
+        study="multi_observation_sparse", geometry=f"n{n}_K{bumps}_L{n_observations}"
+        f"_p{noise:g}_{marginal_mode}_{control}_s{seed}", arm="A_single_big", k=int(bumps), m=big_n, draw=int(seed),
+        metrics={"agreement": readings.agreement, "excess_cost": readings.excess_cost,
+                 "cost_rel": readings.cost_rel, "train_regret": big.value,
+                 "train_feasible": float(big.value <= 1e-8), "outer_gap": big.gap,
+                 "iterations": float(len(big.iterations)),
+                 "hit_iteration_cap": float(len(big.iterations) >= int(iterations)),
+                 "weight_on_zero_mass_bins": weight, "zero_mass_weighted_bins": float(zero),
+                 "theta_star_draws": float(theta_draws)},
+        config={"n": n, "K": bumps, "L": n_observations, "noise": noise, "marginals": marginal_mode,
+                "control": control, "seed": seed},
+        extra={"theta": [float(v) for v in big.theta], "theta_star": [float(v) for v in planted],
+               "big_n": big_n})]
+
+
 def run_cell(log: RunLog, *, n: int, bumps: int, n_observations: int, noise: float, marginal_mode: str,
-             seed: int, control: str, iterations: int = 40, one_big_plan: bool = False
+             seed: int, control: str, iterations: int = 40, one_big_plan: bool = False,
+             only_big: bool = False
              ) -> list[RunRecord]:
     """EN: one (n, K, L, p, marginal, seed, control) cell, all arms. CN: 一个格子的全部臂。"""
-    planted = planted_theta(int(bumps))
     base_seed = 10_000 + int(seed)
+    planted, theta_draws = sample_discriminating_theta(
+        k=int(bumps), n=int(n), seed=base_seed + 7,
+        make_features=lambda rng: DistanceProfileFeatures(rng.random((n, 2)), rng.random((n, 2)),
+                                                          bumps=int(bumps), seed=base_seed))
     outside = control == "outside"
     observations = [_observation(n, bumps, planted, seed, window, marginal_mode=marginal_mode, noise=noise,
                                  outside=outside, base_seed=base_seed)
@@ -219,45 +328,63 @@ def run_cell(log: RunLog, *, n: int, bumps: int, n_observations: int, noise: flo
                                  extra={**extra, "theta": [float(v) for v in theta],
                                         "theta_star": [float(v) for v in planted]}))
 
-    # EN: arm D and E are free.
-    add("D_oracle", planted, 0.0, {})
-    add("E_neutral", np.full(int(bumps), 1.0 / int(bumps)), _value(np.full(int(bumps), 1.0 / int(bumps)),
-                                                                   maps, plans), {})
+    if only_big:
+        return _big_plan_records(n=n, bumps=bumps, n_observations=n_observations, noise=noise,
+                                 marginal_mode=marginal_mode, seed=seed, control=control, planted=planted,
+                                 theta_draws=theta_draws, iterations=iterations)
+
+    # EN: arm D and E are free. E is the baseline every other arm is compared against.
+    # CN: D 与 E 免费。E 是其余各臂的比较基线。
+    add("D_oracle", planted, 0.0, {"theta_star_draws": theta_draws})
+    uniform = np.full(int(bumps), 1.0 / int(bumps))
+    add("E_neutral", uniform, _value(uniform, maps, plans), {})
 
     # EN: arm C — one shared θ.
     joint = solve_bundle_multi(plans, maps, tol=1e-6, max_iterations=int(iterations), inner_tol=1e-9)
-    add("C_joint", joint.theta, joint.value, {"gap": joint.gap, "n_cuts": joint.n_cuts})
+    weight_c, zero_c = weight_on_zero_mass_bins(joint.theta, maps, plans, int(bumps))
+    add("C_joint", joint.theta, joint.value,
+        {"gap": joint.gap, "n_cuts": joint.n_cuts, "iterations": len(joint.iterations),
+         "hit_iteration_cap": float(len(joint.iterations) >= int(iterations)),
+         "weight_on_zero_mass_bins": weight_c, "zero_mass_weighted_bins": float(zero_c)})
 
-    # EN: arm A — one θ per plan; arm B — their average.
+    # EN: arm A — one θ per plan; arm B — their average, over all windows and over the informative ones only.
+    #     A window is *informative* unless the fit stopped at a zero subgradient (its observed plan is already
+    #     optimal at the initial θ); averaging those in adds pure uniform mass to B.
+    # CN: A 臂为逐计划拟合；B 臂为其平均，分别在全部窗口与仅"有信息"窗口上。若拟合因零次梯度停止（观测计划在初始 θ
+    #     处已最优），该窗口无信息；把它平均进去只会给 B 增加纯均匀质量。
     singles = [solve_bundle_multi([plan], [features], tol=1e-6, max_iterations=int(iterations), inner_tol=1e-9)
                for plan, features in zip(plans, maps, strict=True)]
     for position, single in enumerate(singles):
-        add(f"A_single", single.theta, single.value, {"observation": position})
-    averaged = np.mean(np.stack([np.asarray(single.theta) for single in singles], axis=0), axis=0)
-    averaged = np.clip(averaged, 0.0, None)
-    averaged = averaged / averaged.sum() if averaged.sum() > 0 else np.full(int(bumps), 1.0 / int(bumps))
-    add("B_averaged", averaged, _value(averaged, maps, plans), {})
+        add(f"A_single", single.theta, single.value,
+            {"observation": position, "stopped_at_zero": float(single.stopped_at_zero),
+             "iterations": len(single.iterations)})
+    # EN: *uninformative* means the fit stopped on the first iteration (observed plan already optimal at uniform θ).
+    #     A single fit that reaches a zero subgradient later has converged; it is informative and stays in.
+    # CN: *无信息* 指第一轮就停止（观测计划在均匀 θ 处已最优）。之后才到达零次梯度的单计划拟合是收敛，仍算有信息。
+    skipped_flags = [single.stopped_at_zero and len(single.iterations) == 1 for single in singles]
+    informative = [single for single, flag in zip(singles, skipped_flags, strict=True) if not flag]
+    zero_gradient = int(sum(skipped_flags))
+
+    def average_of(chosen: list) -> np.ndarray:
+        if not chosen:
+            return uniform.copy()
+        mean = np.mean(np.stack([np.asarray(single.theta) for single in chosen], axis=0), axis=0)
+        mean = np.clip(mean, 0.0, None)
+        return mean / mean.sum() if mean.sum() > 0 else uniform.copy()
+
+    for arm, chosen in (("B_averaged", singles), ("B_informative", informative)):
+        averaged = average_of(chosen)
+        weight_b, zero_b = weight_on_zero_mass_bins(averaged, maps, plans, int(bumps))
+        add(arm, averaged, _value(averaged, maps, plans),
+            {"windows_averaged": len(chosen), "windows_at_zero_gradient": zero_gradient,
+             "weight_on_zero_mass_bins": weight_b, "zero_mass_weighted_bins": float(zero_b)})
 
     # EN: arm A on ONE plan of L·n points (is more data in one observation the same as more observations?).
     # CN: 一个含 L·n 个点的单一计划上的 A 臂（"一个观测里更多点" 是否等同于 "更多观测"）。
     if one_big_plan:
-        big_n = int(n_observations) * int(n)
-        big_features, big_plan = _observation(big_n, bumps, planted, seed, 20_000, marginal_mode=marginal_mode,
-                                              noise=noise, outside=outside, base_seed=base_seed)
-        big = solve_bundle_multi([big_plan], [big_features], tol=1e-6, max_iterations=int(iterations),
-                                 inner_tol=1e-9)
-        readings = _readings(big.theta, planted, held_features, held_plan)
-        records.append(RunRecord(
-            study="multi_observation_sparse", geometry=f"n{n}_K{bumps}_L{n_observations}"
-            f"_p{noise:g}_{marginal_mode}_{control}_s{seed}", arm="A_single_big", k=int(bumps), m=big_n,
-            draw=int(seed),
-            metrics={"agreement": readings.agreement, "excess_cost": readings.excess_cost,
-                     "cost_rel": readings.cost_rel, "train_regret": big.value,
-                     "train_feasible": float(big.value <= 1e-8)},
-            config={"n": n, "K": bumps, "L": n_observations, "noise": noise, "marginals": marginal_mode,
-                    "control": control, "seed": seed},
-            extra={"theta": [float(v) for v in big.theta], "theta_star": [float(v) for v in planted],
-                   "big_n": big_n}))
+        records.extend(_big_plan_records(n=n, bumps=bumps, n_observations=n_observations, noise=noise,
+                                         marginal_mode=marginal_mode, seed=seed, control=control, planted=planted,
+                                         theta_draws=theta_draws, iterations=iterations))
     return records
 
 
@@ -273,6 +400,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n", type=int, default=40)
     parser.add_argument("--iterations", type=int, default=40)
     parser.add_argument("--one-big-plan", action="store_true")
+    parser.add_argument("--only-big", action="store_true")
     parser.add_argument("--pilot", action="store_true")
     parser.add_argument("--tag", default="pilot")
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -296,7 +424,8 @@ def main(argv: list[str] | None = None) -> int:
         cell_started = time.perf_counter()
         records.extend(run_cell(log, n=int(args.n), bumps=bumps, n_observations=n_obs, noise=noise,
                                 marginal_mode=marginal, seed=seed, control=control,
-                                iterations=int(args.iterations), one_big_plan=bool(args.one_big_plan)))
+                                iterations=int(args.iterations), one_big_plan=bool(args.one_big_plan),
+                                only_big=bool(args.only_big)))
         cells += 1
         log.line(f"cell K={bumps} L={n_obs} p={noise:g} {marginal} {control} s={seed}: "
                  f"{time.perf_counter() - cell_started:.1f}s")

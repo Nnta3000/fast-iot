@@ -171,6 +171,8 @@ class DistanceProfileFeatures:
     scale: float = 1.0
     sample_size: int = 100_000
     seed: int = 0
+    centres: Float[np.ndarray, "k"] = dataclasses.field(default=None, init=False, repr=False)  # type: ignore[assignment]
+    width: float = dataclasses.field(default=0.0, init=False, repr=False)
     normals: tuple[float, ...] = dataclasses.field(default=(), init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -271,6 +273,9 @@ class RampFeatures:
     sample_size: int = 100_000
     seed: int = 0
     thresholds: tuple[float, ...] = dataclasses.field(default=(), init=True, repr=False)
+    threshold_rule: str = "range"
+    differences: bool = False
+    normals: tuple[float, ...] = dataclasses.field(default=(), init=False, repr=False)
 
     def __post_init__(self) -> None:
         """EN: validate and fix the thresholds on the observed range. CN: 校验并在观测范围内固定阈值。"""
@@ -284,9 +289,12 @@ class RampFeatures:
             raise ValueError("ramps must be at least 1")
         if not float(self.scale) > 0.0:
             raise ValueError("scale must be positive")
+        if self.threshold_rule not in ("range", "quantile"):
+            raise ValueError("threshold_rule must be 'range' or 'quantile'")
         object.__setattr__(self, "source_points", source)
         object.__setattr__(self, "target_points", target)
         object.__setattr__(self, "ramps", int(self.ramps))
+        object.__setattr__(self, "differences", bool(self.differences))
         if len(self.thresholds) == int(self.ramps):
             thresholds = np.ascontiguousarray(np.asarray(self.thresholds, dtype=np.float64))
         else:
@@ -316,18 +324,35 @@ class RampFeatures:
         return np.sqrt(np.einsum("ed,ed->e", difference, difference)) / float(self.scale)
 
     def _default_thresholds(self) -> np.ndarray:
-        """EN: thresholds evenly spaced between the 1st and 99th percentile of the subsampled distances. CN: 在抽样距离 1%–99% 分位间等距。"""
+        """EN: thresholds on the sampled distance range (evenly spaced) or at its quantiles. CN: 阈值在抽样距离范围上等距，或取其分位。"""
         rng = np.random.default_rng(int(self.seed))
         count = min(int(self.sample_size), self.n_source * self.n_target)
         rows = rng.integers(0, self.n_source, size=count)
         cols = rng.integers(0, self.n_target, size=count)
         spacing = self._spacing(rows, cols)
+        if self.threshold_rule == "quantile":
+            # EN: t_k at the (k+1)/(K+1) quantiles, so every hinge is positive on a known share of pairs.
+            # CN: t_k 取 (k+1)/(K+1) 分位，故每个 hinge 在已知比例的配对上为正。
+            levels = np.arange(1, int(self.ramps) + 1, dtype=np.float64) / (int(self.ramps) + 1.0)
+            return np.ascontiguousarray(np.quantile(spacing, levels))
         low, high = np.percentile(spacing, 1.0), np.percentile(spacing, 99.0)
         return np.ascontiguousarray(np.linspace(float(low), float(high), int(self.ramps)))
 
     def _raw(self, spacing: Float[np.ndarray, "edges"]) -> Float[np.ndarray, "edges k"]:
-        """EN: `max(0, s - t_k)`. CN: `max(0, s - t_k)`。"""
-        return np.maximum(0.0, spacing[:, None] - np.asarray(self.thresholds, dtype=np.float64)[None, :])
+        """
+        EN: `max(0, s - t_k)`, or its first difference `raw_k - raw_{k+1}` (with `raw_K = 0`) if `differences`.
+
+            A difference column is zero below `t_k`, rises on `(t_k, t_{k+1})` and saturates at `t_{k+1} - t_k`; the
+            columns are much less collinear than nested hinges.
+
+        CN: `max(0, s - t_k)`；若 `differences` 则为它的一阶差分 `raw_k - raw_{k+1}`（取 `raw_K = 0`）。差分列在
+            `t_k` 以下为零、在 `(t_k, t_{k+1})` 上升、在 `t_{k+1}-t_k` 饱和，列间共线性远小于嵌套 hinge。
+        """
+        hinges = np.maximum(0.0, spacing[:, None] - np.asarray(self.thresholds, dtype=np.float64)[None, :])
+        if not bool(self.differences):
+            return hinges
+        later = np.concatenate([hinges[:, 1:], np.zeros((hinges.shape[0], 1), dtype=np.float64)], axis=1)
+        return np.ascontiguousarray(hinges - later)
 
     def _normals(self) -> tuple[float, ...]:
         """EN: subsample-RMS per column. CN: 每列抽样 RMS。"""

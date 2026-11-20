@@ -40,6 +40,7 @@ from iot_experiments.studies.synthetic.multi_observation_sparse.arms import (
     Readings,
     _observation,
     _readings,
+    sample_discriminating_theta,
     _value,
     planted_theta,
 )
@@ -124,7 +125,8 @@ def _fit(plans: list[sparse.csr_matrix], maps: list, *, theta_set, stage2_eta: f
     base = solve_bundle_multi(plans, maps, theta_set=theta_set, tol=1e-6, max_iterations=int(iterations),
                               inner_tol=1e-9)
     fit_info: dict[str, object] = {"stage2": "off", "gap": float(base.gap),
-                                   "iterations": len(base.iterations), "lower": float(base.lower)}
+                                   "iterations": len(base.iterations), "lower": float(base.lower),
+                                   "stopped_at_zero": bool(base.stopped_at_zero)}
     if stage2_eta is None:
         return np.asarray(base.theta), float(base.value), fit_info
     k = int(base.theta.size)
@@ -213,47 +215,46 @@ def _bin_mass(maps: list, plans: list[sparse.csr_matrix], bumps: int) -> np.ndar
     return mass / max(1, len(plans))
 
 
-def _planted_ramp(ramps: int, features: RampFeatures) -> np.ndarray:
-    """
-    EN: planted weights for the ramp basis: nonnegative, decreasing in the threshold (`theta_k ∝ exp(-t_k/0.3)`),
-        so the planted cost grows with distance but not linearly.
-
-    CN: ramp 基的植入权重：非负、随阈值递减（`theta_k ∝ exp(-t_k/0.3)`），使植入代价随距离增长但非线性。
-    """
-    thresholds = np.asarray(features.thresholds, dtype=np.float64)
-    weights = np.exp(-thresholds / 0.3)
-    return weights / weights.sum()
+def _ramp_features(points_rng: np.random.Generator, n: int, ramps: int, thresholds: tuple[float, ...]
+                   ) -> RampFeatures:
+    """EN: a fresh window on the fixed basis: quantile thresholds, first-difference columns. CN: 固定基上的新窗口：分位阈值、一阶差分列。"""
+    return RampFeatures(points_rng.random((n, 2)), points_rng.random((n, 2)), ramps=int(ramps),
+                        seed=30_000, thresholds=thresholds, threshold_rule="quantile", differences=True)
 
 
 def _ramp_cell(n: int, ramps: int, n_observations: int, seed: int
-               ) -> tuple[list[RampFeatures], list[sparse.csr_matrix], RampFeatures, sparse.csr_matrix, np.ndarray]:
-    """EN: the same cell on the ramp basis. CN: ramp 基上的同一格子。"""
-    rng = np.random.default_rng((30_000 + seed, 0))
-    source_points = rng.random((n, 2))
-    target_points = rng.random((n, 2))
-    template = RampFeatures(source_points, target_points, ramps=int(ramps), seed=30_000 + seed)
-    planted = _planted_ramp(int(ramps), template)
+               ) -> tuple[list[RampFeatures], list[sparse.csr_matrix], RampFeatures, sparse.csr_matrix,
+                          np.ndarray, int]:
+    """
+    EN: one ramp cell, with `theta*` chosen by the pre-registered rejection rule (see
+        `arms.sample_discriminating_theta`): fresh instances only, neutral plan reproduces at most half.
+
+    CN: 一个 ramp 格子，`theta*` 由预先注册的拒绝规则选取（见 `arms.sample_discriminating_theta`）：只用全新实例，
+        中性计划最多复现一半。
+    """
+    template_rng = np.random.default_rng((30_000 + seed, 0))
+    template = RampFeatures(template_rng.random((n, 2)), template_rng.random((n, 2)), ramps=int(ramps),
+                            seed=30_000 + seed, threshold_rule="quantile", differences=True)
+    thresholds = tuple(template.thresholds)
+    planted, draws = sample_discriminating_theta(
+        k=int(ramps), n=int(n), seed=(30_000 + seed, 77),
+        make_features=lambda rng: _ramp_features(rng, n, ramps, thresholds))
     observations = []
     for window in range(int(n_observations)):
-        window_rng = np.random.default_rng((30_000 + seed, window + 1))
-        features = RampFeatures(window_rng.random((n, 2)), window_rng.random((n, 2)), ramps=int(ramps),
-                                seed=30_000 + seed, thresholds=tuple(template.thresholds))
+        features = _ramp_features(np.random.default_rng((30_000 + seed, window + 1)), n, ramps, thresholds)
         rows = np.repeat(np.arange(n, dtype=np.int64), n)
         cols = np.tile(np.arange(n, dtype=np.int64), n)
         cost = np.asarray(features.costs(planted, rows, cols)).reshape(n, n)
-        source_mass, target_mass = _uniform(n), _uniform(n)
-        plan = np.asarray(ot.emd(source_mass, target_mass, cost, numItermax=2_000_000))
+        plan = np.asarray(ot.emd(_uniform(n), _uniform(n), cost, numItermax=2_000_000))
         observations.append((features, sparse.csr_matrix(plan)))
-    held_rng = np.random.default_rng((30_000 + seed, 10_000))
-    held_features = RampFeatures(held_rng.random((n, 2)), held_rng.random((n, 2)), ramps=int(ramps),
-                                 seed=30_000 + seed, thresholds=tuple(template.thresholds))
+    held_features = _ramp_features(np.random.default_rng((30_000 + seed, 10_000)), n, ramps, thresholds)
     rows = np.repeat(np.arange(n, dtype=np.int64), n)
     cols = np.tile(np.arange(n, dtype=np.int64), n)
     held_cost = np.asarray(held_features.costs(planted, rows, cols)).reshape(n, n)
     held_plan = sparse.csr_matrix(
         np.asarray(ot.emd(_uniform(n), _uniform(n), held_cost, numItermax=2_000_000)))
     return ([item[0] for item in observations], [item[1] for item in observations],
-            held_features, held_plan, planted)
+            held_features, held_plan, planted, draws)
 
 
 def _cell(n: int, bumps: int, n_observations: int, seed: int) -> tuple[
@@ -348,51 +349,93 @@ def _observed_cost_ratio(theta: np.ndarray, maps: list, plans: list[sparse.csr_m
 
 def mode_ramp(log: RunLog, *, n: int, seeds: list[int], ks: list[int], ls: list[int],
               iterations: int = 40) -> list[RunRecord]:
-    """EN: the ramp-basis check: degeneracy + arms B/C plus oracle. CN: ramp 基检查：退化 + B/C 与 oracle。"""
+    """
+    EN: the ramp-basis reading: neutral baseline, oracle, the joint fit, and averaging with and without the windows
+        that carry no information (a zero subgradient at the initial θ).
+
+    CN: ramp 基读数：中性基线、oracle、联合拟合，以及在有/无"无信息窗口"（初始 θ 处零次梯度）两种情况下的平均。
+    """
     rows: list[RunRecord] = []
     for ramps in ks:
         for n_observations in ls:
             for seed in seeds:
-                maps, plans, held_features, held_plan, planted = _ramp_cell(n, ramps, n_observations, seed)
+                maps, plans, held_features, held_plan, planted, draws = _ramp_cell(n, ramps, n_observations, seed)
+                readings_o = _readings(planted, planted, held_features, held_plan)
+                neutral = _uniform(ramps)
+                readings_n = _readings(neutral, planted, held_features, held_plan)
                 theta_c, value_c, info_c = _fit(plans, maps, theta_set=_simplex(ramps), iterations=iterations)
                 weighted = int(np.sum(np.asarray(theta_c) > 1e-6))
                 ratio = _observed_cost_ratio(theta_c, maps, plans)
                 share_c = _ramp_mass_share(theta_c, maps, plans)
                 readings_c = _readings(theta_c, planted, held_features, held_plan)
-                singles = [_fit([plan], [features], theta_set=_simplex(ramps), iterations=iterations)[0]
-                           for plan, features in zip(plans, maps, strict=True)]
-                averaged = _project(_simplex(ramps), np.mean(np.stack(singles, axis=0), axis=0))
+                fitted = [_fit([plan], [features], theta_set=_simplex(ramps), iterations=iterations)
+                          for plan, features in zip(plans, maps, strict=True)]
+                # EN: a window is *uninformative* only if the fit stopped on the first iteration: its observed plan
+                #     is already optimal at uniform θ, so the window says nothing about how to leave uniform. A fit
+                #     that stops at zero later is a converged fit, not a skipped window.
+                # CN: 只有**第一轮**就停止的窗口才无信息：其观测计划在均匀 θ 处已最优，无法说明如何离开均匀点。
+                #     后续在某 θ 处到达零次梯度的拟合是收敛，不是被跳过的窗口。
+                skipped_flags = [bool(item[2]["stopped_at_zero"])
+                                 and int(_float_field(item[2], "iterations")) == 1 for item in fitted]
+                informative = [item for item, flag in zip(fitted, skipped_flags, strict=True) if not flag]
+                zero_gradient = int(sum(skipped_flags))
+                averaged = _project(_simplex(ramps), np.mean(
+                    np.stack([item[0] for item in fitted], axis=0), axis=0))
                 share_b = _ramp_mass_share(averaged, maps, plans)
                 readings_b = _readings(averaged, planted, held_features, held_plan)
-                readings_o = _readings(planted, planted, held_features, held_plan)
-                log.line(f"[ramp] K={ramps} L={n_observations} s={seed}: weighted ramps={weighted} "
-                         f"obs_cost_ratio={ratio:.4f} F={value_c:.2e} gap={_float_field(info_c, 'gap'):.1e} "
-                         f"iters={int(_float_field(info_c, 'iterations'))} mass_share={share_c.mass_share:.3f} "
-                         f"w_on_zero_mass={share_c.weight_on_zero_mass:.3f} "
-                         f"zero_mass_weighted={share_c.zero_mass_weighted} "
-                         f"C agr={readings_c.agreement:.4f} cost={readings_c.cost_rel:.4f} | "
-                         f"B mass_share={share_b.mass_share:.3f} w_on_zero={share_b.weight_on_zero_mass:.3f} "
-                         f"agr={readings_b.agreement:.4f} cost={readings_b.cost_rel:.4f}")
+                if informative:
+                    averaged_i = _project(_simplex(ramps), np.mean(
+                        np.stack([item[0] for item in informative], axis=0), axis=0))
+                else:
+                    averaged_i = _uniform(ramps)
+                share_bi = _ramp_mass_share(averaged_i, maps, plans)
+                readings_bi = _readings(averaged_i, planted, held_features, held_plan)
+                log.line(f"[ramp] K={ramps} L={n_observations} s={seed} draws={draws}: "
+                         f"neutral agr={readings_n.agreement:.4f} | "
+                         f"C agr={readings_c.agreement:.4f} cost={readings_c.cost_rel:.4f} "
+                         f"F={value_c:.2e} gap={_float_field(info_c, 'gap'):.1e} "
+                         f"iters={int(_float_field(info_c, 'iterations'))} weighted={weighted} "
+                         f"w_on_zero={share_c.weight_on_zero_mass:.3f} | "
+                         f"B agr={readings_b.agreement:.4f} (zero-grad windows {zero_gradient}/{len(fitted)}) | "
+                         f"B_inf agr={readings_bi.agreement:.4f} zeros={share_bi.zero_mass_weighted} | "
+                         f"oracle agr={readings_o.agreement:.4f}")
+                share_n = _ramp_mass_share(neutral, maps, plans)
+                share_o = _ramp_mass_share(planted, maps, plans)
+                diagnostics = {
+                    "C_joint": (share_c, _float_field(info_c, "gap"), _float_field(info_c, "iterations"), value_c),
+                    "B_averaged": (share_b, float("nan"), float("nan"), float("nan")),
+                    "B_informative": (share_bi, float("nan"), float("nan"), float("nan")),
+                    "E_neutral": (share_n, float("nan"), float("nan"), float("nan")),
+                    "D_oracle": (share_o, float("nan"), float("nan"), float("nan")),
+                }
                 for arm, theta, readings in (("C_joint", theta_c, readings_c),
                                              ("B_averaged", averaged, readings_b),
+                                             ("B_informative", averaged_i, readings_bi),
+                                             ("E_neutral", neutral, readings_n),
                                              ("D_oracle", planted, readings_o)):
+                    share, gap, iters, objective = diagnostics[arm]
                     rows.append(RunRecord(
                         study="multi_observation_sparse", geometry=f"ramp_K{ramps}_L{n_observations}",
                         arm=arm, k=int(ramps), m=int(n), draw=int(seed),
                         metrics={"agreement": readings.agreement, "cost_rel": readings.cost_rel,
-                                 "train_objective": float(value_c) if arm == "C_joint" else float("nan"),
-                                 "outer_gap": _float_field(info_c, "gap") if arm == "C_joint" else float("nan"),
-                                 "iterations": _float_field(info_c, "iterations") if arm == "C_joint" else float("nan"),
-                                 "observed_mass_in_weighted_bins": (share_c if arm == "C_joint" else share_b).mass_share,
-                                 "mass_share_below_0.2": float(
-                                     (share_c if arm == "C_joint" else share_b).mass_share < 0.2),
-                                 "weight_on_zero_mass_ramps": (share_c if arm == "C_joint" else share_b).weight_on_zero_mass,
-                                 "zero_mass_weighted_bins": float(
-                                     (share_c if arm == "C_joint" else share_b).zero_mass_weighted),
+                                 "train_objective": objective,
+                                 "outer_gap": gap,
+                                 "iterations": iters,
+                                 "hit_iteration_cap": float(iters >= float(iterations)),
+                                 "observed_mass_in_weighted_bins": share.mass_share,
+                                 "mass_share_below_0.2": float(share.mass_share < 0.2),
+                                 "weight_on_zero_mass_ramps": share.weight_on_zero_mass,
+                                 "zero_mass_weighted_bins": float(share.zero_mass_weighted),
+                                 "windows_at_zero_gradient": float(zero_gradient),
+                                 "windows_averaged": float(len(fitted) if arm == "B_averaged"
+                                                           else len(informative) if arm == "B_informative" else 0),
+                                 "theta_star_draws": float(draws),
                                  "observed_cost_ratio": float(ratio) if arm == "C_joint" else float("nan"),
                                  "weighted_ramps": float(weighted) if arm == "C_joint" else float("nan")},
                         config={"mode": "ramp", "K": ramps, "L": n_observations, "n": n,
-                                "basis": "hinge max(0, s - t_k)", "Theta": "simplex", "iterations": iterations},
+                                "basis": "difference of hinges, quantile thresholds",
+                                "theta_star_rule": "Dirichlet(0.5); fresh-instance neutral agreement <= 0.5",
+                                "Theta": "simplex", "iterations": iterations},
                         extra={"theta": [float(v) for v in theta], "theta_star": [float(v) for v in planted]}))
     return rows
 

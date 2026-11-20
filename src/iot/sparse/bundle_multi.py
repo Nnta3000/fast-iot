@@ -91,6 +91,7 @@ class BundleResult:
     n_cuts: int
     wall_time: float
     total_inner_seconds: float = 0.0
+    stopped_at_zero: bool = False
 
 
 def _moment(features: FeatureMap, plan: sparse.csr_matrix) -> Float[np.ndarray, "k"]:
@@ -171,6 +172,7 @@ def solve_bundle_multi(
     total_inner = 0.0
     started = time.perf_counter()
     plans_now: tuple[sparse.csr_matrix, ...] = ()
+    stopped_at_zero = False
     for iteration in range(1, int(max_iterations) + 1):
         iteration_started = time.perf_counter()
         gradient = np.zeros(k, dtype=np.float64)
@@ -213,6 +215,7 @@ def solve_bundle_multi(
                 edges=tuple(result.n_edges for result in results),
                 sweeps=tuple(result.sweeps for result in results),
                 seconds=float(time.perf_counter() - iteration_started), master_seconds=0.0))
+            stopped_at_zero = True
             break
         cuts.append(gradient)
         master_started = time.perf_counter()
@@ -243,4 +246,5 @@ def solve_bundle_multi(
             for edge, m in zip(edge_sets, maps, strict=True)),
         iterations=tuple(records), observed_diagonal_mass=observed_diagonal,
         predicted_diagonal_mass=predicted_diagonal, n_cuts=len(cuts),
-        wall_time=float(time.perf_counter() - started), total_inner_seconds=total_inner)
+        wall_time=float(time.perf_counter() - started), total_inner_seconds=total_inner,
+        stopped_at_zero=bool(stopped_at_zero))

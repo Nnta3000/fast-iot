@@ -210,52 +210,149 @@ an empty bank to `solve_cut_master`. Covered by `tests/iot_bundle_multi_test.py`
 K ∈ {10, 40, 80}, L ∈ {5, 20} rerun is the measurement for that. It also does not remove the K = 2n zero-mass-bin
 hole, which was found on the bump basis and is untouched here.
 
-#### Addendum 2b: the rerun — more observations move θ a little, and the support reading is not the mass share
+#### Addendum 2b: the first rerun (hinge basis, planted θ*) — **inadequate, superseded by 2c**
 
-Run: `python -m ...multi_observation_sparse.diagnose --mode ramp --n 40 --seeds 0 … 9 --ks 10 40 80 --ls 5 20
---iterations 40 --tag ramp3` (271 s wall, records in `out/multi_observation_sparse/diagnose/ramp3/records.json`,
-table printed by `analyse_ramp.py`). n = 40, uniform marginals, fresh points per window, thresholds fixed on a
-template window, 10 seeds, 40-iteration cap. `D_oracle` (planted θ* on the held-out instance) gives agreement
-1.000 and `cost_rel` 0.000 in every row and is omitted from the table.
+That run used the hinge basis with evenly spaced thresholds and the analytic planted θ* `∝ exp(-t_k/0.3)`. It is kept
+only to record why it cannot answer the question: **the neutral plan was already near the ceiling**. Measured on the
+same cells, neutral (uniform θ) held-out agreement was **0.925 on K = 10, seed 0** (mean **0.875** over the 10 seeds),
+while the joint fit reached 0.975–0.995. The apparent gain was therefore at most +0.05, inside the seed spread, and
+agreement could not separate the arms. The user's reading of ~0.91 is confirmed (0.925 measured; the difference is
+seed/cell choice).
 
-| K | L | arm | draws | agreement | `cost_rel` | ‖θ−θ*‖₁ | mass share | weight on zero-mass ramps |
-| ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: |
-| 10 | 5 | C joint | 10 | 0.975±0.063 | 0.152±0.020 | 0.612±0.128 | 0.998 | 0.000 |
-| 10 | 5 | B averaged | 10 | 0.953±0.074 | 0.123±0.059 | 0.437±0.125 | 1.000 | 0.272 |
-| 10 | 20 | C joint | 10 | 0.995±0.016 | 0.140±0.017 | 0.515±0.085 | 0.999 | 0.000 |
-| 10 | 20 | B averaged | 10 | 0.960±0.067 | 0.105±0.037 | 0.314±0.081 | 1.000 | 0.270 |
-| 40 | 5 | C joint | 10 | 0.910±0.098 | 0.179±0.026 | 1.290±0.162 | 0.667 | 0.000 |
-| 40 | 5 | B averaged | 10 | 0.912±0.104 | 0.144±0.067 | 0.705±0.111 | 1.000 | 0.392 |
-| 40 | 20 | C joint | 10 | 0.972±0.048 | 0.144±0.029 | 1.133±0.073 | 0.748 | 0.000 |
-| 40 | 20 | B averaged | 10 | 0.942±0.080 | 0.096±0.038 | 0.422±0.047 | 1.000 | 0.314 |
-| 80 | 5 | C joint | 10 | 0.887±0.100 | 0.193±0.048 | 1.538±0.305 | 0.408 | 0.070 |
-| 80 | 5 | B averaged | 10 | 0.948±0.066 | 0.157±0.079 | 0.847±0.154 | 1.000 | 0.421 |
-| 80 | 20 | C joint | 10 | 0.960±0.073 | 0.154±0.053 | 1.437±0.267 | 0.466 | 0.066 |
-| 80 | 20 | B averaged | 10 | 0.957±0.069 | 0.101±0.038 | 0.569±0.058 | 1.000 | 0.315 |
+#### Addendum 2c: the discriminating rerun — neutral baseline, three bases, and B with/without skipped windows
 
-**What the table measures.**
-- **Four times the windows buys little in θ.** At fixed K, going from L = 5 to L = 20 (4× the windows) reduces
-  ‖θ−θ*‖₁ by 16 % (K = 10), 12 % (K = 40) and 7 % (K = 80), while agreement rises by 0.02, 0.06 and 0.07. The θ error
-  grows with K instead: 0.61 → 1.29 → 1.54 at L = 5.
-- **The joint fit is not better than averaging single fits.** C beats B on agreement only at K = 10
-  (+0.02…+0.035) and is worse at K = 80, L = 5 (−0.06). B has the lower `cost_rel` in all six cells.
-- **The two arms differ in *where* the weight goes.** C keeps its weight on ramps that carry observed mass
-  (`weight on zero-mass ramps` 0.000–0.070); B puts 27–42 % of its weight on ramps that are zero on every observed
-  edge of the cell. That weight is invisible in training and changes the held-out cost. B is nevertheless closer to
-  θ* in L1 — the metric and the support reading point in opposite directions, so neither is a verdict on its own.
-- **Two cells are not converged.** The certified bracket is zero-width for every K = 10 cell and for K = 40/80 at
-  L = 5, but the L = 20, K ≥ 40 cells hit the 40-iteration cap (10/10 seeds at K = 40, 9/10 at K = 80) with a gap of
-  1e-4–6.5e-4. Their rows are the best θ the loop queried, not a certified optimum; the numbers above do not change
-  if they are read that way, but they must not be read as "the fit converged to F* = 0".
-- **The pre-registered flag never fires, and that is a defect of the reading.** No cell has mass share below 0.2
-  (minimum 0.408), yet one cell (K = 80, L = 5, seed 1) returns exactly uniform θ after one iteration, with 70 % of
-  its weight on zero-observed-mass ramps: `mass share` is 1.000 because *every* ramp is weighted, so the share is
-  blind to a dense θ. For the hinge basis the informative reading is `weight on zero-mass ramps`, and it is now
-  recorded per cell.
+Everything below was fixed **before** any arm was fitted in this configuration.
 
-**Interpretation, separated from the measurements.** The first sentence of the objective ("does more than one
-observation pin θ better?") gets a small *yes* in the L1 sense and a *no* in any practically useful sense at this
-size: 4× the data buys 7–16 % of the θ error, and the error itself grows with K. This is a statement about this
-basis and this n, not about multi-observation in general; the hinge basis is nearly collinear (max |corr| 0.9976,
-smallest correlation eigenvalue 6.8e-04 at K = 10), which is a plausible reason for both the flat likelihood and the
-slow θ convergence, and it is a hypothesis, not a measurement.
+**Basis (chosen on conditioning only, no arm result seen).** Rule: among {hinge, first difference} × {range,
+quantile} thresholds, take the variant with the largest smallest correlation eigenvalue at K = 20, provided no column
+is positive on fewer than 4 % of pairs; ties broken at K = 10. Measured (n = 40, full pair grid, subsample-RMS
+columns):
+
+| variant | K=10 max abs corr / min eig | K=20 max abs corr / min eig | min column positivity |
+| --- | --- | --- | ---: |
+| hinge / range (old) | 0.9976 / 6.76e-04 | 0.9996 / 5.15e-05 | 0.013 |
+| hinge / quantile | 0.9957 / 2.54e-04 | 0.9994 / 3.11e-05 | 0.047 |
+| difference / range | 0.8289 / 6.69e-02 | 0.9180 / 2.65e-02 | 0.013 |
+| **difference / quantile** | 0.8921 / 3.73e-02 | 0.9425 / **1.75e-02** | **0.047** |
+
+`difference / range` has the better K = 20 eigenvalue but a column positive on 1.3 % of pairs, so it fails the
+guard; `difference / quantile` is 340× better conditioned than the old basis at K = 20 and 55× at K = 10. Chosen:
+**first-difference hinge columns with quantile thresholds** (`RampFeatures(threshold_rule="quantile",
+differences=True)`). Each column is `max(0, s-t_k) - max(0, s-t_{k+1})`: zero below `t_k`, rising on
+`(t_k, t_{k+1})`, saturating at `t_{k+1}-t_k`; the columns telescope to the first hinge. Tests:
+`tests/iot_sparse_ramp_test.py`.
+
+**θ* (chosen on discrimination only).** `θ* ~ Dirichlet(0.5·1_K)`, accepted iff on a **fresh** instance the neutral
+plan reproduces at most 50 % of the `θ*` plan (`Σ min(P_neutral, P*) / Σ P* ≤ 0.5`); at most 200 draws, else the
+cell raises. Measured acceptance 10–25 % (K = 10/20/40/80); mean draws to accept 5.2–7.9 in the run below. Rule and
+acceptance are identical for every arm, so no arm sees a different instance.
+
+**Run.** `--mode ramp --n 40 --seeds 0 … 9 --ks 10 40 80 --ls 5 20 --iterations 40 --tag ramp4`
+(695 s, `out/multi_observation_sparse/diagnose/ramp4/`, table by `analyse_ramp.py --tag ramp4`). Paired design:
+θ* and the held-out instance depend only on (K, seed), so L = 5 and L = 20 within a K are compared on the same
+held-out instance. Gain = mean ± sd of the **per-seed difference** `arm − neutral`. `B` is the unweighted mean of
+the per-window fits (each sums to 1, so the simplex projection is a no-op); `B_informative` drops windows whose fit
+stopped at iteration 1 (observed plan already optimal at uniform θ). `D_oracle` is the planted θ*.
+
+| cell | neutral | C | C − neutral | B all | B all − neutral | B informative | B inf − neutral | oracle |
+| --- | ---: | ---: | --- | ---: | --- | ---: | --- | ---: |
+| K10 L5 | 0.698±0.160 | 0.570±0.287 | **−0.128±0.313** | 0.828±0.137 | +0.130±0.126 | 0.715±0.284 | +0.018±0.278 | 1.000 |
+| K10 L20 | 0.698±0.160 | 0.855±0.113 | **+0.158±0.148** | 0.812±0.137 | +0.115±0.161 | 0.787±0.162 | +0.090±0.141 | 1.000 |
+| K40 L5 | 0.520±0.161 | 0.758±0.155 | +0.237±0.253 | 0.753±0.188 | +0.233±0.152 | 0.753±0.188 | +0.233±0.152 | 1.000 |
+| K40 L20 | 0.520±0.161 | 0.762±0.171 | +0.242±0.220 | 0.798±0.205 | +0.277±0.153 | 0.798±0.205 | +0.277±0.153 | 1.000 |
+| K80 L5 | 0.613±0.225 | 0.733±0.084 | +0.120±0.195 | 0.743±0.152 | +0.130±0.103 | 0.743±0.152 | +0.130±0.103 | 1.000 |
+| K80 L20 | 0.613±0.225 | 0.735±0.076 | +0.123±0.202 | 0.763±0.160 | +0.150±0.170 | 0.763±0.160 | +0.150±0.170 | 1.000 |
+
+Skipped windows (fit stopped at iteration 1, i.e. observed plan already optimal at uniform θ), per cell, out of L:
+7.2/20 and 1.9/5 at K = 10; 0.1/20 and 0.1/5 at K = 40; 0.0 at K = 80. Mean draws to accept θ*: 7.9, 6.1, 5.2 at
+K = 10, 40, 80.
+
+**Measurements (no interpretation yet).**
+- The neutral baseline is now 0.52–0.70, not 0.87–0.93, so the readings have room for a gain.
+- At **K = 10**, C goes from **−0.128** (L = 5) to **+0.158** (L = 20) relative to neutral; B stays at +0.130 /
+  +0.115. The spreads are 0.13–0.31, so this is a measurement, not a claim.
+- At **K ≥ 40 the joint fit is not converged**: `hit_iteration_cap` is 1.0 (10/10 seeds) at L = 5 and L = 20, with a
+  certified gap of 1e-2–7e-2. Its gain column is the best *queried* θ, so those rows cannot compare C with B.
+- Including the skipped windows **raises** B at K = 10 (0.828 vs 0.715 at L = 5; 0.812 vs 0.787 at L = 20); at
+  K ≥ 40 the two variants coincide because almost nothing is skipped. So at K = 10 "B" is not "B without the
+  uniform windows", and the two must be reported separately.
+- Support readings: `weight_on_zero_mass_ramps` is **0.350–0.595 for the neutral arm**, 0.177–0.439 for C and
+  0.077–0.157 for `B_informative`. So the *neutral* θ is the arm that leans hardest on ramps with no observed mass —
+  the hole is not something the fit introduces. The pre-registered mass-share flag (< 0.2) still fires nowhere (min
+  0.376), because every arm including neutral weights all K columns at K = 80; `weight_on_zero_mass_ramps` is the
+  reading that separates them.
+- `cost_rel`: C 0.240–0.323, B 0.250–0.372. B is not uniformly better on cost either.
+
+**Defects, stated.**
+1. The acceptance rule is checked on **one** fresh instance per candidate, not on the held-out instance. Measured
+   held-out neutral agreement is 0.52–0.70 except **one cell at 0.95** (K = 80, L = 20, seed 6), so the rule
+   improves but does not guarantee discrimination out of sample. Requiring two fresh instances would.
+2. K ≥ 40 is uncertified at 40 iterations (above). A 200-iteration check would be needed before using those rows.
+3. `K10 L5`: C is worse than neutral with a gap of 0, i.e. it genuinely converged to a θ that generalises worse than
+   uniform. That is a property of this basis at K = 10 with 5 windows, not a solver failure.
+
+**Interpretation, separated.** At K = 10 the paired L = 5 → L = 20 movement is large for C (−0.128 → +0.158) and
+small for B (+0.130 → +0.115). With 10 seeds and spreads of 0.13–0.31 this is consistent with "more windows help the
+joint fit" but does not establish it; the K ≥ 40 rows that could have tested it are uncertified. θ recovery is **not**
+a headline reading for this family (see the note's standing caveat): it is recorded per row and printed only by
+`analyse_ramp.py --theta`.
+
+### Addendum 3: the G3 arms grid and the bounded big-plan arm
+
+**Config (fixed before running).** `n = 40`, `K ∈ {10, 20}`, `L ∈ {1, 5, 10}`, corruption `p ∈ {0, 0.2}`, uniform
+marginals, no control, 5 seeds, 40 outer iterations, bump basis (`DistanceProfileFeatures`), `θ*` by the same
+rejection rule as Addendum 2c (`Dirichlet(0.5)`, fresh-instance neutral agreement ≤ 0.5, ≤ 200 draws). On this basis
+the rule accepts almost immediately (neutral held-out agreement 0.040 at K = 10, 0.015 at K = 20), so the instances
+are strongly discriminating and `E_neutral` is far from the ceiling. Commands and records:
+`arms --tag g3` (809 s), `arms --only-big --tag g3_big` (1005 s), `arms --iterations 200 --tag g3_deep` (62 s),
+tables by `analyse_arms.py`. Gain over neutral is the mean ± sd of the **per-seed** difference; for `A_single` the
+per-seed value is the mean over that seed's plans.
+
+| cell | neutral | A single | B averaged | B − neutral | C joint | C − neutral | C − B | C capped |
+| --- | ---: | ---: | ---: | --- | ---: | --- | --- | ---: |
+| K10 L1 p0 | 0.040 | 0.650 | 0.650 | +0.610±0.215 | 0.650 | +0.610±0.215 | 0.000 | 0.20 |
+| K10 L5 p0 | 0.040 | 0.663 | 0.870 | +0.830±0.165 | 0.980 | +0.940±0.082 | +0.110±0.121 | 0.80 |
+| K10 L10 p0 | 0.040 | 0.702 | 0.880 | +0.840±0.151 | 0.955 | +0.915±0.119 | +0.075±0.120 | 1.00 |
+| K20 L1 p0 | 0.015 | 0.660 | 0.660 | +0.645±0.219 | 0.660 | +0.645±0.219 | 0.000 | 1.00 |
+| K20 L5 p0 | 0.015 | 0.514 | 0.720 | +0.705±0.203 | 0.535 | +0.520±0.400 | −0.185±0.563 | 1.00 |
+| K20 L10 p0 | 0.015 | 0.544 | 0.795 | +0.780±0.132 | 0.570 | +0.555±0.356 | −0.225±0.418 | 1.00 |
+| K10 L1 p0.2 | 0.040 | 0.260 | 0.260 | +0.220±0.212 | 0.260 | +0.220±0.212 | 0.000 | 1.00 |
+| K10 L5 p0.2 | 0.040 | 0.200 | 0.280 | +0.240±0.245 | 0.515 | +0.475±0.324 | +0.235±0.159 | 1.00 |
+| K10 L10 p0.2 | 0.040 | 0.174 | 0.360 | +0.320±0.357 | 0.535 | +0.495±0.248 | +0.175±0.210 | 1.00 |
+| K20 L1 p0.2 | 0.015 | 0.455 | 0.455 | +0.440±0.129 | 0.455 | +0.440±0.129 | 0.000 | 1.00 |
+| K20 L5 p0.2 | 0.015 | 0.278 | 0.465 | +0.450±0.298 | 0.415 | +0.400±0.205 | −0.050±0.310 | 1.00 |
+| K20 L10 p0.2 | 0.015 | 0.295 | 0.560 | +0.545±0.351 | 0.320 | +0.305±0.259 | −0.240±0.213 | 1.00 |
+
+C diagnostics per cell (objective, outer gap, iterations, cap hit, skipped windows) are recorded per row in
+`g3/records.json`; the outer gap is 4.6e-05 (K10 L1 p0) and **2.4e-03 – 1.2e-01** everywhere else, with the cap hit
+in 9/12 cells. No window is skipped for a zero gradient on this basis (`skipped_windows = 0.0` everywhere), so
+`B_averaged` and `B_informative` coincide at every cell and the latter is not tabulated.
+
+**The cap makes the C column unusable as a comparison.** Only `K10 L1 p0` is converged. With `theta*` genuinely
+discriminating, 40 Kelley iterations are far from enough (gap up to 0.12 at K20 L10 p0.2). The C−B column is
+therefore the difference between a *capped* joint fit and a converged average, not between two optima.
+
+**One certified cell (the only C-vs-B statement that survives).** Re-running `K10 L5 p0` with 200 allowed iterations
+(`g3_deep`) lets C converge: 67.6 iterations, gap ≈ 0, objective ≈ 0. C = **0.960**, B = 0.855, neutral = 0.040,
+`C − B = +0.105 ± 0.182` per seed (individual seeds −0.05, −0.025, 0, +0.25, +0.35) and `cost_rel` 0.223 (C) versus
+0.339 (B). So at this cell the joint fit is ahead when it is actually solved, but 3 of 5 seeds show no difference and
+the spread is larger than the effect.
+
+**Bounded big-plan arm** (`A_single_big`: one plan of `L·n` points, `L ∈ {1, 2, 5}`, i.e. n′ = 40/80/200; same fresh
+held-out instance and θ*):
+
+| cell | n′ | agreement | cost_rel | iterations | capped | gap |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| K10 p0 L1/2/5 | 40/80/200 | 0.695 / 0.600 / 0.700 | 0.392 / 0.384 / 0.362 | 40 / 36 / 40 | 3/5 / 2/5 / 4/5 | 1.2e-04 / 0 / 1.2e-04 |
+| K10 p0.2 L1/2/5 | 40/80/200 | 0.185 / 0.115 / 0.120 | 0.423 / 0.425 / 0.441 | 40 / 40 / 40 | 5/5 / 5/5 / 5/5 | 4.0e-04 / 5.2e-04 / 2.7e-04 |
+| K20 p0 L1/2/5 | 40/80/200 | 0.640 / 0.290 / 0.180 | 0.585 / 0.715 / 0.795 | 34 / 40 / 40 | 2/5 / 5/5 / 5/5 | 0 / 5.2e-03 / 7.3e-03 |
+| K20 p0.2 L1/2/5 | 40/80/200 | 0.250 / 0.230 / 0.240 | 0.839 / 0.841 / 0.596 | 40 / 40 / 40 | 5/5 / 5/5 / 5/5 | 1.6e-04 / 2.4e-03 / 4.5e-03 |
+
+The apparent collapse at K = 20 with more points (0.64 → 0.18) is **not** a result: those cells hit the cap (5/5)
+with gap 5e-3–1.8e-2, and at K20 L2 p0 the training objective is 8.6e-06 — the fit has found a θ at which the single
+observed plan is optimal, but the θ is not identified by one plan, so its held-out plan differs. Report as "one plan
+does not identify θ", not as "more points hurt".
+
+**Cost accounting, measured.** G3 was estimated at ~25–30 min for 60 cells plus the big pass; actual 809 s (13.5 min)
+and 1005 s (16.7 min). The big pass exceeded its ~8 min estimate because each n′ = 200 fit runs to the 40-iteration
+cap (~30–48 s per cell). The deep check cost 62 s.
