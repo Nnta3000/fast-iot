@@ -1,6 +1,22 @@
 """
-EN: **One parameter, several observed plans** — the shared-`theta` arm for a multi-observation instance, with the
-    relaxed (regret) formulation and an **exact** OT forward model.
+EN: **DENSE REFERENCE — not the production path, and not exported by `iot.relaxed`.**
+
+    This module is the reference implementation of the shared-`theta` minimum-regret objective: it builds a dense
+    `(n, n, K)` feature tensor per window, contracts it into a dense cost, and solves the forward OT with POT's
+    dense network simplex, then minimises with its own Frank–Wolfe. Its storage is `Theta(L n^2 K)` and its forward
+    solve is `Theta(n^2)`. It exists so the memory-linear bundle (`src/iot/sparse/`) can be checked against it on
+    instances small enough for both to run, and so the taxi / planted studies have a readable dense arm.
+
+    Do not cite its cost or memory as a property of the relaxed formulation: the formulation is the objective
+    `F(theta) = sum_l [<c(theta), pi_hat_l> - OT_l(c(theta))]`, which the sparse bundle solves with linear memory.
+    The quadratic behaviour belongs to this implementation, chosen for brevity.
+
+    Also (see the docstring below): one parameter, several observed plans, relaxed (regret) formulation, exact OT
+    forward model.
+
+CN: **稠密参考实现 —— 不是生产路径，也不由 `iot.relaxed` 导出。** 本模块只用于在小实例上核对内存线性的 bundle
+    （`src/iot/sparse/`），以及给出租车/植入研究提供一个可读的稠密臂。它的 `Theta(L n^2 K)` 存储与 `Theta(n^2)`
+    前向求解属于**这个实现**，不属于松弛形式本身。
 
     Given `L` observed plans `pi_hat_l`, each with its own marginals, minimise the summed regret
 

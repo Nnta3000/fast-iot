@@ -1,0 +1,145 @@
+"""
+EN: **On-the-fly point-distance features, so the feature tensor is never stored.**
+
+    The memory-linear machinery in this subpackage needs a `FeatureMap` whose cost can be evaluated for a *block* of
+    pairs from `O((m + n) d)` stored coordinates. `DiagonalWeightFeatures` qualifies; a feature built from a stored
+    distance matrix does not (that matrix is `Theta(m n)`). This module provides the point-based one used by the
+    synthetic studies, with the same gauge conventions as the dense reference:
+
+      * profiles are `s, s^2, log(1 + s), s^3` with `s = ||x_i - y_j|| / scale`, `width` selecting a prefix;
+      * each column is divided by a **scalar** normaliser estimated once from a deterministic subsample of pairs
+        (unit-norm in expectation), which is the gauge that stops the fit from preferring the column with the
+        smallest entries — the `Theta(1)` version of the dense reference's unit-Frobenius columns;
+      * no constant column and no same-zone-only column, the two directions measured to make the regret trivially
+        small.
+
+    Storage: the two point clouds only. No `m x n` array, at any point.
+
+CN: **即时计算的点距离特征，特征张量从不存储。** 本子包的内存线性机制需要一种能按**块**求代价的 `FeatureMap`，只存
+    `O((m+n)d)` 个坐标。`DiagonalWeightFeatures` 满足；由存储的距离矩阵构造的特征不满足（那个矩阵是 `Theta(mn)`）。
+    本模块提供综合实验所用的点式特征，规范与稠密参考一致：剖面为 `s, s², log(1+s), s³`（`s = ||x_i-y_j||/scale`）；
+    每列除以一个由确定性抽样一次性估计的**标量**归一化常数（期望意义下单位范数），这是阻止拟合偏好"元素最小列"的规范，
+    是稠密参考中单位 Frobenius 列的 `Theta(1)` 版本；没有常数列、没有同 zone 专列 —— 这两个方向都已被实测为使 regret
+    平凡变小。
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from dataclasses import dataclass
+
+import numpy as np
+from jaxtyping import Float, Int
+
+__all__ = ["PointDistanceFeatures", "PROFILE_NAMES"]
+
+PROFILE_NAMES: tuple[str, ...] = ("s", "s2", "log1p", "s3")
+
+
+@dataclass(frozen=True)
+class PointDistanceFeatures:
+    """
+    EN: `phi_ij = [s, s^2, log(1+s), s^3][:width] / normaliser`, `s = ||x_i - y_j||_2 / scale`.
+
+        `scale` is a scalar chosen by the caller (e.g. 1 for the unit square) and must be the **same for every
+        window** in a multi-observation fit, otherwise θ mixes geometries.
+
+    CN: `phi_ij = [s, s², log(1+s), s³][:width] / 归一化常数`，`s = ||x_i-y_j||/scale`。`scale` 是调用方给的一个标量
+        （例如单位方格取 1），在同一个多观测拟合中**各窗必须相同**，否则 θ 混合了不同几何。
+    """
+
+    source_points: Float[np.ndarray, "m d"]
+    target_points: Float[np.ndarray, "n d"]
+    scale: float = 1.0
+    width: int = 4
+    sample_size: int = 100_000
+    seed: int = 0
+    normalisers: tuple[float, ...] = dataclasses.field(default=(), init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """EN: validate and estimate the scalar normalisers. CN: 校验并估计标量归一化常数。"""
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2:
+            raise ValueError("source_points and target_points must be 2D")
+        if source.shape[1] != target.shape[1]:
+            raise ValueError("the two point clouds must share a dimension")
+        if source.shape[0] < 1 or target.shape[0] < 1:
+            raise ValueError("point clouds must be non-empty")
+        if not np.isfinite(source).all() or not np.isfinite(target).all():
+            raise ValueError("point coordinates must be finite")
+        if not float(self.scale) > 0.0:
+            raise ValueError("scale must be positive")
+        if int(self.width) < 1 or int(self.width) > len(PROFILE_NAMES):
+            raise ValueError(f"width must be in 1..{len(PROFILE_NAMES)}")
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+        object.__setattr__(self, "scale", float(self.scale))
+        object.__setattr__(self, "width", int(self.width))
+        object.__setattr__(self, "normalisers", self._normalisers())
+
+    @property
+    def n_source(self) -> int:
+        """EN: `m`. CN: 源点数。"""
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        """EN: `n`. CN: 目标点数。"""
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        """EN: `K = width`. CN: 特征数。"""
+        return int(self.width)
+
+    def _profiles(self, spacing: Float[np.ndarray, "edges"]) -> Float[np.ndarray, "edges k"]:
+        """EN: the raw profile values before normalisation. CN: 归一化前的剖面取值。"""
+        columns = [spacing, spacing ** 2, np.log1p(spacing), spacing ** 3]
+        return np.ascontiguousarray(np.stack(columns[: int(self.width)], axis=1), dtype=np.float64)
+
+    def _normalisers(self) -> tuple[float, ...]:
+        """
+        EN: root-mean-square of each profile over a deterministic subsample of pairs (a scalar per column).
+
+            This is the `Theta(1)` stand-in for the dense reference's `||phi_k||_F`: it uses `sample_size` pairs,
+            never `m n`, and it fixes the gauge so that a column's *magnitude* is not what the simplex selects.
+
+        CN: 每列在确定性抽样对上的均方根（每列一个标量）。这是稠密参考 `||phi_k||_F` 的 `Theta(1)` 替代：只用
+            `sample_size` 对，从不用 `m n`，并固定规范，使单纯形不会因为列幅度而选中它。
+        """
+        rng = np.random.default_rng(int(self.seed))
+        count = min(int(self.sample_size), self.n_source * self.n_target)
+        rows = rng.integers(0, self.n_source, size=count)
+        cols = rng.integers(0, self.n_target, size=count)
+        spacing = self._spacing(rows, cols)
+        profiles = self._profiles(spacing)
+        norms = np.sqrt(np.mean(profiles ** 2, axis=0))
+        norms = np.maximum(norms, 1e-12)
+        return tuple(float(value) for value in norms)
+
+    def _spacing(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges"]:
+        """EN: `||x_i - y_j||_2 / scale` for the requested pairs. CN: 请求对上的归一化欧氏距离。"""
+        difference = self.source_points[rows] - self.target_points[cols]
+        return np.sqrt(np.einsum("ed,ed->e", difference, difference)) / float(self.scale)
+
+    def features(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges k"]:
+        """
+        EN: normalised profile values for the requested pairs; `O(|edges| d)` time, no stored grid.
+        CN: 请求对的归一化剖面值；`O(|edges| d)` 时间，不存网格。
+        """
+        row_index = np.asarray(rows, dtype=np.int64).reshape(-1)
+        col_index = np.asarray(cols, dtype=np.int64).reshape(-1)
+        if row_index.size != col_index.size:
+            raise ValueError("rows and cols must have the same length")
+        profiles = self._profiles(self._spacing(row_index, col_index))
+        return np.ascontiguousarray(profiles / np.asarray(self.normalisers, dtype=np.float64)[None, :],
+                                   dtype=np.float64)
+
+    def costs(self, theta: Float[np.ndarray, "k"], rows: Int[np.ndarray, "edges"],
+              cols: Int[np.ndarray, "edges"]) -> Float[np.ndarray, "edges"]:
+        """EN: `phi @ theta` on the requested pairs. CN: 请求对上的 `phi @ theta`。"""
+        return np.ascontiguousarray(self.features(rows, cols) @ np.asarray(theta, dtype=np.float64).reshape(-1),
+                                   dtype=np.float64)
