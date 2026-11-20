@@ -166,32 +166,96 @@ the estimate given before launching.
 basis is prevented from placing weight where no observation lies (e.g. a support-restricted basis or a width tied to
 the observed distance range), and that is a design decision, not a rerun.
 
-### Addendum 2: a monotone (hinge) basis is rank-equivalent — the K=2n hole cannot be fixed that way
+### Addendum 2: a monotone (hinge) basis — **corrected**: the first version of this addendum was wrong
 
-Tried `RampFeatures`: `phi_k(s) = max(0, s - t_k)` with thresholds on the observed distance range, planted weights
-`theta*_k ∝ exp(-t_k/0.3)`, unit-RMS columns, simplex Θ.
+Tried `RampFeatures`: `phi_k(s) = max(0, s - t_k)` with thresholds between the 1st and 99th percentile of the
+sampled distance, planted weights `theta*_k ∝ exp(-t_k/0.3)`, unit-RMS columns, simplex Θ, n = 40, K = 10, L = 5.
 
-**Result: the bundle cannot build a first cut.** The run stops with
-`RuntimeError: cut bank has no informative (nonzero) cuts` at the first master solve: the summed moment gradient
-`Σ_l (M(π̂_l) − M(P_l))` is exactly zero at the initial θ.
+**The run stops** with `RuntimeError: cut bank has no informative (nonzero) cuts`.
 
-**Why (verified, not inferred):**
-- every ramp column is nondecreasing in `s` (checked on a full grid: `diff ≥ −1e-12`);
-- hence any `θ ≥ 0` gives a cost that is nondecreasing in `s`, and for fixed marginals the exact-OT plan is the
-  **same** for every such cost — measured: `ot.emd` at `θ*` and at uniform return **identical** plans;
-- so the observed plans are optimal at every θ, `F ≡ 0`, every subgradient is zero, and there is nothing to cut.
+**Correction (2026-11-20).** The first version of this addendum said the summed gradient was zero at the initial θ,
+that every monotone cost therefore induces the *same* plan, and that a monotone family is unidentifiable from plans
+at all. That is false, and it came from reading one window as if it were the sum. The three checks below were run at
+the user's request; they contradict the claim.
 
-This is the same structural fact as the earlier kernel finding (multi-bandwidth Gaussians are monotone transforms of
-one distance and therefore rank-equivalent), now in its sharpest form: **a cost family that is monotone in the
-distance is unidentifiable from plans at all** — the plans reveal only the *ordering* of distances. The residual
-`F(uniform) = 5.3e-4` summed over five windows is a plateau/tie effect in the value, not information about θ.
+(a) **Monotone reweighting changes the plan.** On one fixed instance (n = 40, same two clouds, uniform marginals),
+the exact-OT matchings under cost `s`, `s²`, `s³` differ in 15/40, 24/40 and 18/40 row targets respectively
+(`s` vs `s²`, `s` vs `s³`, `s²` vs `s³`). In 2-D the magnitudes matter, not only the ordering of distances — the
+1-D argument (where any increasing cost gives the same monotone matching) does not transfer.
 
-**Consequence.** The K=2n degeneracy cannot be removed by making the basis monotone; monotonicity *is* the
-degeneracy. Every non-monotone family (bumps) is identifiable in principle but reopens the zero-mass-bin hole at
-large K. The remaining options are design decisions, not reruns:
+(b) **The basis is severely collinear, and its top column is nearly empty.** At K = 10 the thresholds are
+0.0598 … 1.1142 while the sampled distance spans 0.0117 … 1.3300; the fraction of pairs with `phi_k > 0` falls from
+0.988 (k = 0) to 0.013 (k = 9); the maximum off-diagonal correlation is 0.9976 and the smallest eigenvalue of the
+correlation matrix is 6.76e-04. Hinges on a fixed range are nested, so they are close to linearly dependent.
 
-1. a **data-dependent Θ** that keeps weight only on features with observed support (stated as such), or
-2. features that are **not functions of distance alone** (per-point or per-pair structure), or
-3. declaring **K ≤ n/2** the operating regime and not running K = 2n at all.
+(c) **The observed plans are not all the uniform-cost plans.** Comparing the planted plan with the exact-OT plan at
+uniform θ, per window: 0/40, 6/40, 0/40, 2/40 and 9/40 row targets differ.
 
-No further fixes were tried, per the instruction.
+**What actually raised the error.** `F(uniform)` summed over the five windows is `5.3e-4`, not zero; per window it
+is `−1.7e-18`, `1.5e-4`, `0`, `1.3e-6`, `3.8e-4`. The zero was window 0's contribution alone, which is exactly the
+window whose observed plan is already the uniform-cost plan. The crash comes from the **per-window fits of arm B**:
+a window that is already optimal at uniform has a zero subgradient at the initial θ, so the cut bank is empty and the
+master LP (correctly) refuses it. It is not a statement about the family.
+
+**How common is it:** over 10 seeds, n = 40, a window is already optimal at uniform in 19/50 (K = 10), 29/50
+(K = 40) and 30/50 (K = 80) cases. The **joint** `F(uniform)` is positive in 9/10 seeds at every K, and is `≈ 0` in
+1/10 seeds at K = 80 (all five windows optimal at uniform) — so the joint fit can hit the same empty bank.
+
+**Fix (a real bug in the new code, not a tuning choice).** `solve_bundle_multi` now stops when the subgradient is
+zero: `F(θ) = 0` is the global minimum because `F ≥ 0`, and the cut would be the always-true halfspace
+`0·θ' ≤ 0`. It records that iteration with `lower = upper = value` and reports a zero-gap bracket; it no longer hands
+an empty bank to `solve_cut_master`. Covered by `tests/iot_bundle_multi_test.py`.
+
+**Not claimed.** This says nothing yet about whether the ramp family identifies θ better than the bump family; the
+K ∈ {10, 40, 80}, L ∈ {5, 20} rerun is the measurement for that. It also does not remove the K = 2n zero-mass-bin
+hole, which was found on the bump basis and is untouched here.
+
+#### Addendum 2b: the rerun — more observations move θ a little, and the support reading is not the mass share
+
+Run: `python -m ...multi_observation_sparse.diagnose --mode ramp --n 40 --seeds 0 … 9 --ks 10 40 80 --ls 5 20
+--iterations 40 --tag ramp3` (271 s wall, records in `out/multi_observation_sparse/diagnose/ramp3/records.json`,
+table printed by `analyse_ramp.py`). n = 40, uniform marginals, fresh points per window, thresholds fixed on a
+template window, 10 seeds, 40-iteration cap. `D_oracle` (planted θ* on the held-out instance) gives agreement
+1.000 and `cost_rel` 0.000 in every row and is omitted from the table.
+
+| K | L | arm | draws | agreement | `cost_rel` | ‖θ−θ*‖₁ | mass share | weight on zero-mass ramps |
+| ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: |
+| 10 | 5 | C joint | 10 | 0.975±0.063 | 0.152±0.020 | 0.612±0.128 | 0.998 | 0.000 |
+| 10 | 5 | B averaged | 10 | 0.953±0.074 | 0.123±0.059 | 0.437±0.125 | 1.000 | 0.272 |
+| 10 | 20 | C joint | 10 | 0.995±0.016 | 0.140±0.017 | 0.515±0.085 | 0.999 | 0.000 |
+| 10 | 20 | B averaged | 10 | 0.960±0.067 | 0.105±0.037 | 0.314±0.081 | 1.000 | 0.270 |
+| 40 | 5 | C joint | 10 | 0.910±0.098 | 0.179±0.026 | 1.290±0.162 | 0.667 | 0.000 |
+| 40 | 5 | B averaged | 10 | 0.912±0.104 | 0.144±0.067 | 0.705±0.111 | 1.000 | 0.392 |
+| 40 | 20 | C joint | 10 | 0.972±0.048 | 0.144±0.029 | 1.133±0.073 | 0.748 | 0.000 |
+| 40 | 20 | B averaged | 10 | 0.942±0.080 | 0.096±0.038 | 0.422±0.047 | 1.000 | 0.314 |
+| 80 | 5 | C joint | 10 | 0.887±0.100 | 0.193±0.048 | 1.538±0.305 | 0.408 | 0.070 |
+| 80 | 5 | B averaged | 10 | 0.948±0.066 | 0.157±0.079 | 0.847±0.154 | 1.000 | 0.421 |
+| 80 | 20 | C joint | 10 | 0.960±0.073 | 0.154±0.053 | 1.437±0.267 | 0.466 | 0.066 |
+| 80 | 20 | B averaged | 10 | 0.957±0.069 | 0.101±0.038 | 0.569±0.058 | 1.000 | 0.315 |
+
+**What the table measures.**
+- **Four times the windows buys little in θ.** At fixed K, going from L = 5 to L = 20 (4× the windows) reduces
+  ‖θ−θ*‖₁ by 16 % (K = 10), 12 % (K = 40) and 7 % (K = 80), while agreement rises by 0.02, 0.06 and 0.07. The θ error
+  grows with K instead: 0.61 → 1.29 → 1.54 at L = 5.
+- **The joint fit is not better than averaging single fits.** C beats B on agreement only at K = 10
+  (+0.02…+0.035) and is worse at K = 80, L = 5 (−0.06). B has the lower `cost_rel` in all six cells.
+- **The two arms differ in *where* the weight goes.** C keeps its weight on ramps that carry observed mass
+  (`weight on zero-mass ramps` 0.000–0.070); B puts 27–42 % of its weight on ramps that are zero on every observed
+  edge of the cell. That weight is invisible in training and changes the held-out cost. B is nevertheless closer to
+  θ* in L1 — the metric and the support reading point in opposite directions, so neither is a verdict on its own.
+- **Two cells are not converged.** The certified bracket is zero-width for every K = 10 cell and for K = 40/80 at
+  L = 5, but the L = 20, K ≥ 40 cells hit the 40-iteration cap (10/10 seeds at K = 40, 9/10 at K = 80) with a gap of
+  1e-4–6.5e-4. Their rows are the best θ the loop queried, not a certified optimum; the numbers above do not change
+  if they are read that way, but they must not be read as "the fit converged to F* = 0".
+- **The pre-registered flag never fires, and that is a defect of the reading.** No cell has mass share below 0.2
+  (minimum 0.408), yet one cell (K = 80, L = 5, seed 1) returns exactly uniform θ after one iteration, with 70 % of
+  its weight on zero-observed-mass ramps: `mass share` is 1.000 because *every* ramp is weighted, so the share is
+  blind to a dense θ. For the hinge basis the informative reading is `weight on zero-mass ramps`, and it is now
+  recorded per cell.
+
+**Interpretation, separated from the measurements.** The first sentence of the objective ("does more than one
+observation pin θ better?") gets a small *yes* in the L1 sense and a *no* in any practically useful sense at this
+size: 4× the data buys 7–16 % of the θ error, and the error itself grows with K. This is a statement about this
+basis and this n, not about multi-observation in general; the hinge basis is nearly collinear (max |corr| 0.9976,
+smallest correlation eigenvalue 6.8e-04 at K = 10), which is a plausible reason for both the flat likelihood and the
+slow θ convergence, and it is a hypothesis, not a measurement.

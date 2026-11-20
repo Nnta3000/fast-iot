@@ -104,3 +104,51 @@ def test_bundle_rejects_bad_input() -> None:
         solve_bundle_multi([empty], features)
     with pytest.raises(ValueError):
         solve_bundle_multi(plans, [features, features])
+
+
+# EN: zero-subgradient guard. A window whose observed plan is already optimal at the queried theta gives F = 0
+#     and a zero cut; the bundle must stop with a certified bracket instead of handing an empty bank to the master.
+# CN: 零次梯度守卫。若某窗的观测计划在查询 theta 处已最优，则 F=0、割为零；bundle 应停止并给出证书区间，
+#     而不是把空割银行交给 master。
+N = 6
+
+
+def _unit_square(seed: int) -> PointDistanceFeatures:
+    """EN: two point clouds on the unit square. CN: 单位方格上的两片点云。"""
+    rng = np.random.default_rng(seed)
+    return PointDistanceFeatures(rng.random((N, 2)), rng.random((N, 2)), width=3)
+
+
+def _plan_at(features: PointDistanceFeatures, theta: np.ndarray) -> sparse.csr_matrix:
+    """EN: the exact uniform-marginal OT plan at `theta`. CN: 在 `theta` 处、均匀边际下的精确 OT 计划。"""
+    rows = np.repeat(np.arange(N, dtype=np.int64), N)
+    cols = np.tile(np.arange(N, dtype=np.int64), N)
+    mass = np.full(N, 1.0 / N)
+    return sparse.csr_matrix(
+        np.asarray(ot.emd(mass, mass, np.asarray(features.costs(theta, rows, cols)).reshape(N, N),
+                          numItermax=2_000_000)))
+
+
+def test_zero_subgradient_stops_with_a_bracket() -> None:
+    """EN: a plan optimal at uniform gives F=0, a zero gap and no exception. CN: 在均匀点最优的计划应给出 F=0、零间隙且不抛错。"""
+    features = _unit_square(0)
+    uniform = np.full(features.n_features, 1.0 / features.n_features)
+    result = solve_bundle_multi([_plan_at(features, uniform)], [features],
+                                theta_set=SimplexTheta(features.n_features), max_iterations=10)
+    assert result.converged
+    assert abs(result.value) < 1e-12
+    assert result.gap <= 1e-12
+    assert len(result.iterations) == 1
+    assert np.allclose(result.theta, uniform)
+
+
+def test_a_nonzero_gradient_still_builds_cuts() -> None:
+    """EN: if uniform is not already optimal the loop builds a cut and reaches a certified bracket. CN: 若均匀点非最优，循环应建割并给出证书区间。"""
+    features = _unit_square(1)
+    result = solve_bundle_multi([_plan_at(features, np.asarray([0.0, 0.0, 1.0]))], [features],
+                                theta_set=SimplexTheta(features.n_features), max_iterations=20)
+    assert len(result.iterations) >= 2
+    assert result.upper >= -1e-12
+    assert result.lower <= result.upper + 1e-9
+    assert abs(result.value) < 1e-12
+    assert result.theta[-1] > 0.99

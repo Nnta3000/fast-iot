@@ -27,6 +27,9 @@ python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode 
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode inner --prune-slack 1e-3
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode benchmark --iterations 10 --max-seconds 45
 python -m iot_experiments.studies.synthetic.multi_observation_sparse.run --mode sanity
+python -m iot_experiments.studies.synthetic.multi_observation_sparse.diagnose --mode ramp \
+    --n 40 --seeds 0 1 2 3 4 5 6 7 8 9 --ks 10 40 80 --ls 5 20 --iterations 40 --tag ramp3   # ~4.5 min
+python -m iot_experiments.studies.synthetic.multi_observation_sparse.analyse_ramp                    # the table
 ```
 
 ## Results (all in `iot_experiments/out/multi_observation_sparse/`)
@@ -62,7 +65,17 @@ takes 66 s and grows like `n²`, so `n=12800` is ≈17 min per window per outer 
 the out-of-family control gives `F = 0.04–0.71` and agreement `0.24–0.27`. θ is not recovered (`θ_l1` 0.2–0.8) while
 the plans are: the identifiability cone, as expected. Not evidence about quality.
 
+**Ramp (hinge) basis** (`K ∈ {10,40,80}`, `L ∈ {5,20}`, `n=40`, 10 seeds, 40-iteration cap; records
+`out/multi_observation_sparse/diagnose/ramp3/`, table from `analyse_ramp.py`): the joint fit's held-out agreement is
+0.887–0.995 and averaging single fits gives 0.912–0.960; `cost_rel` is 0.140–0.193 for the joint fit and
+0.096–0.157 for averaging. Going from `L=5` to `L=20` lowers `‖θ−θ*‖₁` by only 7–16 %, while the error grows with
+`K` (0.61 → 1.29 → 1.54 at `L=5`). The joint fit keeps its weight on ramps that carry observed mass (0.000–0.070 on
+zero-mass ramps); averaging puts 27–42 % of its weight on ramps that are zero on every observed edge. Full table and
+the correction of an earlier wrong claim about monotone bases: `notes/MULTI_OBSERVATION_SPARSE_BUNDLE.md`,
+Addendum 2.
+
 ## Files
 
-`run.py` (four modes), `reference.py` (dense joint LP + dense FW), `../../../../src/iot/sparse/{features,sparse_ot,bundle_multi}.py`,
+`run.py` (four modes), `reference.py` (dense joint LP + dense FW), `diagnose.py` (degeneracy / fix / ramp modes),
+`analyse_ramp.py` (the ramp table), `../../../../src/iot/sparse/{features,sparse_ot,bundle_multi}.py`,
 tests `tests/iot_sparse_ot_test.py`, `tests/iot_bundle_multi_test.py`.

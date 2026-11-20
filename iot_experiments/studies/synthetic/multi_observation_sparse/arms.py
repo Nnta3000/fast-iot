@@ -39,6 +39,7 @@ import numpy as np
 import ot
 import scipy.sparse as sparse
 
+from iot.core.features import FeatureMap
 from iot.sparse.bundle_multi import solve_bundle_multi
 from iot.sparse.features import DistanceProfileFeatures
 from iot.sparse.sparse_ot import solve_sparse_ot
@@ -152,7 +153,7 @@ class Readings:
     cost_rel: float
 
 
-def _readings(theta: np.ndarray, planted: np.ndarray, held_features: DistanceProfileFeatures,
+def _readings(theta: np.ndarray, planted: np.ndarray, held_features: FeatureMap,
               held_plan: sparse.csr_matrix) -> Readings:
     """
     EN: evaluate a fitted θ on a **fresh** instance: fraction reproduced, excess cost under c*, and the cost error.

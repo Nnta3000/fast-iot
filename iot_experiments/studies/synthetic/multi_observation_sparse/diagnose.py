@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import time
+from typing import cast
 from pathlib import Path
 
 import numpy as np
@@ -33,9 +34,10 @@ import scipy.sparse as sparse
 
 from iot.core.theta import LinearThetaConstraints
 from iot.sparse.bundle_multi import solve_bundle_multi
-from iot.sparse.features import RampFeatures
+from iot.sparse.features import DistanceProfileFeatures, RampFeatures
 from iot_experiments.harness.records import RunLog, RunRecord, format_table, summarise, write_records
 from iot_experiments.studies.synthetic.multi_observation_sparse.arms import (
+    Readings,
     _observation,
     _readings,
     _value,
@@ -100,6 +102,14 @@ def _uniform(k: int) -> np.ndarray:
     return np.full(int(k), 1.0 / float(k))
 
 
+def _float_field(info: dict[str, object], key: str) -> float:
+    """EN: read a numeric diagnostic out of the open `info` dict, failing loudly. CN: 从开放的 `info` 字典读一个数值诊断，类型不对就报错。"""
+    value = info.get(key)
+    if not isinstance(value, (int, float)):
+        raise TypeError(f"diagnostic {key!r} is not numeric: {value!r}")
+    return float(value)
+
+
 def _fit(plans: list[sparse.csr_matrix], maps: list, *, theta_set, stage2_eta: float | None = None,
          iterations: int = 40) -> tuple[np.ndarray, float, dict[str, object]]:
     """
@@ -113,8 +123,10 @@ def _fit(plans: list[sparse.csr_matrix], maps: list, *, theta_set, stage2_eta: f
     """
     base = solve_bundle_multi(plans, maps, theta_set=theta_set, tol=1e-6, max_iterations=int(iterations),
                               inner_tol=1e-9)
+    fit_info: dict[str, object] = {"stage2": "off", "gap": float(base.gap),
+                                   "iterations": len(base.iterations), "lower": float(base.lower)}
     if stage2_eta is None:
-        return np.asarray(base.theta), float(base.value), {"stage2": "off"}
+        return np.asarray(base.theta), float(base.value), fit_info
     k = int(base.theta.size)
     neutral = _uniform(k)
     # EN: the outer loop already evaluated F exactly at every θ it queried, so those pairs are free candidates;
@@ -135,7 +147,53 @@ def _fit(plans: list[sparse.csr_matrix], maps: list, *, theta_set, stage2_eta: f
     return np.asarray(chosen[2]), float(chosen[1]), {
         "stage2": "uniform", "eta_fraction": float(stage2_eta),
         "eta_absolute": float(stage2_eta) * f_uniform, "f_uniform": f_uniform,
-        "n_candidates": len(filtered), "n_admissible": len(admissible), "l1_to_uniform": chosen[0]}
+        "n_candidates": len(filtered), "n_admissible": len(admissible), "l1_to_uniform": chosen[0],
+        **fit_info}
+
+
+@dataclasses.dataclass(frozen=True)
+class RampMassReading:
+    """
+    EN: how the observed hinge mass and the fitted weights are distributed over the ramp columns.
+
+        `mass_share` is `sum_{k: theta_k>0} m_k / sum_k m_k`; `weight_on_zero_mass` is `sum_{k: m_k=0} theta_k`.
+        The second reading is the one that detects the hole: a ramp that is zero on every observed edge carries no
+        mass, so weight placed there is invisible in training and only shows up out of sample.
+
+    CN: 观测 hinge 质量与拟合权重在 ramp 列上的分布。`mass_share` 为 `sum_{k: theta_k>0} m_k / sum_k m_k`；
+        `weight_on_zero_mass` 为 `sum_{k: m_k=0} theta_k`。后者才是检测"洞"的读数：在所有观测边上为零的 ramp
+        不承载质量，放在其上的权重在训练中不可见，只会在样本外显现。
+    """
+
+    mass_share: float
+    zero_mass_weighted: int
+    weight_on_zero_mass: float
+
+
+def _ramp_mass_share(theta: np.ndarray, maps: list, plans: list[sparse.csr_matrix]) -> RampMassReading:
+    """
+    EN: observed hinge mass per ramp and the two readings above.
+
+        For the hinge basis the columns are not a partition of unity, so "mass per bin" is defined as
+        `m_k = sum_l sum_edges phi_ij,k pi_hat_l,ij`.
+
+    CN: 每条 ramp 的观测 hinge 质量及上面两个读数。hinge 基的列不是单位分解，故"每箱质量"定义为
+        `m_k = sum_l sum_edges phi_ij,k pi_hat_l,ij`。
+    """
+    mass = np.zeros(int(np.asarray(theta).size), dtype=np.float64)
+    for features, plan in zip(maps, plans, strict=True):
+        coo = plan.tocoo()
+        rows = coo.row.astype(np.int64)
+        cols = coo.col.astype(np.int64)
+        mass += features.features(rows, cols).T @ coo.data.astype(np.float64)
+    weights = np.asarray(theta, dtype=np.float64)
+    weighted = weights > 1e-6
+    share = float(mass[weighted].sum() / mass.sum()) if mass.sum() > 0 else float("nan")
+    return RampMassReading(
+        mass_share=share,
+        zero_mass_weighted=int(np.sum(weighted & (mass <= 0.0))),
+        weight_on_zero_mass=float(weights[mass <= 0.0].sum()),
+    )
 
 
 def _bin_mass(maps: list, plans: list[sparse.csr_matrix], bumps: int) -> np.ndarray:
@@ -167,7 +225,8 @@ def _planted_ramp(ramps: int, features: RampFeatures) -> np.ndarray:
     return weights / weights.sum()
 
 
-def _ramp_cell(n: int, ramps: int, n_observations: int, seed: int):
+def _ramp_cell(n: int, ramps: int, n_observations: int, seed: int
+               ) -> tuple[list[RampFeatures], list[sparse.csr_matrix], RampFeatures, sparse.csr_matrix, np.ndarray]:
     """EN: the same cell on the ramp basis. CN: ramp 基上的同一格子。"""
     rng = np.random.default_rng((30_000 + seed, 0))
     source_points = rng.random((n, 2))
@@ -197,7 +256,8 @@ def _ramp_cell(n: int, ramps: int, n_observations: int, seed: int):
             held_features, held_plan, planted)
 
 
-def _cell(n: int, bumps: int, n_observations: int, seed: int) -> tuple[list, list, object, object, np.ndarray]:
+def _cell(n: int, bumps: int, n_observations: int, seed: int) -> tuple[
+        list[DistanceProfileFeatures], list[sparse.csr_matrix], DistanceProfileFeatures, sparse.csr_matrix, np.ndarray]:
     """EN: build the training and held-out observations of one cell (bump basis). CN: 构造一个格子的训练与留出观测（鼓包基）。"""
     planted = planted_theta(int(bumps))
     observations = [_observation(n, bumps, planted, seed, window, marginal_mode="uniform", noise=0.0,
@@ -294,19 +354,25 @@ def mode_ramp(log: RunLog, *, n: int, seeds: list[int], ks: list[int], ls: list[
         for n_observations in ls:
             for seed in seeds:
                 maps, plans, held_features, held_plan, planted = _ramp_cell(n, ramps, n_observations, seed)
-                theta_c, value_c, _info = _fit(plans, maps, theta_set=_simplex(ramps), iterations=iterations)
+                theta_c, value_c, info_c = _fit(plans, maps, theta_set=_simplex(ramps), iterations=iterations)
                 weighted = int(np.sum(np.asarray(theta_c) > 1e-6))
                 ratio = _observed_cost_ratio(theta_c, maps, plans)
+                share_c = _ramp_mass_share(theta_c, maps, plans)
                 readings_c = _readings(theta_c, planted, held_features, held_plan)
                 singles = [_fit([plan], [features], theta_set=_simplex(ramps), iterations=iterations)[0]
                            for plan, features in zip(plans, maps, strict=True)]
                 averaged = _project(_simplex(ramps), np.mean(np.stack(singles, axis=0), axis=0))
+                share_b = _ramp_mass_share(averaged, maps, plans)
                 readings_b = _readings(averaged, planted, held_features, held_plan)
                 readings_o = _readings(planted, planted, held_features, held_plan)
                 log.line(f"[ramp] K={ramps} L={n_observations} s={seed}: weighted ramps={weighted} "
-                         f"obs_cost_ratio={ratio:.4f} F={value_c:.2e} "
-                         f"C agr={readings_c.agreement:.4f} cost={readings_c.cost_rel:.4f} "
-                         f"B agr={readings_b.agreement:.4f} cost={readings_b.cost_rel:.4f}")
+                         f"obs_cost_ratio={ratio:.4f} F={value_c:.2e} gap={_float_field(info_c, 'gap'):.1e} "
+                         f"iters={int(_float_field(info_c, 'iterations'))} mass_share={share_c.mass_share:.3f} "
+                         f"w_on_zero_mass={share_c.weight_on_zero_mass:.3f} "
+                         f"zero_mass_weighted={share_c.zero_mass_weighted} "
+                         f"C agr={readings_c.agreement:.4f} cost={readings_c.cost_rel:.4f} | "
+                         f"B mass_share={share_b.mass_share:.3f} w_on_zero={share_b.weight_on_zero_mass:.3f} "
+                         f"agr={readings_b.agreement:.4f} cost={readings_b.cost_rel:.4f}")
                 for arm, theta, readings in (("C_joint", theta_c, readings_c),
                                              ("B_averaged", averaged, readings_b),
                                              ("D_oracle", planted, readings_o)):
@@ -315,6 +381,14 @@ def mode_ramp(log: RunLog, *, n: int, seeds: list[int], ks: list[int], ls: list[
                         arm=arm, k=int(ramps), m=int(n), draw=int(seed),
                         metrics={"agreement": readings.agreement, "cost_rel": readings.cost_rel,
                                  "train_objective": float(value_c) if arm == "C_joint" else float("nan"),
+                                 "outer_gap": _float_field(info_c, "gap") if arm == "C_joint" else float("nan"),
+                                 "iterations": _float_field(info_c, "iterations") if arm == "C_joint" else float("nan"),
+                                 "observed_mass_in_weighted_bins": (share_c if arm == "C_joint" else share_b).mass_share,
+                                 "mass_share_below_0.2": float(
+                                     (share_c if arm == "C_joint" else share_b).mass_share < 0.2),
+                                 "weight_on_zero_mass_ramps": (share_c if arm == "C_joint" else share_b).weight_on_zero_mass,
+                                 "zero_mass_weighted_bins": float(
+                                     (share_c if arm == "C_joint" else share_b).zero_mass_weighted),
                                  "observed_cost_ratio": float(ratio) if arm == "C_joint" else float("nan"),
                                  "weighted_ramps": float(weighted) if arm == "C_joint" else float("nan")},
                         config={"mode": "ramp", "K": ramps, "L": n_observations, "n": n,
@@ -352,8 +426,9 @@ def mode_fix(log: RunLog, *, n: int, seeds: list[int], taus: list[float], stage2
                                    "cost_rel": float(np.mean([r.cost_rel for r in readings_a]))}
                         theta_values: list[float] = []
                     else:
-                        metrics = {"agreement": readings.agreement, "cost_rel": readings.cost_rel}
-                        theta_values = [float(v) for v in theta]
+                        chosen = cast(Readings, readings)
+                        metrics = {"agreement": chosen.agreement, "cost_rel": chosen.cost_rel}
+                        theta_values = [float(v) for v in cast(np.ndarray, theta)]
                     rows.append(RunRecord(
                         study="multi_observation_sparse",
                         geometry=f"fix_{label}_L{n_observations}", arm=arm, k=int(bumps), m=int(n), draw=int(seed),

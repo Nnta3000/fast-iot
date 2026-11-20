@@ -201,6 +201,19 @@ def solve_bundle_multi(
             best_value = value
             best_theta = theta.copy()
             best_plans = plans_now
+        # EN: A zero subgradient means every observed plan is already optimal at this theta, so F(theta) = 0.
+        #     Since F >= 0 that is the global minimum and the cut would be the always-true halfspace
+        #     0·theta' <= 0; `solve_cut_master` rejects an all-zero bank. Stop instead of raising.
+        # CN: 零次梯度表示每个观测计划在该 theta 处已最优，故 F(theta)=0；因 F>=0 这是全局最小，
+        #     割为恒真半空间 0·theta'<=0，而 `solve_cut_master` 会拒绝全零割银行。直接停止而非报错。
+        if float(np.linalg.norm(gradient)) <= 1e-12:
+            records.append(BundleIteration(
+                index=iteration, theta=tuple(float(v) for v in theta), value=value, lower=value, upper=upper,
+                gap=float(upper - value), inner_gaps=tuple(result.inner_gap for result in results),
+                edges=tuple(result.n_edges for result in results),
+                sweeps=tuple(result.sweeps for result in results),
+                seconds=float(time.perf_counter() - iteration_started), master_seconds=0.0))
+            break
         cuts.append(gradient)
         master_started = time.perf_counter()
         master = solve_cut_master(np.stack(cuts), theta_set=set_theta, mode="kelley")
