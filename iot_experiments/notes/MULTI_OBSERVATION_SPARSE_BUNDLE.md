@@ -121,3 +121,47 @@ Measured: it is 67 % of the runtime at n=3200. **Per the decision rule, that is 
 The single-plan relaxed loop at `L=1` was not run as a third arm: it solves the same objective, and the bundle at
 `L=1` already matches both dense references; it would add a third solver, not a new answer. The large `L` sweep was
 reduced to `L ∈ {1,5,20}` in the sanity mode. `n=12800` was not run (estimated 17 min per inner solve).
+
+---
+
+## Addendum: the K = 2n reversal is a degeneracy, not a result (2026-11-20)
+
+The arms pilot showed `C_joint` far below `B_averaged` at K = 80 = 2n. Before treating that as a finding, the fitted
+cost was checked against the observed support.
+
+**Degeneracy (K=80, n=40, 10 seeds, both L).** For each fitted θ, every support edge of the training plans was
+assigned to its nearest bump centre; the weighted bins (θ_k > 1e-6) carry **0.0000 ± 0.0000** of the observed mass.
+Examples from the log: L=5 seed 0 puts θ = 1.0 on bin 35 with **zero observed mass** and reaches `F = −3.3e-11`;
+L=20 seed 0 spreads over bins 38/28/37, all zero-mass, `F = −1.9e-10`. Zero-mass bins: 47.8/80 (L=5), 37.9/80
+(L=20). At K=10 the same statistic is 0.478 ± 0.275 (L=5) and 0.638 ± 0.219 (L=20) with 3.7/10 and 2.3/10 zero-mass
+bins, and `F ≈ 3.6e-3` — a real fit.
+
+So at K = 2n the cost is ~0 on every observed edge and the regret is zero **by construction**. The K=2n rows of the
+pilot measure this degeneracy, not the value of joint fitting.
+
+**Fixes (K=80, L ∈ {5,20}, 10 seeds, 10 outer iterations).** Same Θ and same rule for every arm.
+
+| fix | L | B_averaged agreement | C_joint agreement | B cost error | C cost error |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| reference | 5 | 0.200 ± 0.122 | 0.050 ± 0.040 | 0.749 | 0.931 |
+| reference | 20 | 0.310 ± 0.111 | 0.060 ± 0.034 | 0.584 | 0.924 |
+| floor τ=0.1 | 5 | 0.095 ± 0.060 | 0.025 ± 0.025 | 0.715 | 0.838 |
+| floor τ=0.1 | 20 | 0.170 ± 0.040 | 0.018 ± 0.016 | 0.560 | 0.821 |
+| floor τ=0.3 | 20 | 0.120 ± 0.019 | 0.038 ± 0.036 | 0.584 | 0.643 |
+| stage-2 η=0.05 | 5 | 0.303 ± 0.065 | 0.113 ± 0.053 | 0.727 | 0.896 |
+| stage-2 η=0.05 | 20 | 0.415 ± 0.169 | 0.145 ± 0.061 | 0.468 | 0.875 |
+| stage-2 η=0.2 | 20 | 0.340 ± 0.145 | 0.195 ± 0.074 | 0.437 | 0.862 |
+| oracle | — | 1.000 | 1.000 | 0.000 | 0.000 |
+
+Stage-2 lifts C (0.06 → 0.15–0.20) and the floor barely moves it; **neither closes the gap to averaging**, which is
+2–8× higher on agreement at both L. θ spread across seeds is 1.5–1.85 (L1 over 80 coordinates) in every
+configuration, i.e. the cone is wide and the fit is not stable.
+
+**Defects of this diagnostic, stated:** the fits were capped at 10 outer iterations, and the fix rows do **not**
+record the training objective or the outer gap (the values were computed but not written) — so a capped fit cannot be
+distinguished from a converged one in that table. The degeneracy run took 7.8 min and the fix run 15 min, both above
+the estimate given before launching.
+
+**Consequence:** the mid-size grid is **not** run. The K=2n regime is not informative under this family until the
+basis is prevented from placing weight where no observation lies (e.g. a support-restricted basis or a width tied to
+the observed distance range), and that is a design decision, not a rerun.
