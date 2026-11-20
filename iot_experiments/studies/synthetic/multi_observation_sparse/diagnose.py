@@ -28,10 +28,12 @@ import time
 from pathlib import Path
 
 import numpy as np
+import ot
 import scipy.sparse as sparse
 
 from iot.core.theta import LinearThetaConstraints
 from iot.sparse.bundle_multi import solve_bundle_multi
+from iot.sparse.features import RampFeatures
 from iot_experiments.harness.records import RunLog, RunRecord, format_table, summarise, write_records
 from iot_experiments.studies.synthetic.multi_observation_sparse.arms import (
     _observation,
@@ -153,8 +155,50 @@ def _bin_mass(maps: list, plans: list[sparse.csr_matrix], bumps: int) -> np.ndar
     return mass / max(1, len(plans))
 
 
+def _planted_ramp(ramps: int, features: RampFeatures) -> np.ndarray:
+    """
+    EN: planted weights for the ramp basis: nonnegative, decreasing in the threshold (`theta_k ∝ exp(-t_k/0.3)`),
+        so the planted cost grows with distance but not linearly.
+
+    CN: ramp 基的植入权重：非负、随阈值递减（`theta_k ∝ exp(-t_k/0.3)`），使植入代价随距离增长但非线性。
+    """
+    thresholds = np.asarray(features.thresholds, dtype=np.float64)
+    weights = np.exp(-thresholds / 0.3)
+    return weights / weights.sum()
+
+
+def _ramp_cell(n: int, ramps: int, n_observations: int, seed: int):
+    """EN: the same cell on the ramp basis. CN: ramp 基上的同一格子。"""
+    rng = np.random.default_rng((30_000 + seed, 0))
+    source_points = rng.random((n, 2))
+    target_points = rng.random((n, 2))
+    template = RampFeatures(source_points, target_points, ramps=int(ramps), seed=30_000 + seed)
+    planted = _planted_ramp(int(ramps), template)
+    observations = []
+    for window in range(int(n_observations)):
+        window_rng = np.random.default_rng((30_000 + seed, window + 1))
+        features = RampFeatures(window_rng.random((n, 2)), window_rng.random((n, 2)), ramps=int(ramps),
+                                seed=30_000 + seed, thresholds=tuple(template.thresholds))
+        rows = np.repeat(np.arange(n, dtype=np.int64), n)
+        cols = np.tile(np.arange(n, dtype=np.int64), n)
+        cost = np.asarray(features.costs(planted, rows, cols)).reshape(n, n)
+        source_mass, target_mass = _uniform(n), _uniform(n)
+        plan = np.asarray(ot.emd(source_mass, target_mass, cost, numItermax=2_000_000))
+        observations.append((features, sparse.csr_matrix(plan)))
+    held_rng = np.random.default_rng((30_000 + seed, 10_000))
+    held_features = RampFeatures(held_rng.random((n, 2)), held_rng.random((n, 2)), ramps=int(ramps),
+                                 seed=30_000 + seed, thresholds=tuple(template.thresholds))
+    rows = np.repeat(np.arange(n, dtype=np.int64), n)
+    cols = np.tile(np.arange(n, dtype=np.int64), n)
+    held_cost = np.asarray(held_features.costs(planted, rows, cols)).reshape(n, n)
+    held_plan = sparse.csr_matrix(
+        np.asarray(ot.emd(_uniform(n), _uniform(n), held_cost, numItermax=2_000_000)))
+    return ([item[0] for item in observations], [item[1] for item in observations],
+            held_features, held_plan, planted)
+
+
 def _cell(n: int, bumps: int, n_observations: int, seed: int) -> tuple[list, list, object, object, np.ndarray]:
-    """EN: build the training and held-out observations of one cell. CN: 构造一个格子的训练与留出观测。"""
+    """EN: build the training and held-out observations of one cell (bump basis). CN: 构造一个格子的训练与留出观测（鼓包基）。"""
     planted = planted_theta(int(bumps))
     observations = [_observation(n, bumps, planted, seed, window, marginal_mode="uniform", noise=0.0,
                                  outside=False, base_seed=20_000 + seed) for window in range(int(n_observations))]
@@ -222,6 +266,63 @@ def _simplex(k: int):
     return SimplexTheta(int(k))
 
 
+def _observed_cost_ratio(theta: np.ndarray, maps: list, plans: list[sparse.csr_matrix]) -> float:
+    """
+    EN: cost of the observed edges under θ, relative to the cost of the same edges under the uniform θ.
+
+        This is the ramp-basis degeneracy reading: ~0 means the fitted cost vanishes where the observations are.
+
+    CN: 观测边在 θ 下的代价，相对同一批边在均匀 θ 下的代价。这是 ramp 基的退化读数：约 0 表示拟合代价在观测处消失。
+    """
+    total_theta = 0.0
+    total_uniform = 0.0
+    for features, plan in zip(maps, plans, strict=True):
+        coo = plan.tocoo()
+        rows = coo.row.astype(np.int64)
+        cols = coo.col.astype(np.int64)
+        mass = coo.data.astype(np.float64)
+        total_theta += float(mass @ features.costs(theta, rows, cols))
+        total_uniform += float(mass @ features.costs(_uniform(theta.size), rows, cols))
+    return total_theta / total_uniform if total_uniform > 0 else float("nan")
+
+
+def mode_ramp(log: RunLog, *, n: int, seeds: list[int], ks: list[int], ls: list[int],
+              iterations: int = 40) -> list[RunRecord]:
+    """EN: the ramp-basis check: degeneracy + arms B/C plus oracle. CN: ramp 基检查：退化 + B/C 与 oracle。"""
+    rows: list[RunRecord] = []
+    for ramps in ks:
+        for n_observations in ls:
+            for seed in seeds:
+                maps, plans, held_features, held_plan, planted = _ramp_cell(n, ramps, n_observations, seed)
+                theta_c, value_c, _info = _fit(plans, maps, theta_set=_simplex(ramps), iterations=iterations)
+                weighted = int(np.sum(np.asarray(theta_c) > 1e-6))
+                ratio = _observed_cost_ratio(theta_c, maps, plans)
+                readings_c = _readings(theta_c, planted, held_features, held_plan)
+                singles = [_fit([plan], [features], theta_set=_simplex(ramps), iterations=iterations)[0]
+                           for plan, features in zip(plans, maps, strict=True)]
+                averaged = _project(_simplex(ramps), np.mean(np.stack(singles, axis=0), axis=0))
+                readings_b = _readings(averaged, planted, held_features, held_plan)
+                readings_o = _readings(planted, planted, held_features, held_plan)
+                log.line(f"[ramp] K={ramps} L={n_observations} s={seed}: weighted ramps={weighted} "
+                         f"obs_cost_ratio={ratio:.4f} F={value_c:.2e} "
+                         f"C agr={readings_c.agreement:.4f} cost={readings_c.cost_rel:.4f} "
+                         f"B agr={readings_b.agreement:.4f} cost={readings_b.cost_rel:.4f}")
+                for arm, theta, readings in (("C_joint", theta_c, readings_c),
+                                             ("B_averaged", averaged, readings_b),
+                                             ("D_oracle", planted, readings_o)):
+                    rows.append(RunRecord(
+                        study="multi_observation_sparse", geometry=f"ramp_K{ramps}_L{n_observations}",
+                        arm=arm, k=int(ramps), m=int(n), draw=int(seed),
+                        metrics={"agreement": readings.agreement, "cost_rel": readings.cost_rel,
+                                 "train_objective": float(value_c) if arm == "C_joint" else float("nan"),
+                                 "observed_cost_ratio": float(ratio) if arm == "C_joint" else float("nan"),
+                                 "weighted_ramps": float(weighted) if arm == "C_joint" else float("nan")},
+                        config={"mode": "ramp", "K": ramps, "L": n_observations, "n": n,
+                                "basis": "hinge max(0, s - t_k)", "Theta": "simplex", "iterations": iterations},
+                        extra={"theta": [float(v) for v in theta], "theta_star": [float(v) for v in planted]}))
+    return rows
+
+
 def mode_fix(log: RunLog, *, n: int, seeds: list[int], taus: list[float], stage2: list[float],
              iterations: int = 40) -> list[RunRecord]:
     """EN: floor and stage-2, each applied to all arms, for K=80. CN: 下限与第二阶段选择，作用于所有臂，K=80。"""
@@ -280,13 +381,15 @@ def mode_fix(log: RunLog, *, n: int, seeds: list[int], taus: list[float], stage2
 def main(argv: list[str] | None = None) -> int:
     """EN: entry point. CN: 入口。"""
     parser = argparse.ArgumentParser(description="diagnose the K=2n reversal")
-    parser.add_argument("--mode", required=True, choices=("degeneracy", "fix"))
+    parser.add_argument("--mode", required=True, choices=("degeneracy", "fix", "ramp"))
     parser.add_argument("--n", type=int, default=40)
     parser.add_argument("--seeds", type=int, nargs="+", default=list(range(10)))
     parser.add_argument("--taus", type=float, nargs="+", default=[0.1, 0.3])
     parser.add_argument("--etas", type=float, nargs="+", default=[0.05, 0.2])
     parser.add_argument("--iterations", type=int, default=40)
     parser.add_argument("--tag", default="")
+    parser.add_argument("--ks", type=int, nargs="+", default=[10, 40, 80])
+    parser.add_argument("--ls", type=int, nargs="+", default=[5, 20])
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     out_dir = OUT / (args.tag or args.mode)
@@ -295,6 +398,10 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     if args.mode == "degeneracy":
         records = mode_degeneracy(log, n=int(args.n), seeds=[int(v) for v in args.seeds])
+    elif args.mode == "ramp":
+        records = mode_ramp(log, n=int(args.n), seeds=[int(v) for v in args.seeds],
+                            ks=[int(v) for v in args.ks], ls=[int(v) for v in args.ls],
+                            iterations=int(args.iterations))
     else:
         records = mode_fix(log, n=int(args.n), seeds=[int(v) for v in args.seeds],
                            taus=[float(v) for v in args.taus], stage2=[float(v) for v in args.etas],

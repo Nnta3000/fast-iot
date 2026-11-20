@@ -165,3 +165,33 @@ the estimate given before launching.
 **Consequence:** the mid-size grid is **not** run. The K=2n regime is not informative under this family until the
 basis is prevented from placing weight where no observation lies (e.g. a support-restricted basis or a width tied to
 the observed distance range), and that is a design decision, not a rerun.
+
+### Addendum 2: a monotone (hinge) basis is rank-equivalent — the K=2n hole cannot be fixed that way
+
+Tried `RampFeatures`: `phi_k(s) = max(0, s - t_k)` with thresholds on the observed distance range, planted weights
+`theta*_k ∝ exp(-t_k/0.3)`, unit-RMS columns, simplex Θ.
+
+**Result: the bundle cannot build a first cut.** The run stops with
+`RuntimeError: cut bank has no informative (nonzero) cuts` at the first master solve: the summed moment gradient
+`Σ_l (M(π̂_l) − M(P_l))` is exactly zero at the initial θ.
+
+**Why (verified, not inferred):**
+- every ramp column is nondecreasing in `s` (checked on a full grid: `diff ≥ −1e-12`);
+- hence any `θ ≥ 0` gives a cost that is nondecreasing in `s`, and for fixed marginals the exact-OT plan is the
+  **same** for every such cost — measured: `ot.emd` at `θ*` and at uniform return **identical** plans;
+- so the observed plans are optimal at every θ, `F ≡ 0`, every subgradient is zero, and there is nothing to cut.
+
+This is the same structural fact as the earlier kernel finding (multi-bandwidth Gaussians are monotone transforms of
+one distance and therefore rank-equivalent), now in its sharpest form: **a cost family that is monotone in the
+distance is unidentifiable from plans at all** — the plans reveal only the *ordering* of distances. The residual
+`F(uniform) = 5.3e-4` summed over five windows is a plateau/tie effect in the value, not information about θ.
+
+**Consequence.** The K=2n degeneracy cannot be removed by making the basis monotone; monotonicity *is* the
+degeneracy. Every non-monotone family (bumps) is identifiable in principle but reopens the zero-mass-bin hole at
+large K. The remaining options are design decisions, not reruns:
+
+1. a **data-dependent Θ** that keeps weight only on features with observed support (stated as such), or
+2. features that are **not functions of distance alone** (per-point or per-pair structure), or
+3. declaring **K ≤ n/2** the operating regime and not running K = 2n at all.
+
+No further fixes were tried, per the instruction.

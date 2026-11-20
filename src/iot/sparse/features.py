@@ -242,3 +242,111 @@ class DistanceProfileFeatures:
         """EN: `phi @ theta`. CN: `phi @ theta`。"""
         return np.ascontiguousarray(self.features(rows, cols) @ np.asarray(theta, dtype=np.float64).reshape(-1),
                                    dtype=np.float64)
+
+
+@dataclass(frozen=True)
+class RampFeatures:
+    """
+    EN: **a cumulative (hinge) basis**: `phi_k = max(0, s - t_k)`, so every feature is nondecreasing in the distance.
+
+        Thresholds `t_k` are evenly spaced between the 1st and 99th percentile of the distance over a deterministic
+        subsample of pairs — the "observed distance range". A cost `sum_k theta_k phi_k` with `theta >= 0` is
+        therefore **nondecreasing in `s`**, which is the structural assumption a distance cost should have; the bump
+        basis does not enforce it.
+
+        One hole remains by construction and is measured, not hidden: a single ramp with a high threshold is zero on
+        every shorter pair, so a fit can still choose weights that vanish on the observed support. `diagnose.py`
+        reports the observed cost relative to the uniform plan's cost on the same edges.
+
+    CN: **累积（hinge）基** `phi_k = max(0, s - t_k)`，每个特征对距离非减。阈值 `t_k` 在抽样对距离的 1%–99% 分位间等距
+        —— 即"观测距离范围"。`theta>=0` 时代价对 `s` **非减**，这是距离代价应有的结构；鼓包基不强制它。仍然存在一个
+        构造性的洞并会被测量而非隐藏：高阈值的单个 ramp 在所有更短的配对上为 0，故拟合仍可选到在观测支撑上消失的权重；
+        `diagnose.py` 报告观测代价相对均匀计划在同一批边上的代价。
+    """
+
+    source_points: Float[np.ndarray, "m d"]
+    target_points: Float[np.ndarray, "n d"]
+    ramps: int = 8
+    scale: float = 1.0
+    sample_size: int = 100_000
+    seed: int = 0
+    thresholds: tuple[float, ...] = dataclasses.field(default=(), init=True, repr=False)
+
+    def __post_init__(self) -> None:
+        """EN: validate and fix the thresholds on the observed range. CN: 校验并在观测范围内固定阈值。"""
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2 or source.shape[1] != target.shape[1]:
+            raise ValueError("two point clouds of the same dimension are required")
+        if not np.isfinite(source).all() or not np.isfinite(target).all():
+            raise ValueError("point coordinates must be finite")
+        if int(self.ramps) < 1:
+            raise ValueError("ramps must be at least 1")
+        if not float(self.scale) > 0.0:
+            raise ValueError("scale must be positive")
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+        object.__setattr__(self, "ramps", int(self.ramps))
+        if len(self.thresholds) == int(self.ramps):
+            thresholds = np.ascontiguousarray(np.asarray(self.thresholds, dtype=np.float64))
+        else:
+            thresholds = self._default_thresholds()
+        object.__setattr__(self, "thresholds", thresholds)
+        object.__setattr__(self, "normals", self._normals())
+
+    @property
+    def n_source(self) -> int:
+        """EN: `m`. CN: 源点数。"""
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        """EN: `n`. CN: 目标点数。"""
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        """EN: `K = ramps`. CN: 特征数。"""
+        return int(self.ramps)
+
+    def _spacing(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges"]:
+        """EN: normalised distance. CN: 归一化距离。"""
+        difference = self.source_points[rows] - self.target_points[cols]
+        return np.sqrt(np.einsum("ed,ed->e", difference, difference)) / float(self.scale)
+
+    def _default_thresholds(self) -> np.ndarray:
+        """EN: thresholds evenly spaced between the 1st and 99th percentile of the subsampled distances. CN: 在抽样距离 1%–99% 分位间等距。"""
+        rng = np.random.default_rng(int(self.seed))
+        count = min(int(self.sample_size), self.n_source * self.n_target)
+        rows = rng.integers(0, self.n_source, size=count)
+        cols = rng.integers(0, self.n_target, size=count)
+        spacing = self._spacing(rows, cols)
+        low, high = np.percentile(spacing, 1.0), np.percentile(spacing, 99.0)
+        return np.ascontiguousarray(np.linspace(float(low), float(high), int(self.ramps)))
+
+    def _raw(self, spacing: Float[np.ndarray, "edges"]) -> Float[np.ndarray, "edges k"]:
+        """EN: `max(0, s - t_k)`. CN: `max(0, s - t_k)`。"""
+        return np.maximum(0.0, spacing[:, None] - np.asarray(self.thresholds, dtype=np.float64)[None, :])
+
+    def _normals(self) -> tuple[float, ...]:
+        """EN: subsample-RMS per column. CN: 每列抽样 RMS。"""
+        rng = np.random.default_rng(int(self.seed) + 1)
+        count = min(int(self.sample_size), self.n_source * self.n_target)
+        rows = rng.integers(0, self.n_source, size=count)
+        cols = rng.integers(0, self.n_target, size=count)
+        raw = self._raw(self._spacing(rows, cols))
+        return tuple(float(max(value, 1e-12)) for value in np.sqrt(np.mean(raw ** 2, axis=0)))
+
+    def features(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges k"]:
+        """EN: normalised ramp values. CN: 归一化 hinge 取值。"""
+        raw = self._raw(self._spacing(np.asarray(rows, dtype=np.int64).reshape(-1),
+                                      np.asarray(cols, dtype=np.int64).reshape(-1)))
+        return np.ascontiguousarray(raw / np.asarray(self.normals, dtype=np.float64)[None, :], dtype=np.float64)
+
+    def costs(self, theta: Float[np.ndarray, "k"], rows: Int[np.ndarray, "edges"],
+              cols: Int[np.ndarray, "edges"]) -> Float[np.ndarray, "edges"]:
+        """EN: `phi @ theta`. CN: `phi @ theta`。"""
+        return np.ascontiguousarray(self.features(rows, cols) @ np.asarray(theta, dtype=np.float64).reshape(-1),
+                                   dtype=np.float64)
