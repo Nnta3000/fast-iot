@@ -143,3 +143,102 @@ class PointDistanceFeatures:
         """EN: `phi @ theta` on the requested pairs. CN: 请求对上的 `phi @ theta`。"""
         return np.ascontiguousarray(self.features(rows, cols) @ np.asarray(theta, dtype=np.float64).reshape(-1),
                                    dtype=np.float64)
+
+
+@dataclass(frozen=True)
+class DistanceProfileFeatures:
+    """
+    EN: **a tunable-width radial profile of the distance** — `bumps` Gaussian functions of `s = ||x-y||/scale`.
+
+        `phi_k = exp(-((s - c_k) / w)^2)` with centres `c_k` evenly spaced on `[0, 1]` and width `w = 1.5 / bumps`,
+        each column divided by its subsample-RMS. `bumps` is the knob the arms study sweeps against `n`: the planted
+        cost is expressed in **the same basis**, so the family always contains the truth and `bumps` controls only
+        how many parameters must be pinned, not whether the truth is representable.
+
+        The columns are **not** monotone transforms of one another (each bump peaks at its own `s`), unlike kernels
+        `exp(-s^2 / sigma^2)` at different bandwidths, which are rank-equivalent and leave θ unidentifiable.
+        No constant column and no same-zone column.
+
+    CN: **宽度可调的径向剖面** —— `bumps` 个关于 `s = ||x-y||/scale` 的高斯函数。`phi_k = exp(-((s-c_k)/w)²)`，中心
+        `c_k` 在 `[0,1]` 等距，宽度 `w = 1.5/bumps`，每列除以抽样 RMS。`bumps` 是 arms 研究相对 `n` 扫描的旋钮：植入代价
+        用**同一基**表示，故族总含真值，`bumps` 只控制需要钉住的参数个数。各列**不是**彼此的单调变换（每个鼓包在自己
+        的 `s` 处取峰），不同于不同带宽的 `exp(-s²/sigma²)`（秩等价，θ 不可辨识）。无常数列、无同 zone 列。
+    """
+
+    source_points: Float[np.ndarray, "m d"]
+    target_points: Float[np.ndarray, "n d"]
+    bumps: int = 8
+    scale: float = 1.0
+    sample_size: int = 100_000
+    seed: int = 0
+    normals: tuple[float, ...] = dataclasses.field(default=(), init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """EN: validate, place the centres, estimate the column scales. CN: 校验、放置中心、估计列尺度。"""
+        source = np.ascontiguousarray(np.asarray(self.source_points, dtype=np.float64))
+        target = np.ascontiguousarray(np.asarray(self.target_points, dtype=np.float64))
+        if source.ndim != 2 or target.ndim != 2 or source.shape[1] != target.shape[1]:
+            raise ValueError("two point clouds of the same dimension are required")
+        if np.isfinite(source).sum() != source.size or np.isfinite(target).sum() != target.size:
+            raise ValueError("point coordinates must be finite")
+        if int(self.bumps) < 1:
+            raise ValueError("bumps must be at least 1")
+        if not float(self.scale) > 0.0:
+            raise ValueError("scale must be positive")
+        centres = np.linspace(0.0, 1.0, int(self.bumps))
+        object.__setattr__(self, "source_points", source)
+        object.__setattr__(self, "target_points", target)
+        object.__setattr__(self, "bumps", int(self.bumps))
+        object.__setattr__(self, "centres", np.ascontiguousarray(centres))
+        object.__setattr__(self, "width", 1.5 / float(self.bumps))
+        object.__setattr__(self, "normals", self._normals())
+
+    @property
+    def n_source(self) -> int:
+        """EN: `m`. CN: 源点数。"""
+        return int(self.source_points.shape[0])
+
+    @property
+    def n_target(self) -> int:
+        """EN: `n`. CN: 目标点数。"""
+        return int(self.target_points.shape[0])
+
+    @property
+    def n_features(self) -> int:
+        """EN: `K = bumps`. CN: 特征数。"""
+        return int(self.bumps)
+
+    def _spacing(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges"]:
+        """EN: normalised Euclidean distance for the requested pairs. CN: 请求对的归一化欧氏距离。"""
+        difference = self.source_points[rows] - self.target_points[cols]
+        return np.sqrt(np.einsum("ed,ed->e", difference, difference)) / float(self.scale)
+
+    def _raw(self, spacing: Float[np.ndarray, "edges"]) -> Float[np.ndarray, "edges k"]:
+        """EN: the bump values before normalisation. CN: 归一化前的鼓包取值。"""
+        centres = np.asarray(self.centres, dtype=np.float64)
+        width = float(self.width)
+        return np.exp(-((spacing[:, None] - centres[None, :]) / width) ** 2)
+
+    def _normals(self) -> tuple[float, ...]:
+        """EN: subsample-RMS per column, the `Theta(1)` gauge. CN: 每列的抽样 RMS，即 `Theta(1)` 规范。"""
+        rng = np.random.default_rng(int(self.seed))
+        count = min(int(self.sample_size), self.n_source * self.n_target)
+        rows = rng.integers(0, self.n_source, size=count)
+        cols = rng.integers(0, self.n_target, size=count)
+        raw = self._raw(self._spacing(rows, cols))
+        return tuple(float(max(value, 1e-12)) for value in np.sqrt(np.mean(raw ** 2, axis=0)))
+
+    def features(self, rows: Int[np.ndarray, "edges"], cols: Int[np.ndarray, "edges"]
+                 ) -> Float[np.ndarray, "edges k"]:
+        """EN: normalised bump values for the requested pairs. CN: 请求对的归一化鼓包取值。"""
+        row_index = np.asarray(rows, dtype=np.int64).reshape(-1)
+        col_index = np.asarray(cols, dtype=np.int64).reshape(-1)
+        raw = self._raw(self._spacing(row_index, col_index))
+        return np.ascontiguousarray(raw / np.asarray(self.normals, dtype=np.float64)[None, :], dtype=np.float64)
+
+    def costs(self, theta: Float[np.ndarray, "k"], rows: Int[np.ndarray, "edges"],
+              cols: Int[np.ndarray, "edges"]) -> Float[np.ndarray, "edges"]:
+        """EN: `phi @ theta`. CN: `phi @ theta`。"""
+        return np.ascontiguousarray(self.features(rows, cols) @ np.asarray(theta, dtype=np.float64).reshape(-1),
+                                   dtype=np.float64)
