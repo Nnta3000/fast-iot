@@ -111,9 +111,13 @@ feasible (A 0.0147, C 0.1157, B 0.1665) and the joint advantage over a single pl
 
 **One plan with more points versus more observations (corrected).** `A_single_big`, converged in all seeds: n′ = 80
 0.610 (per seed 1.0, 0.125, 0.6, 0.775, 0.55); n′ = 200 0.605 (0.95, 0.10, 0.95, 0.5, 0.525) — not better than the
-single 40-point plans (≈ 0.7). The earlier summary compared n′ = 200 with the joint fit at L = 10 (400 points), which
-is **not like-for-like**; the matching noise-free cell (K=10, L=5 and L=2) is **not in this record file**, so the
-contrast is open. The earlier C 0.960 vs B 0.855 at K10 L5 is from `.../arms/g3_deep/` and not re-checked here.
+single 40-point plans (≈ 0.7). The earlier summary compared n′ = 200 with the joint fit at L = 10, which is 400 points
+and **not like-for-like**. The matched cell is not in `arms/final`, but it is in `.../arms/g3_deep/records.json`
+(K=10, L=5, p=0, seeds 0–4 — five 40-point plans, i.e. the same 200 points), and I re-checked it: C 0.960 (per seed
+0.85, 1.0, 0.95, 1.0, 1.0; 34–135 iterations, gap 0 in every seed), B 0.855, A 0.691, neutral 0.040. Both runs call
+the same `run_cell` with the same seeds, so θ* and the held-out instance coincide. On that matched comparison, five
+40-point observations beat one 200-point plan by +0.355 for the joint fit (one cell, 5 seeds, n′ = 200; the two records
+are separate invocations of the same code).
 
 ### 5.1 Degenerate directions found, one line each
 
@@ -172,5 +176,5 @@ and cannot test cost recovery; §5 uses a planted instance instead.
 - `.../arms/g3/` — G3 at 40 iterations: C capped 9/12 (gap 2.4e-03–1.2e-01; e.g. K20 L10 p0.2 = 1.2e-01).
 - `.../arms/g3_big/` — big plan at 40 iterations: capped 5/5 at K = 20 (gap 5e-03–1.8e-02); at K20 L2 p0 the training
   objective is 8.6e-06, i.e. the single plan is exactly optimal at the fitted θ.
-- `.../arms/g3_deep/` — first converged cell (K10 L5 p0, 200 iterations); superseded by `arms/final`, kept as the
-  pre-registered single-cell check.
+- `.../arms/g3_deep/` — K10 L5 p0 at a 200-iteration cap; superseded by `arms/final` for the headline cells, but it is
+  the matched cell for the big-plan comparison (C 0.960, B 0.855, gap 0).
