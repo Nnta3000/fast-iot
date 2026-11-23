@@ -28,7 +28,7 @@ def test_watchdog_aborts_when_rss_exceeds_budget() -> None:
     """CN: RSS 超过预算必须中止（退出码 125）。EN: exceeding the RSS budget must abort with exit 125."""
     code = (
         "import numpy as np\n"
-        "from iot_experiments.harness.watchdog import Watchdog\n"
+        "from experiments.harness.watchdog import Watchdog\n"
         "Watchdog(budget_gb=0.5, name='t', min_available_gb=0.0, interval_s=0.1).start()\n"
         "a = np.ones((300_000_000,), dtype=np.float64)\n"
         "a[:] = 1.0\n"
@@ -48,7 +48,7 @@ def test_watchdog_aborts_when_system_memory_is_low() -> None:
         exhausting memory.
     """
     code = (
-        "from iot_experiments.harness.watchdog import Watchdog\n"
+        "from experiments.harness.watchdog import Watchdog\n"
         "Watchdog(budget_gb=100.0, name='t', min_available_gb=1e9, interval_s=0.1).start()\n"
         "import time; time.sleep(3)\n"
         "print('NOT ABORTED')\n"
@@ -62,7 +62,7 @@ def test_watchdog_does_not_fire_on_normal_completion() -> None:
     """CN: 正常结束（内存远低于预算）不得中止。EN: normal completion under budget must not abort."""
     code = (
         "import numpy as np\n"
-        "from iot_experiments.harness.watchdog import Watchdog\n"
+        "from experiments.harness.watchdog import Watchdog\n"
         "w = Watchdog(budget_gb=4.0, name='t', min_available_gb=0.0, interval_s=0.1).start()\n"
         "a = np.ones((10_000_000,), dtype=np.float64)\n"
         "a[:] = 1.0\n"

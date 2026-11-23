@@ -25,7 +25,7 @@ import ot
 import pytest
 import scipy.sparse as sparse
 
-from iot_experiments.studies.iot.synthetic.inverse_cost_recovery.run import (
+from experiments.studies.iot.synthetic.inverse_cost_recovery.run import (
     _best_scale,
     _dense_cost,
     _family,

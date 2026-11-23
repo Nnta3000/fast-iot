@@ -26,7 +26,7 @@ import ot
 import pytest
 
 from iot.relaxed.multi_plan import distance_features, fit_shared_theta, regret_of
-from iot_experiments.studies.iot.synthetic.planted_shared_theta.run import (
+from experiments.studies.iot.synthetic.planted_shared_theta.run import (
     diagonal_mass,
     geometry,
     marginals,

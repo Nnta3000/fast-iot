@@ -22,7 +22,7 @@ from iot.core.parameters import cost_std
 from iot.entropic.inner_f import joint_hvp
 from iot.entropic.joint_master import make_problem
 from iot.entropic.joint_reference import ReducedProblem, evaluate
-from iot_experiments.harness.lib.planting import plant_instance
+from experiments.harness.lib.planting import plant_instance
 
 
 def _setup(rel_eps: float = 0.5, n: int = 24):

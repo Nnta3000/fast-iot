@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 
 from iot import DiagonalWeightFeatures, QuadraticFeatures, bilinear_embedding
-from iot_experiments.benchmarks.lowrank import LowRankFeatures
+from experiments.benchmarks.lowrank import LowRankFeatures
 
 
 def _embedding_error(features, theta: np.ndarray) -> float:

@@ -100,7 +100,7 @@ def test_planted_certificate_is_still_exact() -> None:
     """
     from iot.core.parameters import ExactObjective, PruningParameters, SolverParameters
     from iot.exact.loop import solve_inverse_ot
-    from iot_experiments.harness.lib.planting import plant_instance
+    from experiments.harness.lib.planting import plant_instance
 
     planted = plant_instance(family="diagonal", n=40, point_dimension=3, seed=0)
     result = solve_inverse_ot(

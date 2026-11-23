@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-EXPERIMENTS = REPO_ROOT / "iot_experiments"
+EXPERIMENTS = REPO_ROOT / "experiments"
 
 
 def _run(script: str, args: list[str], out: Path) -> dict[str, object]:

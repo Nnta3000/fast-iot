@@ -18,8 +18,8 @@ import numpy as np
 import pytest
 from jaxtyping import Bool, Float
 
-from iot_experiments.harness.discriminates import format_check
-from iot_experiments.harness.e1_metrics import (
+from experiments.harness.discriminates import format_check
+from experiments.harness.e1_metrics import (
     E1Error,
     SlicePool,
     mask_iou,
@@ -28,8 +28,8 @@ from iot_experiments.harness.e1_metrics import (
     ssim,
     z_gap,
 )
-from iot_experiments.harness.e2_scale import cosine_cost, report_lines, run_emd, run_hungarian, samples_per_cell, sweep
-from iot_experiments.harness.nmi_helpers import mutual_information_detail
+from experiments.harness.e2_scale import cosine_cost, report_lines, run_emd, run_hungarian, samples_per_cell, sweep
+from experiments.harness.nmi_helpers import mutual_information_detail
 
 
 def synthetic_pool(n: int = 60, *, pixels: int = 64 * 64, seed: int = 0,

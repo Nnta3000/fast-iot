@@ -1,13 +1,13 @@
 """
 CN: **合并的回归测试** —— 精确循环与松弛循环共用 `core/scan.py` 之后，必须保持两点：
-      1. 精确循环的结果与合并前**逐位相同**（见 `iot_experiments/tools/loop_baseline.py` 的基线）；
+      1. 精确循环的结果与合并前**逐位相同**（见 `experiments/tools/loop_baseline.py` 的基线）；
       2. 三个扫描后端（numpy / torch / hello）在**两个**循环里给出同一条结论。
     这个测试锁住第 2 点，并保证 `maximum_slack` 与逐元素定义一致。
 
 EN: **Regression test for the merge** -- now that the exact and relaxed loops share `core/scan.py`, two
     things must hold:
       1. the exact loop's numbers are **bit-identical** to before the merge (see the baseline in
-         `iot_experiments/tools/loop_baseline.py`);
+         `experiments/tools/loop_baseline.py`);
       2. the three scan backends (numpy / torch / hello) agree in **both** loops.
     This test pins point 2 and checks `maximum_slack` against its elementwise definition.
 """

@@ -1,0 +1,12 @@
+# EN: FAUST protocol (P2) jobs. One shell command per line, run from the repo root by gpu_queue.sh.
+#     These are CPU-bound (HiGHS master); CUDA_VISIBLE_DEVICES is set by the queue but unused.
+#     On a server, replace `${FAUST_PYTHON:-.venv/bin/python}` with the environment's interpreter and keep PYTHONPATH=src:.
+# CN: FAUST 协议（P2）作业。每行一条 shell 命令，由 gpu_queue.sh 从仓库根目录执行。作业是 CPU 密集（HiGHS），
+#     队列仍会设置 CUDA_VISIBLE_DEVICES 但用不到。在服务器上把 `${FAUST_PYTHON:-.venv/bin/python}` 换成该环境的解释器即可。
+#
+# Train: 50 pairs = 5 subjects x (6 intra + 4 inter); Test: 50 pairs on the 5 held-out subjects.
+# 50 training + 50 test = 100 pairs total; theta is fitted on the 50 training pairs only.
+
+PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m experiments.studies.iot.real.faust.challenge --study faust_challenge_diag13 --n-sub 800 --family diag13 --max-iterations 5
+
+PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m experiments.studies.iot.real.faust.challenge --study faust_challenge_hinge8 --n-sub 800 --family hinge8 --max-iterations 5

@@ -24,7 +24,7 @@ from iot.entropic.joint_reference import (
     simplex_kkt,
     solve,
 )
-from iot_experiments.harness.lib.planting import plant_instance
+from experiments.harness.lib.planting import plant_instance
 
 
 def _problem(n: int = 12, point_dimension: int = 3, rel_eps: float = 0.5):

@@ -24,8 +24,8 @@ import numpy as np
 import pytest
 
 from iot.core.features import SquaredDifferenceFeatures
-import iot_experiments.harness.faust as faust_module
-from iot_experiments.harness.faust import (
+import experiments.harness.faust as faust_module
+from experiments.harness.faust import (
     FaustError,
     cotangent_laplacian,
     default_registrations_root,
@@ -240,7 +240,7 @@ def test_intra_pairs_are_same_subject_and_distinct_pose() -> None:
         requested subject set. It exists only because that code path is committed but never run -- an untested
         pair generator is a classic silent-error source.
     """
-    from iot_experiments.studies.iot.real.faust.correspondence import intra_pairs, subject_of
+    from experiments.studies.iot.real.faust.correspondence import intra_pairs, subject_of
 
     subjects = (5, 6, 7)
     pairs = intra_pairs(subjects, 4)
@@ -258,7 +258,7 @@ def test_intra_and_inter_generators_differ() -> None:
     CN: 两个生成器不能意外相同（那会让 `--pairing intra` 变成无操作）。
     EN: the two generators must not coincide, or `--pairing intra` would be a no-op.
     """
-    from iot_experiments.studies.iot.real.faust.correspondence import default_pairs, intra_pairs, subject_of
+    from experiments.studies.iot.real.faust.correspondence import default_pairs, intra_pairs, subject_of
 
     subjects = (5, 6, 7, 8, 9)
     intra = intra_pairs(subjects, 4)
@@ -295,7 +295,7 @@ def test_default_registrations_root_is_portable_and_honours_faust_root(monkeypat
     # CN: 任何驱动都不许再写回这个绝对路径。真正的回归就在这里：21 个模块写死了同一台机器的路径，所以只能查源码。
     offenders = [
         str(path.relative_to(faust_module.REPO_ROOT))
-        for path in (faust_module.REPO_ROOT / "iot_experiments" / "studies" / "real" / "faust").glob("*.py")
+        for path in (faust_module.REPO_ROOT / "experiments" / "studies" / "real" / "faust").glob("*.py")
         if "/home/agent/Documents" in path.read_text()
     ]
     assert not offenders, f"hardcoded machine path in: {offenders}"

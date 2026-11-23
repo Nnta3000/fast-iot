@@ -85,7 +85,7 @@ def _load_pycupdlpx() -> Any:
             "CuPDLPx (pycupdlpx) is not available. It is HELLO-OT's native CUDA extension; "
             "build it with the documented stack (`bash scripts/create_hello_ot_env.sh`, then "
             "`HELLO_OT_BUILD_NATIVE=1 python -m pip install -e .`) or the local CUDA-12/13 "
-            "helper (`python iot_experiments/methods/exact/build_pycupdlpx_cuda13.py`). "
+            "helper (`python experiments/methods/exact/build_pycupdlpx_cuda13.py`). "
             "HiGHS remains the default master solver."
         ) from error
 

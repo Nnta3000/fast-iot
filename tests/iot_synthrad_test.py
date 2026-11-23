@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 from jaxtyping import Float
 
-from iot_experiments.harness.synthrad import (
+from experiments.harness.synthrad import (
     CT_WINDOW,
     IMAGE_SIZE,
     SynthRadError,

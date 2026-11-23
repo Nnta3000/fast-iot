@@ -21,7 +21,7 @@ from iot import (
     scan_violations_fast,
     solve_inverse_ot,
 )
-from iot_experiments.benchmarks.lowrank import LowRankFeatures
+from experiments.benchmarks.lowrank import LowRankFeatures
 from iot.core.parameters import ExactObjective, ScanParameters, SolverParameters
 
 

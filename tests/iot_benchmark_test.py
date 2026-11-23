@@ -21,17 +21,17 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot_experiments.benchmarks.checkpoint import read_run, write_run  # noqa: E402
-from iot_experiments.benchmarks.evaluate import (  # noqa: E402
+from experiments.benchmarks.checkpoint import read_run, write_run  # noqa: E402
+from experiments.benchmarks.evaluate import (  # noqa: E402
     reference_scores,
     score_theta,
 )
-from iot_experiments.benchmarks.instances import (  # noqa: E402
+from experiments.benchmarks.instances import (  # noqa: E402
     build_clean_instance,
     build_instance,
     build_noisy_instance,
 )
-from iot_experiments.benchmarks.runner import (  # noqa: E402
+from experiments.benchmarks.runner import (  # noqa: E402
     ExactConfig,
     GradientConfig,
     fit_theta_adamw,
@@ -40,7 +40,7 @@ from iot_experiments.benchmarks.runner import (  # noqa: E402
 
 
 def test_generator_matches_common_build_problem_for_seeds_0_to_9() -> None:
-    from iot_experiments.benchmarks.legacy_reference import build_problem
+    from experiments.benchmarks.legacy_reference import build_problem
 
     for seed in range(10):
         ours = build_instance(n=50, k=8, seed=seed, num_itermax=2_000_000)

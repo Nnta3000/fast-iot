@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 
 from iot import DiagonalWeightFeatures, HingeProfileFeatures
-from iot_experiments.studies.iot.real.faust.joint import _cost_rows, _flatness
+from experiments.studies.iot.real.faust.joint import _cost_rows, _flatness
 
 
 def test_blocked_cost_equals_full_grid_cost() -> None:

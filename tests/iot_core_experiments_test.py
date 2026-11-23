@@ -1,6 +1,6 @@
 """
-CN: `iot_experiments.core` 的不变量测试：边际轴、RunSpec 校验、以及一次微小端到端运行。
-EN: Invariant tests for `iot_experiments.core`: the marginal axis, RunSpec validation, and one
+CN: `experiments.core` 的不变量测试：边际轴、RunSpec 校验、以及一次微小端到端运行。
+EN: Invariant tests for `experiments.core`: the marginal axis, RunSpec validation, and one
     tiny end-to-end run.
 """
 
@@ -16,7 +16,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from iot_experiments.harness.lib import (  # noqa: E402
+from experiments.harness.lib import (  # noqa: E402
     FamilySpec,
     MarginalSpec,
     RunSpec,

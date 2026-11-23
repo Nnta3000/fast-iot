@@ -1,5 +1,5 @@
 """
-EN: tests for the NICP pairing decoders (`iot_experiments.harness.nicp_pairing`).
+EN: tests for the NICP pairing decoders (`experiments.harness.nicp_pairing`).
 
     These validate the gate machinery on synthetic cost matrices where the answer is known, so that when the
     same functions are pointed at NSR's real cost matrices the numbers mean something. They do NOT test NSR.
@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
-from iot_experiments.harness.nicp_pairing import (
+from experiments.harness.nicp_pairing import (
     DecodedPairing,
     cost_from_offsets,
     decode_argmin,

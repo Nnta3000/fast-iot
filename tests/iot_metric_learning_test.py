@@ -37,8 +37,8 @@ from __future__ import annotations
 import numpy as np
 from jaxtyping import Float
 
-from iot_experiments.harness.solver import diagonal_cost, matching_hit
-from iot_experiments.studies.iot.real.t1t2.metric_learning.run import (
+from experiments.harness.solver import diagonal_cost, matching_hit
+from experiments.studies.iot.real.t1t2.metric_learning.run import (
     EARLY_STOP_EPOCHS,
     Box,
     at_bound_fraction,

@@ -21,7 +21,7 @@ import scipy.sparse as sparse
 from iot.core.theta import SimplexTheta
 from iot.sparse.bundle_multi import solve_bundle_multi
 from iot.sparse.features import PointDistanceFeatures
-from iot_experiments.studies.iot.synthetic.multi_observation_sparse.reference import (
+from experiments.studies.iot.synthetic.multi_observation_sparse.reference import (
     dense_frank_wolfe,
     dense_joint_lp,
 )

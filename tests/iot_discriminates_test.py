@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from jaxtyping import Float
 
-from iot_experiments.harness.discriminates import (
+from experiments.harness.discriminates import (
     DiscriminatesError,
     discrimination_check,
     format_check,

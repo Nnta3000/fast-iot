@@ -2,7 +2,7 @@
 EN: **Metrics the comparison papers report**, plus the one preprocessing step a flow comparison needs.
 
     All four functions take arrays and return a float; none of them knows what generated the plan. That keeps them
-    usable from a baseline, from our own arm, and from a test, without importing anything from `iot_experiments`.
+    usable from a baseline, from our own arm, and from a test, without importing anything from `experiments`.
 
     Definitions follow the papers quoted in `notes/RELATED_WORK_AND_COMPARABILITY.md`:
 
@@ -17,7 +17,7 @@ EN: **Metrics the comparison papers report**, plus the one preprocessing step a 
     is the standard way to compare a transport model's *pattern* at the observed demand.
 
 CN: **比较论文所报告的指标**，以及流量比较所需的那一步预处理。四个函数只接收数组、返回浮点数，不关心计划由谁生成，
-    因此基线、我们自己的臂和测试都能用，且不导入 `iot_experiments`。定义取自 `notes/RELATED_WORK_AND_COMPARABILITY.md`
+    因此基线、我们自己的臂和测试都能用，且不导入 `experiments`。定义取自 `notes/RELATED_WORK_AND_COMPARABILITY.md`
     所引论文：`rmse`/`pearson` 在流量矩阵**全部**元素上计算（含零，M-IOT 表 1 即如此）；`cpc` 为
     `2*sum(min(X, X_hat))/(sum(X)+sum(X_hat))`，取值 `[0,1]`；`relative_frobenius` 为 Ma 等的代价恢复误差。
     `align_to_marginals` 存在的原因：流量比较是**绝对**量纲，两个计划可以对相同的配对排序而总质量不同，此时 RMSE 被质量

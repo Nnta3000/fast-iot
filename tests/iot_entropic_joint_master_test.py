@@ -30,7 +30,7 @@ from iot.entropic.joint_master import (
     solve_joint_master,
 )
 from iot.entropic.inner_f import sinkhorn_sweeps_on_f
-from iot_experiments.harness.lib.planting import plant_instance
+from experiments.harness.lib.planting import plant_instance
 
 
 def _instance(n: int = 24, point_dimension: int = 4):

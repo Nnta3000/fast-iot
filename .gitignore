@@ -208,20 +208,20 @@ __pycache__/
 
 # CN: iot 实验的生成结果与临时锁
 # EN: iot experiment generated outputs and transient lock
-# CN: **所有**运行结果统一在 `iot_experiments/out/`（驱动目录不再自带 out/）。
-# EN: **all** run results live in `iot_experiments/out/`; driver directories no longer carry their own.
-/iot_experiments/out/*
+# CN: **所有**运行结果统一在 `experiments/out/`（驱动目录不再自带 out/）。
+# EN: **all** run results live in `experiments/out/`; driver directories no longer carry their own.
+/experiments/out/*
 # CN: `out/` 是 git-ignored，但被报告与图引用的**机器生成记录**必须能在 clone 里重现，
 #     所以它们放在 `out/records/` 的**例外**路径：只有被引用的记录进版本库，其余运行产物仍然忽略。
 # EN: `out/` is git-ignored, but machine-written records that reports and figures cite must survive a
 #     clone, so they live in the `out/records/` exception below: only cited records are committed, every
 #     other run artefact stays ignored.
-!/iot_experiments/out/records/
-!/iot_experiments/out/records/**
-/iot_experiments/benchmarks/.cpu_lock/
-/iot_experiments/benchmarks/thetas/
-/iot_experiments/*/out/
-/iot_experiments/studies/**/out/
+!/experiments/out/records/
+!/experiments/out/records/**
+/experiments/benchmarks/.cpu_lock/
+/experiments/benchmarks/thetas/
+/experiments/*/out/
+/experiments/studies/**/out/
 
 # CN: 数据集（SynthRAD、T1/T2 等）本体一律不推送：`data/` 下的**全部内容**都被忽略，
 #     只允许 README 记录"这里放什么、如何获取"。git 从不跟踪大文件。
@@ -236,11 +236,11 @@ __pycache__/
 # CN: 实验缓存（预处理切片、池化的 DINOv2 特征）。**可随时删除**，由 `scripts/wipe_cache.sh` 清理。
 #     体积小但可重建，因此从不入版本库。caches are rebuildable, never committed.
 /cache/
-/iot_experiments/cache/
+/experiments/cache/
 
 # CN: legacy（历史）实验整目录不推送（含不适合公开的报告/脚本）
 # EN: the whole legacy experiments directory is not pushed (holds files unfit for public)
-/iot_experiments/legacy/
+/experiments/legacy/
 
 # CN: agent 规格文件仅本地保留，不推送
 # EN: local-only agent spec, never pushed
