@@ -7,7 +7,7 @@
 > there — a single evaluation is **53 ms**, not 351 ms. The tables in this file are unchanged.
 
 **Status:** CURRENT for the size grid; the two numbers above are superseded by `eot_restricted_edges.md`.
-**Driver:** `iot_experiments/studies/real/t1t2/metric_learning/eot_scaling_slsqp.py`
+**Driver:** `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_scaling_slsqp.py`
 **Record:** `iot_experiments/out/eot_scaling_slsqp/scaling_slsqp.json`
 **Instance:** planted `diagonal`, `point_dimension=4`, seed 0 · sizes `n = 300, 450, 675, 1000, 1500`
 **ε:** `rel_eps × std(c(θ_uniform))` with `rel_eps ∈ {0.5, 0.25, 0.1}` · **Grid:** full (all edges)

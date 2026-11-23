@@ -54,7 +54,7 @@ unchanged); only wall time differs.
 ## 4. Reproduce
 
 ```bash
-python iot_experiments/benchmarks/hello_solver_benchmark.py \
+python iot_experiments/studies/ot/hello_solver_benchmark.py \
   --sizes 200 800 1600 --k 8 --seeds 0 --device cuda --max-iterations 2000 \
   --out iot_experiments/benchmarks/out/hello_scan/hello_solver.json
 ```

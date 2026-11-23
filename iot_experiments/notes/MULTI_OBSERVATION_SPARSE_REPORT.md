@@ -1,6 +1,6 @@
 # Multi-observation relaxed inverse OT with sparse plans — report
 
-Status: current (2026-11-23). Code `src/iot/sparse/`, study `iot_experiments/studies/synthetic/multi_observation_sparse/`,
+Status: current (2026-11-23). Code `src/iot/sparse/`, study `iot_experiments/studies/iot/synthetic/multi_observation_sparse/`,
 records under `iot_experiments/out/multi_observation_sparse/` (git-ignored, as the convention requires). Measurement is
 separated from interpretation and every number cites its record.
 
@@ -121,10 +121,10 @@ are separate invocations of the same code).
 
 ### 5.1 Degenerate directions found, one line each
 
-1. **Constant column** — a constant cost makes every plan optimal; excluded (`iot_experiments/studies/related/nyc_taxi/README.md`).
-2. **Mask column** — admits `θ = e_mask` (`F_train ≈ 3` on taxi); excluded (`iot_experiments/studies/related/nyc_taxi/README.md`).
+1. **Constant column** — a constant cost makes every plan optimal; excluded (`iot_experiments/studies/iot/real/nyc_taxi/README.md`).
+2. **Mask column** — admits `θ = e_mask` (`F_train ≈ 3` on taxi); excluded (`iot_experiments/studies/iot/real/nyc_taxi/README.md`).
 3. **Same-zone column** — a cost supported only there makes any diagonal-free plan optimal; diagonal mass 0.0000
-   (`iot_experiments/studies/synthetic/planted_shared_theta/README.md`).
+   (`iot_experiments/studies/iot/synthetic/planted_shared_theta/README.md`).
 4. **Bins with no data** — at `K = 2n` the fit weights bins carrying zero observed mass and reaches `F ≈ 0` by
    construction (`.../diagnose/degeneracy/records.json`); the K = 2n grid is therefore uninformative.
 5. **Monotone-family collapse** — nested hinges put the neutral plan at 0.925 of the planted one, at the ceiling

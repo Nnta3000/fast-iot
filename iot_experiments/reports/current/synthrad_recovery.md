@@ -107,7 +107,7 @@ exactly this purpose.
 ## Files
 
 `records.json`, `run.log` (self-written), committed in `out/records/synthrad_probe/`. Code:
-`studies/real/synthrad/recovery.py`, encoders in `harness/dinov2.py`.
+`studies/iot/real/synthrad/recovery.py`, encoders in `harness/dinov2.py`.
 
 ## This supersedes the earlier "GATE 1 FAILED"
 

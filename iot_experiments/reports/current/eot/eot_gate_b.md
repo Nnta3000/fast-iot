@@ -6,7 +6,7 @@ the working solver, but `eot_solver_compare.md` and `eot_scaling_slsqp.md` later
 file's §5 should be read as the first of three statements, not the last.
 **Commit:** `6f57f1d` (solver frozen at `53f3211`, git tag `t3-freeze-gate-b` — tags keep their
 historical name)
-**Driver:** `iot_experiments/studies/real/t1t2/metric_learning/eot_joint_reference.py`
+**Driver:** `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_joint_reference.py`
 **Instance:** `planting.plant_instance(family="diagonal", n=24, point_dimension=4, seed=0)`
 **Sizes:** `m_eff = 24`, `n_eff = 15`, `K = 4`, full grid = 360 edges, `sum a = sum b = 24`
 **ε:** `0.5738680483` = `0.5 × std(c(θ_uniform))` where `std = 1.1477360965`

@@ -3,7 +3,7 @@
 **Status: RESULT OBTAINED (2026-11-13).** Runs on OUR descriptor cost, not NSR's. It is the control for the
 NSR gate, not a replacement for it.
 
-Driver: `studies/real/faust/pairing_gate.py` · records: `out/faust_pairing_gate/`,
+Driver: `studies/iot/real/faust/pairing_gate.py` · records: `out/faust_pairing_gate/`,
 `out/faust_pairing_gate_learned/` · decoders: `harness/nicp_pairing.py`
 
 ## Question

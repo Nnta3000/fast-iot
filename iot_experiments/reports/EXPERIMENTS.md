@@ -14,7 +14,7 @@ inverse-OT master (formerly "T3"). Full definitions: `GLOSSARY.md`.
 
 ---
 
-## 1. Synthetic core (`studies/synthetic/`)
+## 1. Synthetic core (`studies/iot/synthetic/`)
 
 These established the solver on instances with known ground truth. All are **historical** on the
 GPU-only target path (NumPy scan + HiGHS master + POT truth); kept for provenance.
@@ -38,7 +38,7 @@ GPU-only target path (NumPy scan + HiGHS master + POT truth); kept for provenanc
 | 10 | **Lex-generic tie-break** | the proof-covered two-solve rule vs `random` / `none` | retired | `legacy/reports/LEX_GENERIC_REPORT.md` |
 | 11 | **GPU server tests** | consolidated A100 runs of the GPU-only path | current — cite for server results (driver paths in it are stale, see `README.md` §4) | `current/SERVER_TESTS_REPORT.md` |
 
-## 3. Real data — T1/T2 pairs (`studies/real/t1t2/`)
+## 3. Real data — T1/T2 pairs (`studies/iot/real/t1t2/`)
 
 1,000 subjects, DINOv2-pool4 PCA features, fixed 400-pair held-out pool, geometry `G2`.
 
@@ -51,7 +51,7 @@ GPU-only target path (NumPy scan + HiGHS master + POT truth); kept for provenanc
 | 16 | **E5 pseudo-pairs** | synthesise pseudo-pairs from the `N=1` trainer | **NOT RUN** — scope only | `current/E5_SCOPE.md` |
 | 17 | **quadratic (Mahalanobis) iOT in F2's setup** | does the quadratic family `K = d(d+1)/2` beat diagonal iOT / cosine on F2's exact pool? `d=64`, same 9-cell grid, relaxed loop, `prune=False` | **RAN, then EXCLUDED** — 0/9 fits met `converged ∧ U−L ≤ 5 % R_uniform` | `out/t1t2_quad_f2/d64/` — no report |
 | 18 | **coupled family `(θ, η)`** | `c = Σ θ_a d_a² + Σ_{a<b} η_ab d_a d_b`, `‖η‖₁ ≤ δ`, `δ` by CV | **BLOCKED** — `theta_set` incompatible with the loop's uniform baseline; no result | `out/t1t2_coupled/` — one log |
-| 28 | **entropic metric (EOT on T1/T2)** | does the EOT master learn useful weights on the real pool, vs cosine? `K ∈ {16,32}`, `m ∈ {50,100}`, 1 draw | **PARTIAL / exploratory** — one draw, and the cosine rows are not in the record | `studies/real/t1t2/entropic_metric/README.md`, `out/entropic_metric/` |
+| 28 | **entropic metric (EOT on T1/T2)** | does the EOT master learn useful weights on the real pool, vs cosine? `K ∈ {16,32}`, `m ∈ {50,100}`, 1 draw | **PARTIAL / exploratory** — one draw, and the cosine rows are not in the record | `studies/iot/real/t1t2/entropic_metric/README.md`, `out/entropic_metric/` |
 | 29 | **EOT vs relaxed LP, head-to-head** | same features, same protocol: does the entropic objective beat the relaxed regret LP? | **PARTIAL — run stopped** after `K=64, m=50` and `m=100` | `out/entropic_vs_relaxed/` — no report |
 | 30 | **EOT vs relaxed LP at m=300** | same at the largest `m` | **PARTIAL — run stopped** mid-grid (`K=64`, draw 1) | `out/entropic_vs_relaxed_m300/` — no report |
 | 42 | **sanity — capacity null** (`sanity/run.py --check null`) | does the fit carry signal? fit on true vs permuted pairing at the same `(K, m)` | **DONE — SIGNAL in 9/9 cells; margin falls with `m`** | `out/sanity/null/records.json`; `current/SANITY_CHECKS_REPORT.md` §2a |
@@ -60,7 +60,7 @@ GPU-only target path (NumPy scan + HiGHS master + POT truth); kept for provenanc
 | 45 | **sanity — pool-size transfer** (`sanity/transfer.py`) | does a cost trained on `m` pairs transfer to pools of 50…1000? | **NOT RUN** (written) | `current/SANITY_CHECKS_REPORT.md` |
 | 46 | **sanity — identifiability** (`sanity/ident.py`) | are row-only/column-only features absorbed, and does double-centring + standardisation fix the scale? | **RAN — INCONCLUSIVE on the main claim** (the admissible set had no headroom); the scale result and the "textbook" failure are recorded | `out/sanity_identifiability/records.json`; §3 |
 
-## 4. Real data — SynthRAD brain (`studies/real/synthrad/`)
+## 4. Real data — SynthRAD brain (`studies/iot/real/synthrad/`)
 
 Registered CT↔MR of the same patient; ground truth is `(patient, z_index)`. Split seed 2024,
 stratified by centre: **FIT 105 / DEV 45 / FINAL TEST 30**.
@@ -79,7 +79,7 @@ stratified by centre: **FIT 105 / DEV 45 / FINAL TEST 30**.
 | 31 | **Stage 0 / Stage 1 hierarchy** | does coarse-to-fine warming pay for inverse OT? | done, **negative** (relaxed variant; 1.6–1.9× slower than flat) | `current/hierarchy_warm_start.md`, `out/synthrad_stage0{,_1}/` |
 | 32 | **quadratic iOT on SynthRAD** | quadratic family in the SynthRAD loop | records exist, **no report** | `out/synthrad_loop_quad/`, `out/synthrad_quad/` |
 
-## 5. EOT — entropic inverse-OT master (`studies/real/t1t2/metric_learning/eot_*.py`)
+## 5. EOT — entropic inverse-OT master (`studies/iot/real/t1t2/metric_learning/eot_*.py`)
 
 Formerly "T3". Index: `current/eot/README.md`. All rows are planted `diagonal` instances,
 `point_dimension=4`, seed 0 unless stated; `ε = rel_eps × std(c(θ_uniform))`.
@@ -96,7 +96,7 @@ Formerly "T3". Index: `current/eot/README.md`. All rows are planted `diagonal` i
 | 40 | **EOT `|F|` fraction vs `m`** (`eot_edge_fraction.py`) | does a 20 %-of-grid `|F|` stay 20 % as `m` grows? | **record exists, no report** | `out/eot_scaling/scaling.json` |
 | 41 | **EOT restricted-`F`** (`eot_restricted_edges.py`) | does a restricted `F` stay cheap **and** approximate the full grid? | done — cheap yes, close **no**; 99 % of the mass needs ≈52 % of the grid at `n=300` | `current/eot/eot_restricted_edges.md`, `out/eot_restricted_edges/` |
 
-## 6. Shape correspondence — FAUST (`studies/real/faust/`)
+## 6. Shape correspondence — FAUST (`studies/iot/real/faust/`)
 
 Registered 3D human meshes, 6890 vertices sharing one ordering, so `π̂ = I/n` **is** the ground truth. Design:
 `../notes/FAUST_CORRESPONDENCE_GUIDELINE.md`.
@@ -144,7 +144,7 @@ F3/F4's sources are missing or git-ignored, so under `AGENTS.md` §7.2 they are 
 
 ### Where the renamed EOT drivers live
 
-`iot_experiments/studies/real/t1t2/metric_learning/eot_{bias,inner_observations,planted,p1_reference,joint_reference,solver_compare,edge_fraction,scaling_slsqp,restricted_edges}.py`.
+`iot_experiments/studies/iot/real/t1t2/metric_learning/eot_{bias,inner_observations,planted,p1_reference,joint_reference,solver_compare,edge_fraction,scaling_slsqp,restricted_edges}.py`.
 The old names `t3_*` appear in git history and in the output directories only.
 
 ---

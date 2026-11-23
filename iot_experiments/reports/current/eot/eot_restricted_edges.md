@@ -3,11 +3,11 @@
 **Status: CURRENT. This report corrects `eot_scaling_slsqp.md` (the 28× figure and the per-edge
 attribution) and defines the current picture of the restricted-`F` question. Read it after the other
 four.**
-**Driver:** `iot_experiments/studies/real/t1t2/metric_learning/eot_restricted_edges.py`
+**Driver:** `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_restricted_edges.py`
 **Record:** `iot_experiments/out/eot_restricted_edges/restricted_f.json` · 60/60 cases completed
 **Instance:** planted `diagonal`, `point_dimension=4`, seeds {0,1} · `n ∈ {70,120,300}` ·
 `rel_eps ∈ {0.5,0.25}` · fractions {1,2,5,10,20 %}`
-**Driver:** `iot_experiments/studies/real/t1t2/metric_learning/eot_restricted_edges.py`
+**Driver:** `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_restricted_edges.py`
 **Grid:** `n ∈ {70, 120, 300}` × `seeds {0,1}` × `rel_ε ∈ {0.5, 0.25}` × fractions {1, 2, 5, 10, 20 %} × 2
 
 ## Two corrections to the previous report, made first

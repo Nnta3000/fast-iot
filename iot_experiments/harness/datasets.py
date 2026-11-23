@@ -1,10 +1,10 @@
 """
 CN: **SynthRAD 数据工具** —— 切片加载、对齐表、特征流、降维。原本住在
-    `studies/real/synthrad/v2_run.py` 里，导致**一个实验脚本同时充当库**（5 个脚本 import 它）。
+    `studies/iot/real/synthrad/v2_run.py` 里，导致**一个实验脚本同时充当库**（5 个脚本 import 它）。
     现搬到 harness：实验脚本只做实验，共享工具只有一份。
 
 EN: **SynthRAD data helpers** -- slice loading, the aligned table, feature streaming and reduction. These
-    used to live inside `studies/real/synthrad/v2_run.py`, so a *study script doubled as a library* (five
+    used to live inside `studies/iot/real/synthrad/v2_run.py`, so a *study script doubled as a library* (five
     scripts imported it). They live in the harness now: a study script only does the study.
 """
 

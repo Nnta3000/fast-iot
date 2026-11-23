@@ -133,9 +133,9 @@ evaluation metrics until a dataset where they pass the discrimination check is i
 ## Reproduce
 
 ```bash
-PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.real.t1t2.nmi.run \
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.iot.real.t1t2.nmi.run \
     --ks 256 --ms 300 --draws 0 1 2 --solver cupdlpx
-PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.real.t1t2.nmi.robustness
+PYTHONPATH=/home/agent/Documents/dpm-inverse-ot python -u -m iot_experiments.studies.iot.real.t1t2.nmi.robustness
 ```
 
 Tests: `tests/iot_nmi_study_test.py` (planted recovery after shuffling, true-partner scoring,

@@ -5,7 +5,7 @@ earlier "adopt SLSQP as the working solver"; the recommendation at the bottom of
 yet designate SLSQP the production solver". Read §"Recommendation" here as the later statement.
 `eot_scaling_slsqp.md` adds the scale evidence.
 **Commit:** `5c7387b` (+ the driver) · **Record:** `iot_experiments/out/eot_solver_compare/solver_compare.json`
-**Driver:** `iot_experiments/studies/real/t1t2/metric_learning/eot_solver_compare.py`
+**Driver:** `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_solver_compare.py`
 **Instance:** planted `diagonal`, `point_dimension=4`, seeds 0–1 · `n ∈ {24, 70, 120, 300}` ·
 `rel_eps ∈ {0.5, 0.25, 0.1}` · full grid
 

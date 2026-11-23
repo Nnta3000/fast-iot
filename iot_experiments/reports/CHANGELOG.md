@@ -69,7 +69,7 @@ Re-ran the modes with `time_sec_limit=1` (since `iter_limit` turned out to be ig
 
 ## 2026-11-12 (latest+) — where the fit's time goes, and what "dirty mode" costs
 
-New `studies/real/faust/modes.py` (n=2000, 8 held-out pairs):
+New `studies/iot/real/faust/modes.py` (n=2000, 8 held-out pairs):
 
   normal 28.3s 0.2006 | 5-rounds 10.9s 0.2087 | loose 27.0s 0.2006 | dirty 10.9s 0.2087 | numpy_scan 27.3s 0.2006
   normal - 5rounds = -0.0081 [-0.0108,-0.0054] 8/8
@@ -85,7 +85,7 @@ The relaxed loop's theta is bit-identical under both.
 
 ## 2026-11-12 (latest) — the ablation: random search, GD, and what iOT is actually worth
 
-New `studies/real/faust/ablation.py`, four families selected identically on 6 validation pairs, evaluated
+New `studies/iot/real/faust/ablation.py`, four families selected identically on 6 validation pairs, evaluated
 on the 8 held-out pairs:
 
   iot 0.2053 | gd 0.2453 | random_support 0.2854 | random_simplex 0.3562
@@ -104,7 +104,7 @@ so it can only strengthen the "no measurable advantage" conclusion.
 
 ## 2026-11-12 (later) — the training pair dominates, and cross-pair regret is a label-free selector
 
-New `studies/real/faust/pairing.py`: 8 subject-disjoint training pairs, each theta decoded on the same 8
+New `studies/iot/real/faust/pairing.py`: 8 subject-disjoint training pairs, each theta decoded on the same 8
 held-out pairs; all regrets exact full-grid POT.
 
   held-out miss@5%: (11,33) 0.1979 | (0,13) 0.2006 | (24,12) 0.2053 | (4,22) 0.2160 | (14,42) 0.2702 |
@@ -131,7 +131,7 @@ runs a second LP per round and hung the fit.
 
 ## 2026-11-12 — direction A: validation selection inside the near-optimal set WORKS
 
-New `studies/real/faust/select.py` (n=4000): the 71 near-optimal candidates from D1, ranked on 6 validation
+New `studies/iot/real/faust/select.py` (n=4000): the 71 near-optimal candidates from D1, ranked on 6 validation
 pairs from the TRAINING subjects; only the winner goes to the 8 held-out pairs.
 
   uniform 0.4219 | median-of-set 0.2232 | reference (max-margin) 0.2028 | selected 0.1890
@@ -149,7 +149,7 @@ Caveat: 0.0138 is 6.8% relative, smaller than the LP-vs-supervised gap (0.026).
 
 ## 2026-11-11 (final++++) — the two go/no-go diagnostics: both GO, with a caveat that matters more
 
-New `studies/real/faust/face.py` (D1, n=4000) and `regional.py` (D2, n=2000), each pre-registered in
+New `studies/iot/real/faust/face.py` (D1, n=4000) and `regional.py` (D2, n=2000), each pre-registered in
 `notes/FAUST_NEXT_STEPS.md` before being run.
 
 **D1 (admissible set):** 71 near-equally-good thetas (regret within 25% of the shipped reference) score
@@ -186,7 +186,7 @@ ranked directions, plus the VRAM/resource note about the TTS container.
 
 ## 2026-11-11 (final++) — two applications of iOT tested on FAUST: confidence and teaching
 
-New `studies/real/faust/abstention.py` (n=4000, 8 held-out pairs): four label-free confidence scores ranked
+New `studies/iot/real/faust/abstention.py` (n=4000, 8 held-out pairs): four label-free confidence scores ranked
 against the true per-vertex error.
 
   AUROC (0.5 = chance): cost_margin 0.46 | dual_margin (OT certificate) 0.50 | rel_cost_margin 0.57 |
@@ -197,7 +197,7 @@ margin is worse than chance (0.46) because it is dominated by per-vertex cost sc
 works (0.60-0.63) and works for uniform theta too (0.597), so confidence is a property of the cost
 landscape, not of inverse OT. Practically: abstaining on 50% of vertices cuts miss@5% from 0.203 to 0.144.
 
-New `studies/real/faust/curriculum.py` (n=2000): use the fitted cost as a hard-negative miner for a cheap
+New `studies/iot/real/faust/curriculum.py` (n=2000): use the fitted cost as a hard-negative miner for a cheap
 softmax arm. **Negative**: hard_lp 0.2671 vs plain 0.2453 (+0.0218, CI [+0.0193,+0.0248], 0/8 pairs), and
 the control `hard_self` (negatives from the supervised arm's own cost) is closer to plain at 0.2518 — so
 inverse OT is not even the better miner.
@@ -219,7 +219,7 @@ per-pair* thetas did work.
 
 ## 2026-11-11 (final) — four objectives on one hypothesis class (FAUST)
 
-New `studies/real/faust/arms.py`: same cost family, same standardised 13 descriptors, same training pair, only
+New `studies/iot/real/faust/arms.py`: same cost family, same standardised 13 descriptors, same training pair, only
 the objective differs. `tau` / `rel_eps` chosen on training-subject validation pairs. 8 held-out test pairs,
 n=1500.
 
@@ -315,7 +315,7 @@ are visited and `max` does not depend on order. The tempting second change — r
 residual (this solver reports `converged=False` routinely), so an under-stated `s` would make the certificate's
 upper bound `U` too small. That is exactly the kind of short-cut that could invalidate a bound.
 
-**Verified**, not assumed (`studies/real/faust/baseline.py`, run before and after, then `diff`):
+**Verified**, not assumed (`studies/iot/real/faust/baseline.py`, run before and after, then `diff`):
 `exact.delta`, `is_optimal`, `relative_gap`, relaxed `theta`/`regret`/`lower`/`upper`/`max_sigma_all`, and the
 FAUST fit `theta`/`regret` are **bit-identical**; only the memory lines moved (peak `n=2000` 2142.8 → 2112.6 MB;
 `n=3000` 3561.8 → 3423.9 MB, i.e. −137.9 MB, matching the two 144 MB arrays).
@@ -402,7 +402,7 @@ descriptor suffices, across people absolute shape matters.
 
 ## 2026-11-09 — FAUST held-out transfer: the first positive result
 
-`studies/real/faust/correspondence.py` fits `θ` on **one** registered pair and evaluates on **eight** held-out
+`studies/iot/real/faust/correspondence.py` fits `θ` on **one** registered pair and evaluates on **eight** held-out
 pairs with the standard geodesic metric (`potpourri3d`, normalised by `sqrt(area)`). Three independent
 training pairs, `n = 800`.
 
@@ -428,7 +428,7 @@ area".
 
 ## 2026-11-09 — FAUST preliminary tests: gates 6.0–6.3 pass
 
-**New study** `studies/real/faust/` with `data_check.py` (gate 6.0) and `gates.py` (gates 6.1–6.3), plus
+**New study** `studies/iot/real/faust/` with `data_check.py` (gate 6.0) and `gates.py` (gates 6.1–6.3), plus
 `iot_experiments/harness/faust.py` — a minimal PLY reader and descriptor primitives (`vertex_areas`,
 `cotangent_laplacian`, `spectral_basis`, `heat_kernel_signature`), because **no mesh library is installed**.
 
@@ -499,7 +499,7 @@ complete, check B partial at the time of writing.
 
 ## 2026-11-05 — the five sanity checks
 
-**New study** `studies/real/t1t2/sanity/` (study name `sanity` in every `RunRecord`):
+**New study** `studies/iot/real/t1t2/sanity/` (study name `sanity` in every `RunRecord`):
 `run.py` (`--check null|curve|baselines`), `transfer.py`, `ident.py`, with `README.md` carrying the
 questions, commands and the memory/time budget. Those are the checks the user asked for that had never
 been run: the permutation null, the curve past `m = 300`, the three-losses comparison, pool-size
@@ -519,7 +519,7 @@ number it was re-read from the record first (two drafting errors were caught and
 (entropic inverse-OT master). Applied to:
 
 - reports → `reports/current/eot/` (see below)
-- drivers → `studies/real/t1t2/metric_learning/eot_*.py` (9 files, content unchanged apart from the label)
+- drivers → `studies/iot/real/t1t2/metric_learning/eot_*.py` (9 files, content unchanged apart from the label)
 - `section` / `study` strings → `eot_*`; output directories under `iot_experiments/out/` moved to match
   (`t3_bias` → `eot_bias`, … `t3_restricted_f` → `eot_restricted_edges`)
 - docstrings in `src/iot/entropic/*.py`, `src/iot/core/scan.py`, `tests/iot_entropic_*`, `tests/reference/dense_outer.py`
@@ -549,7 +549,7 @@ retraction banner for two numbers corrected in `eot_restricted_edges.md`.
 - `eot_bias.py`'s docstring said the θ̂–θ* gap "does not shrink with eps"; the record
   (`out/eot_bias/bias.json`) shows it **does** shrink from `rel_eps` 0.5 to 0.1 (0.285 → 0.155 at
   `n=120`). Docstring corrected; the result is now in `current/eot/README.md` §1 row 5.
-- `studies/real/t1t2/entropic_metric/README.md` gained a §Corrections: its cosine rows are not in the
+- `studies/iot/real/t1t2/entropic_metric/README.md` gained a §Corrections: its cosine rows are not in the
   committed record (the `n_params=0` rows are not cosine), and the K=16 cells sit barely above a
   constant cost.
 - `EXPERIMENTS.md` learned that its key sentence is wrong in one direction: P2 is **done and negative**,

@@ -107,7 +107,7 @@ hurt the feature arms; that is unknown, not assumed.
 - `records.json` — every arm × cell × draw, with timings.
 - `metric_gate_soft.json`, `metric_gate_bone.json` — the measure-check effect sizes.
 - `run.log` — timestamped run log written by the job itself.
-- Code: `iot_experiments/studies/real/synthrad/gate1.py`; encoders in
+- Code: `iot_experiments/studies/iot/real/synthrad/gate1.py`; encoders in
   `iot_experiments/harness/dinov2.py`; measures in `iot_experiments/harness/e1_metrics.py`.
 
 ## E4 was not started

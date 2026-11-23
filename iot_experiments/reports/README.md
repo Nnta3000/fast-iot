@@ -92,7 +92,7 @@ having run.
 | --- | --- | --- |
 | `out/t1t2_quad_f2/` | quadratic (Mahalanobis) iOT in F2's grid | RAN, EXCLUDED — 0/9 fits met the acceptance rule (`EXPERIMENTS.md` #17) |
 | `out/t1t2_coupled/` | coupled family `(θ, η)` | BLOCKED, one log only (`EXPERIMENTS.md` #18) |
-| `out/entropic_metric/` | entropic EOT on T1/T2, K ∈ {16,32} | PARTIAL — see `studies/real/t1t2/entropic_metric/README.md` §Corrections |
+| `out/entropic_metric/` | entropic EOT on T1/T2, K ∈ {16,32} | PARTIAL — see `studies/iot/real/t1t2/entropic_metric/README.md` §Corrections |
 | `out/entropic_metric_matched/`, `out/entropic_metric_loweps/` | variants of the above | no write-up |
 | `out/entropic_vs_relaxed/` | EOT vs relaxed LP head-to-head, K=64 | **PARTIAL — stopped after m=50 and m=100** |
 | `out/entropic_vs_relaxed_m300/` | same at m=300 | **PARTIAL — stopped mid-grid (K=64, draw 1)** |
@@ -145,11 +145,11 @@ There is no single regeneration script. Each study owns a driver:
 
 | study | command (from the repository root) |
 | --- | --- |
-| `metric_learning` (#12, F2) | `PYTHONPATH=. .venv/bin/python -m iot_experiments.studies.real.t1t2.metric_learning.run --ks 64 128 256 --ms 50 100 300` |
-| EOT studies | `PYTHONPATH=. .venv/bin/python -m iot_experiments.studies.real.t1t2.metric_learning.eot_<name>` (see `current/eot/README.md`) |
-| SynthRAD phases | `iot_experiments/studies/real/synthrad/phase_{b,c}.py` (see `STATE.md` §7) |
-| entropic metric | `iot_experiments/studies/real/t1t2/entropic_metric/run.py` (its README) |
-| hierarchy | `iot_experiments/studies/real/synthrad/stage{0,1}_*.py` |
+| `metric_learning` (#12, F2) | `PYTHONPATH=. .venv/bin/python -m iot_experiments.studies.iot.real.t1t2.metric_learning.run --ks 64 128 256 --ms 50 100 300` |
+| EOT studies | `PYTHONPATH=. .venv/bin/python -m iot_experiments.studies.iot.real.t1t2.metric_learning.eot_<name>` (see `current/eot/README.md`) |
+| SynthRAD phases | `iot_experiments/studies/iot/real/synthrad/phase_{b,c}.py` (see `STATE.md` §7) |
+| entropic metric | `iot_experiments/studies/iot/real/t1t2/entropic_metric/run.py` (its README) |
+| hierarchy | `iot_experiments/studies/iot/real/synthrad/stage{0,1}_*.py` |
 
 ## 7. Figures
 

@@ -157,7 +157,7 @@ These are statements about the problem definitions, not recommendations.
 - **Stuart & Wolfram** report no scalar held-out error (acceptance rates and posterior plots), so no numeric cell
   of theirs can be matched directly.
 - **M-IOT** needs `K ≥ 2` plans from the same cost. Our `InverseOTProblem` holds one plan; a multi-observation
-  version is a different object (`iot_experiments/studies/synthetic/methods/*` and `benchmarks/` hold the
+  version is a different object (`iot_experiments/studies/iot/synthetic/methods/*` and `benchmarks/` hold the
   single-plan studies).
 
 ## 6. Where the FAUST number sits
@@ -171,5 +171,5 @@ is URSSM (FAUST geodesic error 1.6); our reproduction of it is 1.59, recorded in
 ---
 
 **Provenance.** Paper PDFs fetched 2026-11-19 from the URLs printed on slides 21–24. Reproduction code:
-`iot_experiments/studies/related/inverse_cost_recovery/`. Numbers from this repository are cited with their
+`iot_experiments/studies/iot/synthetic/inverse_cost_recovery/`. Numbers from this repository are cited with their
 `out/<study>/records.json`.

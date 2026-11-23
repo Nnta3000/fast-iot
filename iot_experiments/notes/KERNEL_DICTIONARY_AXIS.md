@@ -280,7 +280,7 @@ natural *second* step, after §3.
 
 1. `KernelMixtureFeatures` (A) and `RadialProfileFeatures` (B) in `src/iot/core/features.py`, each a `FeatureMap`
    with `features()` and `costs()`. No change to the solver, scan, loop or master.
-2. Oracle-ceiling driver `studies/real/faust/oracle_ceiling.py`: same pairs, same `n = 800`, same subsample as
+2. Oracle-ceiling driver `studies/iot/real/faust/oracle_ceiling.py`: same pairs, same `n = 800`, same subsample as
    `faust_correspondence_box`, so the comparison against 0.1945 is like-for-like.
 3. **Gate** per §3. Record the verdict here, negative or positive.
 4. Only if the gate passes: transfer evaluation (fit on pair A, evaluate on pair B), then the

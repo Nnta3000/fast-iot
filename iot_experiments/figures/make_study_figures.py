@@ -6,7 +6,7 @@ EN: **Study figures** -- F6 to F14, built only from records in `iot_experiments/
     `figures/FIGURE_STYLE.md`; the shared helpers are `style.py` (look) and `metadata.py` (csv + caption).
 
     F6 is the only builder that needs a figure-specific input beyond a records file: the per-vertex error
-    arrays written by `studies/real/faust/heatmaps.py`. If they are absent the builder says so instead of
+    arrays written by `studies/iot/real/faust/heatmaps.py`. If they are absent the builder says so instead of
     recomputing the experiment here.
 
     CN: **研究图** F6–F13，只读 `iot_experiments/out/` 下的记录。样式契约见 `figures/FIGURE_STYLE.md`；
@@ -121,7 +121,7 @@ def build_f6() -> Path:
     for r, (pair, target) in enumerate(pairs):
         npz_path = OUT / "faust_heatmaps" / f"errors_{pair}.npz"
         if not npz_path.is_file():
-            raise FigureError(f"missing per-vertex errors: {npz_path} (rerun studies/real/faust/heatmaps.py)")
+            raise FigureError(f"missing per-vertex errors: {npz_path} (rerun studies/iot/real/faust/heatmaps.py)")
         payload = np.load(npz_path)
         vmax = float(payload["vmax"])
         mesh = read_ply(FAUST_ROOT / f"tr_reg_{target:03d}.ply")
@@ -172,7 +172,7 @@ def build_f6() -> Path:
                        "(fitted on the evaluated pair); the oracle is a ceiling, not a competitor",
             "config": config,
             "sources": "out/faust_heatmaps/records.json plus the per-vertex arrays errors_pair*.npz written "
-                       "by studies/real/faust/heatmaps.py; both are git-ignored, the run regenerates them",
+                       "by studies/iot/real/faust/heatmaps.py; both are git-ignored, the run regenerates them",
             "conventions": "a flip is counted only where the error exceeds 1 % of √area and the mirrored "
                            "vertex is a different vertex; the mirror is a reflection across the estimated "
                            "sagittal plane, so it is a proxy",
@@ -923,7 +923,7 @@ def build_f14() -> Path:
             "methods": "position_only, uniform_theta, learned (simplex fit on pair 000-013, exact CPU master)",
             "config": config,
             "sources": "out/faust_error_points/records.json and errors_pair050-066.npz, written by "
-                       "studies/real/faust/error_points.py; both are git-ignored and regenerated in ~1 min",
+                       "studies/iot/real/faust/error_points.py; both are git-ignored and regenerated in ~1 min",
             "conventions": "dots are drawn only for the front-facing 65 % of the evaluated vertices, so the "
                            "counts in the titles exceed what is visible; grey is the rest of the surface, not "
                            "a data value",

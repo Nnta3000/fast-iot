@@ -240,7 +240,7 @@ def test_intra_pairs_are_same_subject_and_distinct_pose() -> None:
         requested subject set. It exists only because that code path is committed but never run -- an untested
         pair generator is a classic silent-error source.
     """
-    from iot_experiments.studies.real.faust.correspondence import intra_pairs, subject_of
+    from iot_experiments.studies.iot.real.faust.correspondence import intra_pairs, subject_of
 
     subjects = (5, 6, 7)
     pairs = intra_pairs(subjects, 4)
@@ -258,7 +258,7 @@ def test_intra_and_inter_generators_differ() -> None:
     CN: 两个生成器不能意外相同（那会让 `--pairing intra` 变成无操作）。
     EN: the two generators must not coincide, or `--pairing intra` would be a no-op.
     """
-    from iot_experiments.studies.real.faust.correspondence import default_pairs, intra_pairs, subject_of
+    from iot_experiments.studies.iot.real.faust.correspondence import default_pairs, intra_pairs, subject_of
 
     subjects = (5, 6, 7, 8, 9)
     intra = intra_pairs(subjects, 4)

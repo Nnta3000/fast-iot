@@ -1,5 +1,5 @@
 """
-EN: **Tests for the related-work reproduction** (`studies/related/inverse_cost_recovery`).
+EN: **Tests for the related-work reproduction** (`studies/iot/synthetic/inverse_cost_recovery`).
 
     The study reports one scientific reading — minimising the exact-OT regret on Ma et al.'s discrete benchmark
     selects a family member that is fixed by the cost's shape — so the tests pin the three things that reading
@@ -25,7 +25,7 @@ import ot
 import pytest
 import scipy.sparse as sparse
 
-from iot_experiments.studies.related.inverse_cost_recovery.run import (
+from iot_experiments.studies.iot.synthetic.inverse_cost_recovery.run import (
     _best_scale,
     _dense_cost,
     _family,

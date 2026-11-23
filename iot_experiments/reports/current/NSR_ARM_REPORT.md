@@ -3,7 +3,7 @@
 **Status: CURRENT (2026-11-17).** A record of a **negative result** and the decision that followed.
 Nothing here is a claim about the entropic or exact inverse-OT solvers; those live in §2.1 and §2.2.
 
-Driver/patch: `studies/real/faust/pairing_gate.py`, `scripts/nsr_gate.patch`
+Driver/patch: `studies/iot/real/faust/pairing_gate.py`, `scripts/nsr_gate.patch`
 Records: `out/faust_pairing_gate{,_learned}/`, `out/nsr_gate/` (pulled from the server)
 
 ---

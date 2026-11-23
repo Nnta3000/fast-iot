@@ -10,7 +10,7 @@ EN: Shared matching primitives for the FAUST correspondence study -- cost matric
 
     Nothing in this module decides what to measure -- it only computes a cost, decodes a map, scores it, or
     fits a supervised cost. The study-specific choices (pairing, splits, selection, record building) stay in
-    `studies/real/faust/`.
+    `studies/iot/real/faust/`.
 
     CN: FAUST 对应研究的**共享匹配原语**：代价矩阵、精确 OT 解码、测地误差、监督代价拟合、配对 bootstrap。
         存在的原因：四个驱动各自复制了同一批函数，另有两个驱动从别的驱动里 import 私有函数。驱动不是库，

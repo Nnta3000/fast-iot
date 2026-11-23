@@ -218,19 +218,19 @@ baseline was estimated at 1.5 GB and actually peaked at **7.4 GB** — a 5× mis
 cd /home/agent/Documents/fast-iot
 
 # cheap pixel baseline (NumPy only, no torch, no GPU)
-.venv/bin/python -u -m iot_experiments.studies.real.synthrad.cheap_items --no-features
+.venv/bin/python -u -m iot_experiments.studies.iot.real.synthrad.cheap_items --no-features
 
 # with features (needs CUDA, ~7 GB peak)
-.venv/bin/python -u -m iot_experiments.studies.real.synthrad.cheap_items --ks 64 128
+.venv/bin/python -u -m iot_experiments.studies.iot.real.synthrad.cheap_items --ks 64 128
 
 # patient split (writes out/synthrad_v2/split_v2.json)
-.venv/bin/python -m iot_experiments.studies.real.synthrad.split_v2
+.venv/bin/python -m iot_experiments.studies.iot.real.synthrad.split_v2
 
 # Phase B: loop vs dense at m=300
-.venv/bin/python -u -m iot_experiments.studies.real.synthrad.phase_b --m 300
+.venv/bin/python -u -m iot_experiments.studies.iot.real.synthrad.phase_b --m 300
 
 # Phase C: loop scaling (keep m <= 2000 on this machine)
-.venv/bin/python -u -m iot_experiments.studies.real.synthrad.phase_c --ms 600 2000
+.venv/bin/python -u -m iot_experiments.studies.iot.real.synthrad.phase_c --ms 600 2000
 ```
 
 Every study writes `run.log` and `records.json` into `iot_experiments/out/<study>/`.
@@ -241,7 +241,7 @@ Every study writes `run.log` and `records.json` into `iot_experiments/out/<study
 
 | path | what |
 |---|---|
-| `iot_experiments/studies/real/synthrad/split_v2.py` | stratified 105/45/30 split, seed 2024 |
+| `iot_experiments/studies/iot/real/synthrad/split_v2.py` | stratified 105/45/30 split, seed 2024 |
 | `.../recovery.py` | pair-recovery scoring (`exact_hit`, `patient_hit`), oracle assertion |
 | `.../v2_run.py` | v2 evaluation driver, streaming feature extraction |
 | `.../phase_b.py` | loop vs dense LP at one m |

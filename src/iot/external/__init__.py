@@ -15,7 +15,7 @@ EN: **External comparisons** — the code that implements or loads something tha
                     marginals first)
       `methods`     the baselines. Each one states the objective it minimises and the hyperparameters it fixes
 
-    Data building stays in `iot_experiments/` (`studies/related/<instance>/`): downloading a dataset and turning it
+    Data building stays in `iot_experiments/` (`studies/iot/{real,synthetic}/<instance>/`): downloading a dataset and turning it
     into flow matrices is I/O and bookkeeping, not an algorithm. What lives here is what a comparison *computes*.
 
     Rule for this package: a method never imports from `iot_experiments`, and never downloads. It is given an array
@@ -29,7 +29,7 @@ CN: **外部比较** —— 实现或加载"不属于本仓库"的东西：其�
     布局：`metrics`（RMSE、Pearson、CPC、相对 Frobenius、以及流量比较所需的 IPF 重标定）、`methods`（基线，每个都写明
     它最小化的目标与固定的超参数）。
 
-    **数据构建留在 `iot_experiments/`**（`studies/related/<instance>/`）：下载数据集并转成流量矩阵是 I/O 与簿记，不是
+    **数据构建留在 `iot_experiments/`**（`studies/iot/{real,synthetic}/<instance>/`）：下载数据集并转成流量矩阵是 I/O 与簿记，不是
     算法。放在这里的是比较**计算**的东西。本包规则：方法不从 `iot_experiments` 导入，也不下载；只接收数组（或显式路径），
     返回数组或小的记录。
 """

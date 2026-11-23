@@ -7,6 +7,6 @@
 # Train: 50 pairs = 5 subjects x (6 intra + 4 inter); Test: 50 pairs on the 5 held-out subjects.
 # 50 training + 50 test = 100 pairs total; theta is fitted on the 50 training pairs only.
 
-PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m iot_experiments.studies.real.faust.challenge --study faust_challenge_diag13 --n-sub 800 --family diag13 --max-iterations 5
+PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m iot_experiments.studies.iot.real.faust.challenge --study faust_challenge_diag13 --n-sub 800 --family diag13 --max-iterations 5
 
-PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m iot_experiments.studies.real.faust.challenge --study faust_challenge_hinge8 --n-sub 800 --family hinge8 --max-iterations 5
+PYTHONPATH=src:. ${FAUST_PYTHON:-.venv/bin/python} -u -m iot_experiments.studies.iot.real.faust.challenge --study faust_challenge_hinge8 --n-sub 800 --family hinge8 --max-iterations 5

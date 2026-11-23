@@ -1,5 +1,5 @@
 """
-EN: **Tests for the planted shared-`theta` sanity check** (`studies/synthetic/planted_shared_theta`).
+EN: **Tests for the planted shared-`theta` sanity check** (`studies/iot/synthetic/planted_shared_theta`).
 
     The study's claim is narrow: when the observed plans are exactly optimal at one planted cost, a `theta` fitted on
     some windows reproduces a held-out plan. Two things are pinned here, because both were measured and both are easy
@@ -12,7 +12,7 @@ EN: **Tests for the planted shared-`theta` sanity check** (`studies/synthetic/pl
          `--same-zone-weight 0` and `--diagonal-offset`; with the diagonal free (offset 0, no same-zone weight) the
          planted plans keep ~60 % of their mass in place.
 
-CN: **植入共享 `theta` 健全性检查的测试**（`studies/synthetic/planted_shared_theta`）。该研究的结论很窄：当观测计划恰好最优于
+CN: **植入共享 `theta` 健全性检查的测试**（`studies/iot/synthetic/planted_shared_theta`）。该研究的结论很窄：当观测计划恰好最优于
     一个植入代价时，用部分窗拟合的 `theta` 能复现留出计划。这里固定两件已实测、且容易被无意破坏的事：①植入流程能复现留出
     计划（`F_train` 在机器零、预测计划在植入代价下最优），而**参数**不被恢复（可行集是锥）；②仅支撑在同 zone 列上的代价使
     **任何**无对角质量的计划都最优，故这种计划无法区分正确代价与该退化代价 —— 这正是研究提供 `--same-zone-weight 0` 与
@@ -26,7 +26,7 @@ import ot
 import pytest
 
 from iot.relaxed.multi_plan import distance_features, fit_shared_theta, regret_of
-from iot_experiments.studies.synthetic.planted_shared_theta.run import (
+from iot_experiments.studies.iot.synthetic.planted_shared_theta.run import (
     diagonal_mass,
     geometry,
     marginals,

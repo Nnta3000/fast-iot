@@ -4,7 +4,7 @@
 the true vertex correspondence on pairs drawn from **subjects never seen in training**, better than every
 hand-weighted baseline, on **8 / 8** held-out pairs and **8 / 8** against each baseline.
 
-Driver: `studies/real/faust/correspondence.py` · record: `out/faust_correspondence/records.json` (341 rows) ·
+Driver: `studies/iot/real/faust/correspondence.py` · record: `out/faust_correspondence/records.json` (341 rows) ·
 guides: `../notes/FAUST_CORRESPONDENCE_GUIDELINE.md`, pre-flights: `FAUST_PRELIMINARY_REPORT.md`.
 
 **Scope.** Not a state-of-the-art claim. Deep functional-map methods reach far lower FAUST errors. The claim
@@ -230,7 +230,7 @@ proved optimum. "The learned cost weights late HKS plus a little shape" describe
 
 ## 4b. Where the errors are, and how many are left/right flips
 
-Driver `studies/real/faust/heatmaps.py`, run through `scripts/run_job.sh`. Two held-out pairs from **test
+Driver `studies/iot/real/faust/heatmaps.py`, run through `scripts/run_job.sh`. Two held-out pairs from **test
 subjects** (`050-066`, `056-071`), evaluated at **full 6890-vertex resolution** (the cost is assembled with
 the bilinear identity, so only an `n × n` matrix is materialised). `θ` fitted on the training pair `(0,13)`.
 

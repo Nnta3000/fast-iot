@@ -1,6 +1,6 @@
 # Stage 0 / Stage 1 report: does coarse-to-fine warming pay for inverse OT?
 
-**Status: CURRENT (relaxed variant only, negative).** Driver `studies/real/synthrad/stage0_pivot.py`,
+**Status: CURRENT (relaxed variant only, negative).** Driver `studies/iot/real/synthrad/stage0_pivot.py`,
 `stage1_hierarchy.py`; records `out/synthrad_stage0/stage0.json`, `out/synthrad_stage1/stage1.json`.
 **Stale paths:** this report quotes `src/iot/core/{scan,pruning,edges_advance}.py`, which have since
 moved to `src/iot/core/` or been renamed — see `README.md` §4. The body below is unchanged.
@@ -106,8 +106,8 @@ recursion. With `hierarchical=None` (the default) both are **bit-identical to be
 ### 1.7 Per-round timing and the Stage 0 / Stage 1 drivers
 
 - `RegretIteration` gained `master_time` / `scan_time` (measurement only).
-- `studies/real/synthrad/stage0_pivot.py` — master-vs-scan share, γ sweep, warm-start switch.
-- `studies/real/synthrad/stage1_hierarchy.py` — two-level hierarchy:
+- `studies/iot/real/synthrad/stage0_pivot.py` — master-vs-scan share, γ sweep, warm-start switch.
+- `studies/iot/real/synthrad/stage1_hierarchy.py` — two-level hierarchy:
   `BuildLevels` (edge sampling at ratio ρ) → coarse **dense** solve on `I₁ × J₁` with the induced
   plan → `Prolong` (retained nodes keep their potentials, new nodes min-completed, `f` before `g`)
   → `Seed` (`B ∪ A_row ∪ A_col`, κ per row/column by prolonged slack) → fine loop from `F₀`.
@@ -260,13 +260,13 @@ coarse seed costs more in `|F₀|` than it saves in rounds. If anything is pursu
 
 ```bash
 # Stage 0 pivot + gamma sweep
-python -m iot_experiments.studies.real.synthrad.stage0_pivot --ms 2000 --gammas 1 2 4 8
+python -m iot_experiments.studies.iot.real.synthrad.stage0_pivot --ms 2000 --gammas 1 2 4 8
 
 # warm start comparison
-python -m iot_experiments.studies.real.synthrad.stage0_pivot --ms 2000 --gammas 1 2 --warm
+python -m iot_experiments.studies.iot.real.synthrad.stage0_pivot --ms 2000 --gammas 1 2 --warm
 
 # two-level hierarchy, 3 level seeds
-python -m iot_experiments.studies.real.synthrad.stage1_hierarchy --m 2000 --level-seeds 0 1 2
+python -m iot_experiments.studies.iot.real.synthrad.stage1_hierarchy --m 2000 --level-seeds 0 1 2
 ```
 
 Records: `iot_experiments/out/synthrad_stage0/stage0.json`,

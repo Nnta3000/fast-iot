@@ -26,7 +26,7 @@ def _run(script: str, args: list[str], out: Path) -> dict[str, object]:
 
 
 def test_e1_full_master_script(tmp_path: Path) -> None:
-    payload = _run("studies/synthetic/methods/exact/e1_full_master.py", ["--sizes", "4", "6", "--features", "3"], tmp_path / "e1.json")
+    payload = _run("studies/iot/synthetic/methods/exact/e1_full_master.py", ["--sizes", "4", "6", "--features", "3"], tmp_path / "e1.json")
     assert payload["experiment"] == "e1_full_master"
     rows = payload["rows"]
     assert isinstance(rows, list) and len(rows) == 2
@@ -34,7 +34,7 @@ def test_e1_full_master_script(tmp_path: Path) -> None:
 
 
 def test_e2_loop_vs_full_script(tmp_path: Path) -> None:
-    payload = _run("studies/synthetic/methods/exact/e2_loop_vs_full.py", ["--sizes", "6", "--features", "3"], tmp_path / "e2.json")
+    payload = _run("studies/iot/synthetic/methods/exact/e2_loop_vs_full.py", ["--sizes", "6", "--features", "3"], tmp_path / "e2.json")
     assert payload["experiment"] == "e2_loop_vs_full"
     row = payload["rows"][0]
     assert float(row["delta_difference"]) < 1e-5
@@ -46,7 +46,7 @@ def test_e2_loop_vs_full_script(tmp_path: Path) -> None:
 
 def test_e3_scaling_script(tmp_path: Path) -> None:
     payload = _run(
-        "studies/synthetic/methods/exact/e3_scaling.py",
+        "studies/iot/synthetic/methods/exact/e3_scaling.py",
         ["--sizes", "20", "--features", "3", "--max-iterations", "20"],
         tmp_path / "e3.json",
     )
@@ -59,7 +59,7 @@ def test_e3_scaling_script(tmp_path: Path) -> None:
 
 def test_cutting_plane_benchmark_script(tmp_path: Path) -> None:
     payload = _run(
-        "studies/synthetic/methods/exact/cutting_plane_benchmark.py",
+        "studies/iot/synthetic/methods/exact/cutting_plane_benchmark.py",
         ["--sizes", "30", "--features", "3", "--seeds", "0", "--methods", "cutting-plane"],
         tmp_path / "cutting_plane.json",
     )
@@ -76,7 +76,7 @@ def test_cutting_plane_benchmark_script(tmp_path: Path) -> None:
 
 def test_entropic_psd_moment_fit_script(tmp_path: Path) -> None:
     payload = _run(
-        "studies/synthetic/methods/entropic/entropic_psd_moment_fit.py",
+        "studies/iot/synthetic/methods/entropic/entropic_psd_moment_fit.py",
         ["--n", "40", "--dim", "2", "--num-outer", "15", "--samples", "2000"],
         tmp_path / "entropic.json",
     )

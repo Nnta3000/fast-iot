@@ -15,7 +15,7 @@ data/
 │       ├── brain/                 1BA001/{mr,ct,mask}.nii.gz …  60 A + 60 B + 60 C
 │       ├── pelvis/                1PA001/…, 1PC001/…           120 A + 60 C (no centre B)
 │       └── overview/              1_brain_train.xlsx, 1_pelvis_train.xlsx
-└── t1t2/                          the T1/T2 MRI pairs used by studies/real/t1t2
+└── t1t2/                          the T1/T2 MRI pairs used by studies/iot/real/t1t2
     ├── T1/mri_*.png
     └── T2/mri_*.png
 ```

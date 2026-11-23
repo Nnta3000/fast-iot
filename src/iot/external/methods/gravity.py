@@ -9,7 +9,7 @@ EN: **Gravity model** — the parametric transport baseline reported in M-IOT's 
       * the regression uses entries with **observed** flow and a **positive** distance (up to a common constant);
       * a pair with no observed trip still gets a prediction, because the exponent form is defined for any `d > 0`;
       * `d` is the mean reported trip distance of the **training** trips between that pair (see
-        `studies/related/nyc_taxi/instance.py`); a pair with no train trip uses the global mean distance;
+        `studies/iot/real/nyc_taxi/instance.py`); a pair with no train trip uses the global mean distance;
       * the same-zone pair (`d = 0`) is floored at `distance_floor`, since `d^{-γ}` is undefined there; the gravity
         model has no separate same-zone term;
       * one fit is shared by all training windows (the paper fits a single parametric model, and `α, β, γ` are not

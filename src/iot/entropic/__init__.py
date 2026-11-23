@@ -14,7 +14,7 @@ EN: **EOT -- the entropic inverse-OT master.** Minimise, on an edge set `F`,
     | `inner_f.py` | the inner `(f, g)` solve on a sparse edge set (Newton or Sinkhorn) | component |
     | `soft_loop.py` | the EOT loop: soft master + separation scan + prune + edge advance | driver |
 
-    Studies live in `iot_experiments/studies/real/t1t2/metric_learning/eot_*.py`; reports in
+    Studies live in `iot_experiments/studies/iot/real/t1t2/metric_learning/eot_*.py`; reports in
     `iot_experiments/reports/current/eot/`.
 
     CN: **EOT —— 熵正则反 OT 的联合 master。** 在边集 `F` 上最小化 `Ψ_F`（见上），而不是精确循环里的

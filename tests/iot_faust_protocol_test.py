@@ -22,7 +22,7 @@ import pytest
 
 from iot_experiments.harness.faust import DescriptorScaler, diameter
 from iot_experiments.harness.records import RunRecord, summarise
-from iot_experiments.studies.real.faust.challenge import ChallengeConfig, inter_pairs, intra_pairs
+from iot_experiments.studies.iot.real.faust.challenge import ChallengeConfig, inter_pairs, intra_pairs
 
 
 def test_diameter_is_the_largest_pairwise_distance() -> None:

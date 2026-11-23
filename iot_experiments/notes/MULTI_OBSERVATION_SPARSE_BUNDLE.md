@@ -1,7 +1,7 @@
 # Multi-observation relaxed inverse OT with sparse plans and linear memory
 
 **Status: implemented and measured (2026-11-20).** Code `src/iot/sparse/`, study
-`iot_experiments/studies/synthetic/multi_observation_sparse/`, tests `tests/iot_sparse_*_test.py`.
+`iot_experiments/studies/iot/synthetic/multi_observation_sparse/`, tests `tests/iot_sparse_*_test.py`.
 
 ## Contribution
 
@@ -22,7 +22,7 @@ data come from its own model), not a result about the method.
 | piece | where | what it is |
 | --- | --- | --- |
 | dense reference | `src/iot/relaxed/multi_plan.py` | shared-θ Frank–Wolfe with dense `(n,n,K)` tensors and dense POT. **Marked as the reference; not exported by `iot.relaxed`; not moved.** Used to check the bundle. |
-| dense references | `studies/synthetic/multi_observation_sparse/reference.py` | (i) the exact problem as **one joint LP** in `(θ, {u_l,v_l})` — the ground truth `F*`; (ii) dense FW over an arbitrary `FeatureMap`. |
+| dense references | `studies/iot/synthetic/multi_observation_sparse/reference.py` | (i) the exact problem as **one joint LP** in `(θ, {u_l,v_l})` — the ground truth `F*`; (ii) dense FW over an arbitrary `FeatureMap`. |
 | inner oracle | `src/iot/sparse/sparse_ot.py` | exact OT on a growing edge set; blockwise pricing of the complement via `exact/oracle.scan_violations`; certificate `max σ` outside `E`. |
 | outer loop | `src/iot/sparse/bundle_multi.py` | Kelley cuts in θ (`solve_cut_master(mode="kelley")`, `K+1` variables), bracket `[master value, best exact F]`. |
 | features | `src/iot/sparse/features.py` | `s, s², log1p(s), s³` computed on the fly from two point clouds, subsample-RMS normalised; **no constant and no same-zone column**. |

@@ -3,7 +3,7 @@
 **Status: CURRENT (2026-11-05).** The user submitted five hypotheses for why the transfer from a learned
 inverse-OT cost to a real pairing task might fail. This report maps each one to (a) what had already been
 measured when the question arrived, with its path, and (b) the run that closes it, under
-`studies/real/t1t2/sanity/`. Nothing here changes a number published elsewhere; where this report restates
+`studies/iot/real/t1t2/sanity/`. Nothing here changes a number published elsewhere; where this report restates
 one, it says where it lives.
 
 **The one-line answer.** Four of the five had no dedicated test.
@@ -31,7 +31,7 @@ but the metric should be replaced by a continuous one before deeper conclusions 
 
 | what | path |
 | --- | --- |
-| the new study | `iot_experiments/studies/real/t1t2/sanity/` (`README.md` has questions, commands, budget) |
+| the new study | `iot_experiments/studies/iot/real/t1t2/sanity/` (`README.md` has questions, commands, budget) |
 | its drivers | `run.py` (A, B, C), `transfer.py` (D), `ident.py` (E) |
 | its outputs | `iot_experiments/out/sanity/{null,curve,baselines}/`, `out/sanity_transfer/`, `out/sanity_identifiability/` |
 | this report | `iot_experiments/reports/current/SANITY_CHECKS_REPORT.md` |

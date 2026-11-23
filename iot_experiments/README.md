@@ -1,6 +1,7 @@
 # iot_experiments
 
-Experiments for the inverse-OT work. Run from the repository root after `pip install -e .`.
+Experiments for inverse OT and for the OT solvers it uses. Run from the repository root after
+`pip install -e .`.
 
 **This file is the index.** If you are looking for "the current code", it is
 `harness/` (shared machinery) plus `studies/` (the science).
@@ -11,8 +12,10 @@ Experiments answer two different kinds of question, and the directories say whic
 
 | directory | data | question |
 |---|---|---|
-| **`studies/real/`** | **real images** (T1/T2 MRI, SynthRAD MR/CT) | does the pairing recover the right partner? |
-| **`studies/synthetic/`** | **generated in-process** | does the solver solve it, how fast, does it certify? |
+| **`studies/iot/real/`** | **real data** (T1/T2 MRI, SynthRAD MR/CT, FAUST, NYC taxi) | does inverse OT recover the right partner or cost? |
+| **`studies/iot/synthetic/`** | **generated in-process** | does the solver solve it, how fast, does it certify? |
+| **`studies/ot/`** | **generated point clouds** | HELLO-OT component cost: scan, inner solver, CuPDLPx master |
+| **`studies/flow_matching/`** | toy generative data | does an exact/global coupling beat minibatch OT at equal steps? |
 | `benchmarks/` | frozen instances | cross-method comparison under a fixed protocol |
 | `harness/` | — | shared machinery: config, preprocessing, splits, records, metrics, gates |
 
@@ -25,12 +28,16 @@ Everything else is support or history: `reports/` (what to cite), `theory/` (pro
 iot_experiments/
 ├── harness/                     shared machinery — the only place preprocessing/splits/records live
 ├── studies/
-│   ├── real/
-│   │   ├── t1t2/                geometry, pool, nmi, metric_learning
-│   │   └── synthrad/            E1–E5 (pending data)
-│   └── synthetic/               scaling, marginals, families
+│   ├── iot/
+│   │   ├── real/                t1t2/, synthrad/, faust/, nyc_taxi/
+│   │   └── synthetic/           scaling/, marginals/, families/, methods/,
+│   │                            multi_observation_sparse/, planted_shared_theta/,
+│   │                            inverse_cost_recovery/
+│   ├── ot/                      hello_scan_benchmark, hello_solver_benchmark,
+│   │                            cupdlpx_master_benchmark
+│   └── flow_matching/           reserved — no run yet
 ├── benchmarks/                  frozen cross-method contract (PROTOCOL.md)
-├── theory/                      CONVERGENCE_PROOF.typ
+├── theory/                      HierarchicalIOT.typ
 ├── reports/                     citable results; reports/README.md is the index
 ├── out/                         ALL run output (git-ignored) — studies write iot_experiments/out/<study>/
 └── legacy/                      retired: the frozen core/ tree, gpu_bench/, external/  (git-ignored)
@@ -42,22 +49,37 @@ next to its `records.json` — a long job that is launched with plain `python -u
 
 ## What each study answers
 
-### `studies/real/`
+### `studies/iot/real/`
 
 | study | question | report |
 |---|---|---|
 | `t1t2/geometry` | which post-PCA transform makes retrieval work (G0–G3)? | `current/REAL_PAIRS_REPORT.md` |
 | `t1t2/pool` | which of the selected pairs can be trusted (precision at coverage)? | `current/REAL_PAIRS_REPORT.md` |
 | `t1t2/nmi` | NMI + Hungarian vs cosine + OT vs the learned cost | `current/NMI_PAIRING_REPORT.md` |
-| `t1t2/metric_learning` | InfoNCE / Sinkhorn-InfoNCE / CCA / residual vs relaxed iOT | `studies/real/t1t2/metric_learning/README.md` |
+| `t1t2/metric_learning` | InfoNCE / Sinkhorn-InfoNCE / CCA / residual vs relaxed iOT | `studies/iot/real/t1t2/metric_learning/README.md` |
 
-### `studies/synthetic/`
+### `studies/iot/synthetic/`
 
 | study | question | report |
 |---|---|---|
-| `synthetic/scaling` | where does the solve exceed 2 s in `(m, n, K)`? | `superseded/SCALING_REPORT.md` |
-| `synthetic/marginals` | uniform vs Gaussian / GMM marginals: structure and cost | `superseded/MARGINAL_REPORT.md` |
-| `synthetic/families` | diagonal / quadratic / low-rank (+ tiny-`n` PSD) | `superseded/FAMILY_REPORT.md` |
+| `iot/synthetic/scaling` | where does the solve exceed 2 s in `(m, n, K)`? | `superseded/SCALING_REPORT.md` |
+| `iot/synthetic/marginals` | uniform vs Gaussian / GMM marginals: structure and cost | `superseded/MARGINAL_REPORT.md` |
+| `iot/synthetic/families` | diagonal / quadratic / low-rank (+ tiny-`n` PSD) | `superseded/FAMILY_REPORT.md` |
+| `iot/synthetic/multi_observation_sparse` | one shared cost from many sparse plans, memory-linear | `notes/MULTI_OBSERVATION_SPARSE_REPORT.md` |
+| `iot/synthetic/planted_shared_theta` | shared-cost recovery with a planted same-zone/offset control | `reports/current/` |
+| `iot/synthetic/inverse_cost_recovery` | relaxed arm on Ma et al.'s cost-recovery benchmark | `reports/current/` |
+
+### `studies/ot/`
+
+| study | question | report |
+|---|---|---|
+| `hello_scan_benchmark.py` | is the torch scan bit-identical and how much faster? | `reports/components/HELLO_SCAN_REPORT.md` |
+| `hello_solver_benchmark.py` | HELLO vs POT as the inner exact-OT solver | `reports/components/HELLO_SOLVER_REPORT.md` |
+| `cupdlpx_master_benchmark.py` | CuPDLPx vs HiGHS on the master LP | `reports/components/CUPDLPX_MASTER_REPORT.md` |
+
+### `studies/flow_matching/`
+
+Reserved for the flow-matching coupling study; no run exists yet, so no number may be cited.
 
 These three are driven by `harness/lib/` generators (`planting`, `marginals`, `families`) and
 `harness/lib/runner.py`; every record carries a full `RunSpec`, so results from different studies
@@ -68,12 +90,12 @@ merge and cite directly.
 ```bash
 # real-data study (needs data/, see data/README.md)
 PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
-  .venv/bin/python -u -m iot_experiments.studies.real.t1t2.nmi \
+  .venv/bin/python -u -m iot_experiments.studies.iot.real.t1t2.nmi \
     --ks 256 --ms 100 300 --draws 0 1 2 --solver cupdlpx
 
 # synthetic study
 PYTHONPATH=/home/agent/Documents/dpm-inverse-ot \
-  .venv/bin/python -u -m iot_experiments.studies.synthetic.scaling \
+  .venv/bin/python -u -m iot_experiments.studies.iot.synthetic.scaling \
     --family quadratic --marginal gmm --ms 200 800 3200
 ```
 

@@ -24,7 +24,7 @@ The solver pays off in exactly three situations, and an application that is in n
    hundreds of thousands.
 
 A useful sanity habit before any of these: run the shuffled-pairs null (check A,
-`studies/real/t1t2/sanity/run.py --check null`) at the same `(m, K)`. If the fit is no better than its
+`studies/iot/real/t1t2/sanity/run.py --check null`) at the same `(m, K)`. If the fit is no better than its
 permuted control, the forward step is drawing from a cost that learned nothing.
 
 ---

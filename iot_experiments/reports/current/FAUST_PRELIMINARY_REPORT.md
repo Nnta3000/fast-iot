@@ -4,7 +4,7 @@
 No `θ` has been trained on one pair and tested on another yet, so **nothing here is an experiment result**;
 it is the answer to "is this direction worth building?".
 
-Driver: `studies/real/faust/{data_check,gates}.py` · records:
+Driver: `studies/iot/real/faust/{data_check,gates}.py` · records:
 `out/faust_data_check/records.json` (7 rows), `out/faust_gates/records.json` (24 rows) · guide:
 `../notes/FAUST_CORRESPONDENCE_GUIDELINE.md`.
 

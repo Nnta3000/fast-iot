@@ -131,11 +131,11 @@ python iot_experiments/legacy/methods/exact/build_pycupdlpx_cuda13.py
 python -m pytest tests/iot_cupdlpx_master_test.py -q
 
 # fair pruning comparison (n=200)
-python iot_experiments/benchmarks/cupdlpx_master_benchmark.py --sizes 200 --k 4 --seeds 0 \
+python iot_experiments/studies/ot/cupdlpx_master_benchmark.py --sizes 200 --k 4 --seeds 0 \
   --max-iterations 50 --out .../cupdlpx_fair_n200_k4.json
 
 # K sweep
-python iot_experiments/benchmarks/cupdlpx_master_benchmark.py --sizes 200 --k 256 --seeds 0 \
+python iot_experiments/studies/ot/cupdlpx_master_benchmark.py --sizes 200 --k 256 --seeds 0 \
   --max-iterations 60 --cupdlpx-modes prune-off --out .../cupdlpx_ksweep_n200_k256.json
 
 # harder families (quadratic / lowrank) with the CuPDLPx arm
