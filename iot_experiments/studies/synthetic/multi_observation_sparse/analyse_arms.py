@@ -39,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     """EN: print the table. CN: 打印表格。"""
     parser = argparse.ArgumentParser(description="arms table against the neutral baseline")
     parser.add_argument("--tag", default="g3")
+    parser.add_argument("--detail", action="store_true",
+                        help="per-seed C-B and C-A, theta L1 diagnostic, training regret and feasibility")
     args = parser.parse_args(argv)
     records = json.loads((OUT / args.tag / "records.json").read_text())["records"]
 
@@ -83,6 +85,36 @@ def main(argv: list[str] | None = None) -> int:
         iters = diagnostics[key].get("C_joint:iterations")
         objective = diagnostics[key].get("C_joint:train_regret")
         skipped = diagnostics[key].get("B_averaged:windows_at_zero_gradient")
+        if args.detail and "C_joint" in agreement[key] and "B_averaged" in agreement[key]:
+            c_values = per_seed(agreement[key]["C_joint"], seeds)
+            b_values = per_seed(agreement[key]["B_averaged"], seeds)
+            if "A_single" in agreement[key]:
+                a_values = per_seed(agreement[key]["A_single"], seeds)
+                ca = c_values - a_values
+                print(f"{'':12s} C-A per seed {np.round(ca, 3).tolist()} mean {ca.mean():+.3f} "
+                      f"(positive {int((ca > 0).sum())}/{ca.size})")
+            cb = c_values - b_values
+            print(f"{'':12s} C-B per seed {np.round(cb, 3).tolist()} mean {cb.mean():+.3f}")
+            for arm in ("A_single", "B_averaged", "C_joint"):
+                if arm not in agreement[key]:
+                    continue
+                regret = np.array([np.mean([float(r["metrics"]["train_regret"]) for r in
+                                            [x for x in records
+                                             if (x["config"]["K"], x["config"]["L"], x["config"]["noise"]) == key
+                                             and x["arm"] == arm and int(x["draw"]) == seed]])
+                                   for seed in seeds])
+                feasible = int(np.sum(regret <= 1e-8))
+                print(f"{'':12s} {arm:10s} train_regret {regret.mean():.4f}  feasible {feasible}/{regret.size}")
+            for arm in ("C_joint", "B_averaged"):
+                distances = []
+                for seed in seeds:
+                    for x in records:
+                        if ((x["config"]["K"], x["config"]["L"], x["config"]["noise"]) == key
+                                and x["arm"] == arm and int(x["draw"]) == seed):
+                            distances.append(float(np.abs(np.asarray(x["extra"]["theta"])
+                                                          - np.asarray(x["extra"]["theta_star"])).sum()))
+                            break
+                print(f"{'':12s} {arm:10s} theta L1 {np.mean(distances):.2f}")
         if cap is not None and iters is not None and objective is not None:
             skipped_text = f"{np.mean(skipped):.1f}" if skipped else "n/a"
             print(f"{'':12s} C diag: objective {np.mean(objective):.2e}  gap {np.mean(diagnostics[key]['C_joint:outer_gap']):.1e}"
