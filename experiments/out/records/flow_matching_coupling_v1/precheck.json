@@ -1,0 +1,105 @@
+{
+  "provenance": {
+    "question": "how far is a pool OT pairing from the global pairing, on the same noise?",
+    "target": "the study's own 2-D targets; not a Gaussian proxy",
+    "pools": [
+      256,
+      1024
+    ],
+    "draws": 20
+  },
+  "records": [
+    {
+      "study": "flow_matching_precheck",
+      "geometry": "eight_gaussians",
+      "arm": "pool256",
+      "k": 2,
+      "m": 8192,
+      "draw": 0,
+      "metrics": {
+        "differing": 0.9951171875,
+        "msd_local": 1.0127746073128345,
+        "msd_global": 0.94472576310513,
+        "cost_gap": 0.07203026197151774
+      },
+      "config": {
+        "mode": "precheck",
+        "pool": 256,
+        "draws": 20,
+        "target": "global_ot"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "flow_matching_precheck",
+      "geometry": "eight_gaussians",
+      "arm": "pool1024",
+      "k": 2,
+      "m": 8192,
+      "draw": 0,
+      "metrics": {
+        "differing": 0.973095703125,
+        "msd_local": 0.9525145224987916,
+        "msd_global": 0.9413905345365432,
+        "cost_gap": 0.011816549619042972
+      },
+      "config": {
+        "mode": "precheck",
+        "pool": 1024,
+        "draws": 20,
+        "target": "global_ot"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "flow_matching_precheck",
+      "geometry": "two_moons",
+      "arm": "pool256",
+      "k": 2,
+      "m": 8192,
+      "draw": 0,
+      "metrics": {
+        "differing": 0.990625,
+        "msd_local": 0.8336995366787349,
+        "msd_global": 0.7958041560682958,
+        "cost_gap": 0.04761897801296088
+      },
+      "config": {
+        "mode": "precheck",
+        "pool": 256,
+        "draws": 20,
+        "target": "global_ot"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    },
+    {
+      "study": "flow_matching_precheck",
+      "geometry": "two_moons",
+      "arm": "pool1024",
+      "k": 2,
+      "m": 8192,
+      "draw": 0,
+      "metrics": {
+        "differing": 0.9755859375,
+        "msd_local": 0.7870345400762552,
+        "msd_global": 0.787561985889883,
+        "cost_gap": -0.0006697197466074684
+      },
+      "config": {
+        "mode": "precheck",
+        "pool": 1024,
+        "draws": 20,
+        "target": "global_ot"
+      },
+      "excluded": false,
+      "status": "ok",
+      "extra": {}
+    }
+  ]
+}
