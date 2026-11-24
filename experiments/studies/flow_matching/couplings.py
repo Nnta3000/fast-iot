@@ -57,8 +57,10 @@ def solve_plan(source: Float[np.ndarray, "b d"], target: Float[np.ndarray, "b d"
     """EN: exact OT with uniform marginals and squared Euclidean cost, returned sparse. CN: 均匀边际、平方欧氏代价的精确 OT，返回稀疏计划。"""
     n = int(source.shape[0])
     mass = np.full(n, 1.0 / n, dtype=np.float64)
-    difference = source[:, None, :] - target[None, :, :]
-    cost = np.einsum("bcd,bcd->bc", difference, difference)
+    # EN: `|x-y|^2` via the Gram matrix; the 3-D broadcast is O(n^2 d) and OOMs at n=8192, d=32.
+    # CN: 用 Gram 矩阵算 `|x-y|^2`；三维广播是 O(n^2 d)，在 n=8192、d=32 会 OOM。
+    cost = (source * source).sum(axis=1)[:, None] + (target * target).sum(axis=1)[None, :] - 2.0 * source @ target.T
+    np.maximum(cost, 0.0, out=cost)
     plan = ot.emd(mass, mass, cost, numItermax=5_000_000)
     return sparse.csr_matrix(np.asarray(plan))
 
@@ -90,7 +92,7 @@ def pair_path(root: Path, dataset: str, arm: str, pool: int, seed: int, steps: i
     return root / f"{dataset}_{arm}_B{pool}_s{seed}_t{steps}.npz"
 
 
-def load_store(*, dataset: str, arm: str, pool: int, seed: int, steps: int, batch: int,
+def load_store(*, dataset: str, arm: str, pool: int, seed: int, steps: int, batch: int, dim: int,
                path: Path) -> "PairStore":
     """EN: load a precomputed pair file and reconstruct the fixed noise/permutation it indexes. CN: 载入预计算配对文件并重建其索引的固定噪声/置换。"""
     payload = np.load(path)
@@ -98,11 +100,11 @@ def load_store(*, dataset: str, arm: str, pool: int, seed: int, steps: int, batc
     permutation = None
     if arm in ("global_ot", "fixed_random"):
         rng = np.random.default_rng(seed_from(str(dataset), "pairs", "global_ot", int(pool), int(seed)))
-        fixed_noise = rng.normal(size=(TRAIN_POINTS, 2))
+        fixed_noise = rng.normal(size=(TRAIN_POINTS, int(dim)))
         if arm == "fixed_random":
             permutation = np.asarray(rng.permutation(TRAIN_POINTS), dtype=np.int64)
     return PairStore(arm=arm, seed=int(seed), dataset=str(dataset), pool=int(pool), batch=int(batch),
-                     plan_seconds=float(payload["seconds"]) if "seconds" in payload else 0.0,
+                     dim=int(dim), plan_seconds=float(payload["seconds"]) if "seconds" in payload else 0.0,
                      rows=np.asarray(payload["rows"], dtype=np.int64),
                      cols=np.asarray(payload["cols"], dtype=np.int64),
                      fixed_noise=fixed_noise, permutation=permutation)
@@ -128,15 +130,16 @@ def build_pairs(*, dataset: str, arm: str, pool: int, seed: int, steps: int, bat
     # CN: `fixed_random` 必须与 `global_ot` 共享**同一**固定噪声集；只有配对不同。
     rng = np.random.default_rng(seed_from(str(dataset), "pairs", "global_ot" if arm == "fixed_random" else str(arm),
                                           int(pool), int(seed)))
+    dimension = int(data.shape[1])
     if arm == "global_ot":
-        fixed_noise = rng.normal(size=(TRAIN_POINTS, 2))
+        fixed_noise = rng.normal(size=(TRAIN_POINTS, dimension))
         plan = solve_plan(fixed_noise, data)
     elif arm == "ot_pool":
         plan = None
         fixed_noise = None
     elif arm == "fixed_random":
         plan = None
-        fixed_noise = rng.normal(size=(TRAIN_POINTS, 2))
+        fixed_noise = rng.normal(size=(TRAIN_POINTS, dimension))
     elif arm == "independent":
         np.savez_compressed(path, rows=np.zeros((0, 0), dtype=np.int32),
                             cols=np.zeros((0, 0), dtype=np.int32), seconds=np.asarray(0.0))
@@ -157,7 +160,7 @@ def build_pairs(*, dataset: str, arm: str, pool: int, seed: int, steps: int, bat
         elif arm == "fixed_random":
             rows[step] = np.asarray(step_rng.choice(TRAIN_POINTS, size=batch, replace=False), dtype=np.int32)
         elif arm == "ot_pool":
-            noise = step_rng.normal(size=(pool, 2))
+            noise = step_rng.normal(size=(pool, dimension))
             take = step_rng.choice(len(data), size=pool, replace=False)
             step_plan = solve_plan(noise, data[take])
             picked = _sample_rows(step_plan, batch, step_rng)
@@ -178,6 +181,7 @@ class PairStore:
     rows: Int[np.ndarray, "steps batch"]
     cols: Int[np.ndarray, "steps batch"]
     batch: int
+    dim: int
     plan_seconds: float
     fixed_noise: Float[np.ndarray, "m 2"] | None
     permutation: Int[np.ndarray, "m"] | None
@@ -188,12 +192,12 @@ def make_pairs(store: PairStore, step: int, data: Float[np.ndarray, "m d"],
     """EN: the training pair `(x0, x1)` of one step for a precomputed or independent arm. CN: 一步的训练对 `(x0, x1)`。"""
     batch = int(store.batch)
     if store.arm == "independent":
-        noise = rng.normal(size=(batch, 2))
+        noise = rng.normal(size=(batch, store.dim))
         return noise, data[rng.integers(0, len(data), size=batch)]
     rows, cols = store.rows[step], store.cols[step]
     if store.arm == "ot_pool":
         step_rng = np.random.default_rng(seed_from(str(store.dataset), "ot_pool", int(store.pool), int(store.seed), int(step)))
-        noise_pool = step_rng.normal(size=(store.pool, 2))
+        noise_pool = step_rng.normal(size=(store.pool, store.dim))
         return noise_pool[rows], data[cols]
     if store.arm == "fixed_random":
         assert store.fixed_noise is not None and store.permutation is not None
@@ -232,7 +236,7 @@ def precheck(*, dataset: str, data: Float[np.ndarray, "m d"], pools: Iterable[in
         `cost_gap` 是局部配对相对全局配对的相对超出。直接在目标上测量，不用高斯代理。
     """
     rng = np.random.default_rng(seed_from(str(dataset), "precheck", int(seed)))
-    fixed_noise = rng.normal(size=(TRAIN_POINTS, 2))
+    fixed_noise = rng.normal(size=(TRAIN_POINTS, int(data.shape[1])))
     global_plan = solve_plan(fixed_noise, data)
     rows: list[PrecheckRow] = []
     for pool in pools:

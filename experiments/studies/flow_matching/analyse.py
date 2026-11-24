@@ -1,22 +1,23 @@
 """
-EN: **Tables for the flow-matching coupling study.**
+EN: **Tables for the flow-matching coupling study, v2.**
 
-    Reads `experiments/out/flow_matching/<tag>/records.json` (training sweep) and `precheck.json` (the coupling
-    diagnostic), and prints:
+    Reads `precheck.json`, `train.json` (plan/train times) and `eval.json` (metrics at the NFE grid), and prints:
 
-      * the pre-check: differing partners, both displacements, cost gap;
-      * W2 at a low Euler budget (NFE 10) and a low RK4 budget (NFE 20), where a straighter coupling can matter;
-      * the gain over `fixed_random`, the control that shares the fixed noise set with `global_ot`;
-      * mode coverage for eight-Gaussians.
+      * the coupling diagnostic;
+      * sliced W2 at Euler NFE 1/2/5/10/50 and the floor;
+      * the gain over `fixed_random` at Euler 5 and 10, with the per-seed sd and the standard error;
+      * flow straightness (displacement / path length, 1 = straight);
+      * mode weights, centre and covariance errors for the mixtures;
+      * an **equal-wall-clock** table: per arm, the largest-step run whose plan + training time fits a budget.
 
-    Every number is a seed mean ± sd read from the records; the finite-sample floor is printed alongside. One CSV per
-    tag is written next to the records so the table can be re-plotted without re-running.
+    Every number is read from the records; one CSV is written next to them.
 
-CN: **flow-matching 耦合研究的表格。** 读取 `records.json` 与 `precheck.json`，打印：预检查（伙伴不同比例、两种位移、代价差）；
-    低 Euler 预算（NFE 10）与低 RK4 预算（NFE 20）下的 W2；相对 `fixed_random`（与 `global_ot` 共享固定噪声集的对照）的
-    增益；八高斯的模态覆盖。每个数都是记录里的种子均值±标准差，并列出有限样本下限。每个 tag 写一个 CSV。
+CN: **flow-matching 耦合研究 v2 的表格。** 读取 `precheck.json`、`train.json`（计划/训练时间）与 `eval.json`（NFE 网格指标），
+    打印：耦合诊断；Euler NFE 1/2/5/10/50 的切片 W2 与下限；相对 `fixed_random` 在 Euler 5/10 的增益（逐种子 sd 与标准误）；
+    flow 直线度；混合的模态权重、中心与协方差误差；以及**等墙钟**表（每个臂取计划+训练时间在预算内的最大步数运行）。每个数都
+    来自记录，并在旁边写一个 CSV。
 
-    python -m experiments.studies.flow_matching.analyse --tag coupling_v1
+    python -m experiments.studies.flow_matching.analyse --tag coupling_v2
 """
 
 from __future__ import annotations
@@ -30,54 +31,20 @@ import numpy as np
 
 OUT = Path("experiments/out/flow_matching")
 ARMS = ("independent", "fixed_random", "ot_pool_B256", "ot_pool_B1024", "global_ot")
+EULER = (1, 2, 5, 10, 50)
 
 
 def _mean_sd(values: np.ndarray) -> str:
-    """EN: `mean±sd`, or `mean` when a single seed makes the spread undefined. CN: `mean±sd`，单种子时为 `mean`。"""
+    """EN: `mean±sd` over seeds. CN: 跨种子的 `mean±sd`。"""
     return f"{values.mean():.3f}±n/a" if values.size < 2 else f"{values.mean():.3f}±{values.std(ddof=1):.3f}"
 
 
-def _table(records: list[dict]) -> None:
-    """EN: print the W2 tables and the control-relative gains. CN: 打印 W2 表与相对对照的增益。"""
-    cells: dict[tuple, dict[tuple, list[float]]] = defaultdict(lambda: defaultdict(list))
-    floor: dict[str, float] = {}
-    for record in records:
-        key = (record["geometry"], record["arm"], record["config"]["steps"],
-               record["config"]["sampler"], record["config"]["nfe"])
-        cells[key][record["draw"]].append(record["metrics"]["w2"])
-        floor[record["geometry"]] = record["metrics"]["floor_w2"]
-    print(f"{'dataset':15s} {'steps':>6s} {'arm':14s} {'euler@10':>15s} {'euler@50':>15s} "
-          f"{'rk4@20':>15s} {'cover@10':>8s}")
-    for dataset in sorted({key[0] for key in cells}):
-        print(f"{dataset:15s} floor W2 = {floor[dataset]:.4f}")
-        for steps in (1000, 10000):
-            for arm in ARMS:
-                values = {}
-                for label, sampler, nfe in (("e", "euler", 10), ("e50", "euler", 50), ("r", "rk4", 20)):
-                    per_seed = cells.get((dataset, arm, steps, sampler, nfe))
-                    values[label] = (np.mean([np.mean(v) for v in per_seed.values()])
-                                     if per_seed else float("nan"))
-                coverage = [record["metrics"]["coverage"] for record in records
-                            if record["geometry"] == dataset and record["arm"] == arm
-                            and record["config"]["steps"] == steps and record["config"]["sampler"] == "euler"
-                            and record["config"]["nfe"] == 10]
-                cover = float(np.nanmean(coverage)) if coverage else float("nan")
-                print(f"{'':15s} {steps:6d} {arm:14s} {values['e']:15.3f} {values['e50']:15.3f} "
-                      f"{values['r']:15.3f} {cover:8.3f}")
-        print()
-    print("gain over fixed_random (per-seed arm-minus-control; negative is better)")
-    for dataset in sorted({key[0] for key in cells}):
-        for steps in (1000, 10000):
-            control = {seed: np.mean(v) for seed, v in
-                       cells.get((dataset, "fixed_random", steps, "euler", 10), {}).items()}
-            for arm in ARMS:
-                if arm == "fixed_random":
-                    continue
-                table = cells.get((dataset, arm, steps, "euler", 10), {})
-                differences = np.array([np.mean(v) - control[seed] for seed, v in table.items() if seed in control])
-                if differences.size:
-                    print(f"  {dataset:15s} t{steps:<6d} {arm:14s} euler@10 {_mean_sd(differences):>16s}")
-    print()
+def _mean_sd_sem(values: np.ndarray) -> str:
+    """EN: `mean±sd (sem)` with `sem = sd/√n`. CN: `mean±sd (标准误)`，`sem=sd/√n`。"""
+    if values.size < 2:
+        return f"{values.mean():.3f}"
+    sem = values.std(ddof=1) / np.sqrt(values.size)
+    return f"{values.mean():.3f}±{values.std(ddof=1):.3f} (sem {sem:.3f})"
 
 
 def _precheck(records: list[dict]) -> None:
@@ -90,32 +57,117 @@ def _precheck(records: list[dict]) -> None:
     print()
 
 
+def _quality(eval_rows: list[dict]) -> None:
+    """EN: sliced W2 at the Euler grid, per dataset/steps/arm. CN: Euler 网格上的切片 W2，按数据集/步数/臂。"""
+    cells: dict[tuple, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+    floor: dict[str, float] = {}
+    for record in eval_rows:
+        if record["config"]["sampler"] != "euler":
+            continue
+        key = (record["geometry"], record["arm"], record["config"]["steps"])
+        cells[key][record["config"]["nfe"]].append(record["metrics"]["sw2"])
+        floor[record["geometry"]] = record["metrics"]["floor_sw2"]
+    print(f"{'dataset':15s} {'steps':>6s} {'arm':14s} " + " ".join(f"{'NFE'+str(n):>9s}" for n in EULER))
+    for dataset in sorted({key[0] for key in cells}):
+        print(f"{dataset:15s} floor sliced W2 = {floor[dataset]:.4f}")
+        for steps in (1000, 10000):
+            for arm in ARMS:
+                values = [cells.get((dataset, arm, steps), {}).get(nfe, []) for nfe in EULER]
+                if not values[0]:
+                    continue
+                print(f"{'':15s} {steps:6d} {arm:14s} " +
+                      " ".join(f"{np.mean(v):9.3f}" if v else f"{'—':>9s}" for v in values))
+        print()
+
+
+def _gains(eval_rows: list[dict]) -> None:
+    """EN: per-seed gain over fixed_random at Euler 5 and 10, sd and sem. CN: Euler 5/10 相对 fixed_random 的逐种子增益、sd 与标准误。"""
+    table: dict[tuple, dict[str, dict[int, float]]] = defaultdict(lambda: defaultdict(dict))
+    for record in eval_rows:
+        if record["config"]["sampler"] != "euler" or record["config"]["nfe"] not in (5, 10):
+            continue
+        key = (record["geometry"], record["config"]["steps"], record["config"]["nfe"])
+        table[key][record["arm"]][record["draw"]] = record["metrics"]["sw2"]
+    print("gain over fixed_random (per-seed arm-minus-control; negative is better)")
+    for (dataset, steps, nfe), arms in sorted(table.items()):
+        control = arms.get("fixed_random", {})
+        for arm in ARMS:
+            if arm == "fixed_random" or arm not in arms:
+                continue
+            differences = np.array([value - control[seed] for seed, value in arms[arm].items() if seed in control])
+            if differences.size:
+                print(f"  {dataset:15s} t{steps:<6d} NFE {nfe:<3d} {arm:14s} {_mean_sd_sem(differences)}")
+    print()
+
+
+def _diagnostics(eval_rows: list[dict]) -> None:
+    """EN: straightness, and mode metrics at Euler 50. CN: 直线度与 Euler 50 的模态指标。"""
+    print("straightness (displacement / path length; 1 = straight) and mode diagnostics at Euler 50")
+    for dataset in sorted({record["geometry"] for record in eval_rows}):
+        for arm in ARMS:
+            rows = [record for record in eval_rows if record["geometry"] == dataset and record["arm"] == arm
+                    and record["config"]["sampler"] == "euler" and record["config"]["nfe"] == 50]
+            if not rows:
+                continue
+            straight = np.array([record["metrics"]["straightness"] for record in rows])
+            line = f"  {dataset:15s} {arm:14s} straightness {_mean_sd(straight)}"
+            if "mode_weight_l1" in rows[0]["metrics"] and dataset != "two_moons":
+                weights = np.array([record["metrics"]["mode_weight_l1"] for record in rows])
+                means = np.array([record["metrics"]["mode_mean_error"] for record in rows])
+                covs = np.array([record["metrics"]["mode_cov_error"] for record in rows])
+                line += f" | mode L1 {weights.mean():.3f} mean {means.mean():.3f} cov {covs.mean():.3f}"
+            print(line)
+    print()
+
+
+def _wall_clock(train_rows: list[dict], eval_rows: list[dict]) -> None:
+    """EN: per arm, the largest-step run that fits a budget; quality is sliced W2 at Euler 10. CN: 每个臂取预算内最大步数的运行；质量为 Euler 10 的切片 W2。"""
+    timing = {(record["geometry"], record["arm"], record["config"]["steps"], record["draw"]):
+              record["metrics"]["plan_seconds"] + record["metrics"]["train_seconds"] for record in train_rows}
+    quality = {(record["geometry"], record["arm"], record["config"]["steps"], record["draw"]):
+               record["metrics"]["sw2"] for record in eval_rows
+               if record["config"]["sampler"] == "euler" and record["config"]["nfe"] == 10}
+    print("equal wall-clock: best run within the budget (plan + training), sliced W2 at Euler 10")
+    for budget in (10.0, 40.0, 120.0):
+        print(f"  budget {budget:.0f}s")
+        for dataset in sorted({key[0] for key in timing}):
+            for arm in ARMS:
+                candidates = [(timing[key], key[2], quality.get(key, float("nan")))
+                              for key in timing if key[0] == dataset and key[1] == arm and timing[key] <= budget]
+                if not candidates:
+                    continue
+                best = max(candidates, key=lambda item: item[1])
+                print(f"    {dataset:15s} {arm:14s} {best[1]:6d} steps, {best[0]:6.1f}s, W2 {best[2]:.3f}")
+        print()
+
+
 def main(argv: list[str] | None = None) -> int:
     """EN: entry point. CN: 入口。"""
-    parser = argparse.ArgumentParser(description="flow-matching coupling tables")
-    parser.add_argument("--tag", default="coupling_v1")
+    parser = argparse.ArgumentParser(description="flow-matching coupling tables (v2)")
+    parser.add_argument("--tag", default="coupling_v2")
     args = parser.parse_args(argv)
     root = OUT / args.tag
     precheck = json.loads((root / "precheck.json").read_text())["records"]
-    records = json.loads((root / "records.json").read_text())["records"]
+    train = json.loads((root / "train.json").read_text())["records"]
+    evaluation = json.loads((root / "eval.json").read_text())["records"]
     _precheck(precheck)
-    _table(records)
+    _quality(evaluation)
+    _gains(evaluation)
+    _diagnostics(evaluation)
+    _wall_clock(train, evaluation)
 
-    rows = []
-    for record in records:
-        rows.append({"dataset": record["geometry"], "arm": record["arm"], "steps": record["config"]["steps"],
-                     "seed": record["draw"], "sampler": record["config"]["sampler"],
-                     "nfe": record["config"]["nfe"], "w2": record["metrics"]["w2"],
-                     "floor_w2": record["metrics"]["floor_w2"], "coverage": record["metrics"]["coverage"],
-                     "coupling_share": record["metrics"]["coupling_share"]})
-    csv_path = root / "w2.csv"
+    csv_path = root / "table.csv"
     with csv_path.open("w", encoding="utf-8") as handle:
-        handle.write("dataset,arm,steps,seed,sampler,nfe,w2,floor_w2,coverage,coupling_share\n")
-        for row in rows:
-            handle.write(",".join(str(row[key]) for key in
-                                  ("dataset", "arm", "steps", "seed", "sampler", "nfe", "w2",
-                                   "floor_w2", "coverage", "coupling_share")) + "\n")
-    print(f"wrote {csv_path} ({len(rows)} rows)")
+        handle.write("dataset,arm,steps,seed,sampler,nfe,sw2,floor_sw2,straightness,energy,mode_weight_l1,"
+                     "mode_mean_error,mode_cov_error\n")
+        for record in evaluation:
+            m = record["metrics"]
+            handle.write(",".join(str(value) for value in (
+                record["geometry"], record["arm"], record["config"]["steps"], record["draw"],
+                record["config"]["sampler"], record["config"]["nfe"], m["sw2"], m["floor_sw2"],
+                m["straightness"], m.get("energy", ""), m.get("mode_weight_l1", ""),
+                m.get("mode_mean_error", ""), m.get("mode_cov_error", ""))) + "\n")
+    print(f"wrote {csv_path} ({len(evaluation)} rows)")
     return 0
 
 
