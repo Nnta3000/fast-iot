@@ -16,6 +16,7 @@ Experiments answer two different kinds of question, and the directories say whic
 | **`studies/iot/synthetic/`** | **generated in-process** | does the solver solve it, how fast, does it certify? |
 | **`studies/ot/`** | **generated point clouds** | HELLO-OT component cost: scan, inner solver, CuPDLPx master |
 | **`studies/flow_matching/`** | toy generative data | does an exact/global coupling beat minibatch OT at equal steps? |
+| **`studies/flow_matching_headroom/`** | toys + CIFAR-10 | is there headroom beyond W2 OT for a model-aligned / teacher coupling? |
 | `benchmarks/` | frozen instances | cross-method comparison under a fixed protocol |
 | `harness/` | — | shared machinery: config, preprocessing, splits, records, metrics, gates |
 
@@ -35,7 +36,8 @@ experiments/
 │   │                            inverse_cost_recovery/
 │   ├── ot/                      hello_scan_benchmark, hello_solver_benchmark,
 │   │                            cupdlpx_master_benchmark
-│   └── flow_matching/           reserved — no run yet
+│   ├── flow_matching/           v1/v2 coupling-pool study (toys)
+│   └── flow_matching_headroom/  headroom beyond W2 OT: toys + CIFAR server script
 ├── benchmarks/                  frozen cross-method contract (PROTOCOL.md)
 ├── theory/                      HierarchicalIOT.typ
 ├── reports/                     citable results; reports/README.md is the index
