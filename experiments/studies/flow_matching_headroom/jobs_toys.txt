@@ -1,0 +1,6 @@
+# Stage 0 — coupling headroom on the toy targets, one job per arm so the queue can spread them.
+# Run from the repo root:  experiments/scripts/gpu_queue.sh experiments/studies/flow_matching_headroom/jobs_toys.txt
+# Each job is ~20-40 min on one GPU; the analysis merges every stage0* tag.
+python -m experiments.studies.flow_matching_headroom.toys --steps 10000 --arms mac_full --tag stage0_mac
+python -m experiments.studies.flow_matching_headroom.toys --steps 10000 --arms teacher_routed_ot --tag stage0_teacher
+python -m experiments.studies.flow_matching_headroom.toys --steps 10000 --arms reflow_ref --tag stage0_reflow

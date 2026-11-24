@@ -1,0 +1,9 @@
+# Stage 1 — unconditional CIFAR-10, one job per arm so each gets its own GPU.
+# Run from the repo root:  experiments/scripts/gpu_queue.sh --parallel --jobs 3 experiments/studies/flow_matching_headroom/jobs_cifar.txt
+# 50k steps, batch 128, three seeds. The analysis merges every cifar* tag.
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms independent --seeds 0 1 2 --tag cifar_independent
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --tag cifar_w2_mb
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms mac_full --seeds 0 1 2 --tag cifar_mac_full
+# Optional, expensive: teacher/reflow (10x bank of 500k noise images needs a large GPU; see README).
+# python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms teacher_routed_ot --seeds 0 1 2 --tag cifar_teacher
+# python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms reflow_ref --seeds 0 1 2 --tag cifar_reflow

@@ -22,10 +22,19 @@ are not retrained. Metric: sliced W2 (512 projections, 4 096 generated vs a fres
 The teacher bank is the one fixed noise set in the design, as specified; every other arm draws fresh noise each step.
 
 ```bash
-PYTHONPATH=. .venv/bin/python -m experiments.studies.flow_matching_headroom.toys --smoke   # ~10 s
-PYTHONPATH=. .venv/bin/python -m experiments.studies.flow_matching_headroom.toys --steps 10000 --tag stage0
-PYTHONPATH=. .venv/bin/python -m experiments.studies.flow_matching_headroom.analyse --stage toys
+# local, one GPU, through the local launcher (memory check, no silent retry)
+experiments/scripts/run_job.sh --name headroom_toys --budget-gb 2 -- \
+  python -u -m experiments.studies.flow_matching_headroom.toys --steps 10000 --tag stage0
+# server, one job per arm, assigned to idle GPUs by the usual queue
+experiments/scripts/gpu_queue.sh experiments/studies/flow_matching_headroom/jobs_toys.txt
+# table + decision (merges every stage0* tag)
+python -m experiments.studies.flow_matching_headroom.analyse --stage toys
 ```
+
+The queue writes per-job logs and `summary.tsv` under `experiments/out/queue/<timestamp>/`, pins
+`CUDA_VISIBLE_DEVICES`, and only uses a GPU with < 1 GiB used and < 20 % utilisation (so it would wait,
+correctly, while another service holds the card). Run `python -m experiments.harness.preflight --need-gpu`
+first on a fresh server.
 
 Measured cost estimate at 10 000 steps: `mac_full` ≈ 50–100 s per seed, `teacher_routed_ot` ≈ 60–90 s per seed
 (teacher + bank + 10 000 POT plans), `reflow_ref` ≈ 10 s per seed; 25 runs per arm (10+10+5) → about **50–80 min**
@@ -40,14 +49,17 @@ generated images against a 40 000-image training reference, with floors from a h
 the CIFAR-10 test set; straightness reported per arm.
 
 ```bash
-bash experiments/studies/flow_matching_headroom/server.sh stage0   # Stage 0 on the server
-bash experiments/studies/flow_matching_headroom/server.sh cifar    # 50k steps, 3 seeds, 3 arms
+python -m pip install -q pytorch-fid        # FID only; the Inception weights download on first use
+experiments/scripts/gpu_queue.sh --parallel --jobs 3 \
+  experiments/studies/flow_matching_headroom/jobs_cifar.txt
+python -m experiments.studies.flow_matching_headroom.analyse --stage cifar
 ```
 
-`server.sh` installs `pytorch-fid` only (for FID); nothing else is added. `--smoke` runs four steps and skips FID, so
+One job per arm in `jobs_cifar.txt`, so the queue can put `independent`, `w2_mb` and `mac_full` on
+different GPUs; the analysis merges every `cifar*` tag. `--smoke` runs four steps and skips FID, so
 the time per step can be measured before the full run. The training/eval script is
 `experiments/studies/flow_matching_headroom/cifar.py`; records land in
-`experiments/out/flow_matching_headroom/cifar/records.json`, and the FID image folders in
+`experiments/out/flow_matching_headroom/cifar_<arm>/records.json`, and the FID image folders in
 `experiments/out/flow_matching_headroom/cifar_images/` (git-ignored).
 
 **Cost.** On a 4060-class card, 50k steps at batch 128 for a 5M-parameter DiT is roughly 2–3 h per run; 3 seeds × 3
@@ -68,7 +80,10 @@ steps are read.
 
 RTX 4060 Laptop, 8 188 MiB, 7 011 MiB free after the owner's Docker service was stopped; 15 GiB RAM (6 available);
 32 GB disk; torch 2.14.1+cu130, torchvision, POT available; **no FID package and no cached Inception weights**, both
-downloadable (PyPI and Hugging Face reachable). `pytorch-fid` is installed by `server.sh`.
+downloadable (PyPI and Hugging Face reachable). Install `pytorch-fid` once before Stage 1:
+`python -m pip install pytorch-fid`. The queue (`experiments/scripts/gpu_queue.sh`) is the server
+launcher; `experiments/scripts/run_job.sh` is the local one. Do not add launchers to the
+repository-root `scripts/`, which belongs to HELLO-OT.
 
 ## What is not tested
 

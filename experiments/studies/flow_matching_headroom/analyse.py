@@ -28,8 +28,16 @@ import numpy as np
 
 OUT = Path("experiments/out")
 V2 = OUT / "records/flow_matching_coupling_v2/eval.json"
-TOYS = OUT / "flow_matching_headroom/stage0/records.json"
-CIFAR = OUT / "flow_matching_headroom/cifar/records.json"
+TOYS = sorted((OUT / "flow_matching_headroom").glob("stage0*/records.json"))
+CIFAR = sorted((OUT / "flow_matching_headroom").glob("cifar*/records.json"))
+
+
+def _load(paths: list[Path]) -> list[dict]:
+    """EN: merge records from one or more tags. CN: 合并一个或多个 tag 的记录。"""
+    rows: list[dict] = []
+    for path in paths:
+        rows.extend(json.loads(path.read_text())["records"])
+    return rows
 ARMS = ("independent", "ot_pool_B256", "global_ot", "mac_full", "teacher_routed_ot", "reflow_ref")
 
 
@@ -52,10 +60,10 @@ def _sw2_table(records: list[dict], nfes: tuple[int, ...] = (1, 2, 5, 10)) -> di
 
 def toys() -> None:
     """EN: Stage 0 tables and decision. CN: Stage 0 表与判据。"""
-    if not V2.exists() or not TOYS.exists():
+    if not V2.exists() or not TOYS:
         raise SystemExit(f"missing records: {V2} or {TOYS}")
     baseline_records = json.loads(V2.read_text())["records"]
-    headroom_records = json.loads(TOYS.read_text())["records"]
+    headroom_records = _load(TOYS)
     table = _sw2_table([*baseline_records, *headroom_records])
     datasets = sorted({key[0] for key in table})
     for dataset in datasets:
@@ -97,9 +105,9 @@ def toys() -> None:
 
 def cifar() -> None:
     """EN: Stage 1 FID table and decision. CN: Stage 1 FID 表与判据。"""
-    if not CIFAR.exists():
+    if not CIFAR:
         raise SystemExit(f"missing records: {CIFAR}")
-    records = json.loads(CIFAR.read_text())["records"]
+    records = _load(CIFAR)
     floors = {record["metrics"].get("fid_floor_real") for record in records}
     floors_test = {record["metrics"].get("fid_floor_test") for record in records}
     print(f"FID floors: held-out real {sorted(v for v in floors if v is not None)}, "
