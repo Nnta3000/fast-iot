@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from experiments.harness.records import RunLog, RunRecord, write_records
-from experiments.studies.flow_matching.data import dataset
+from experiments.studies.flow_matching.data import DATASETS, dataset
 from experiments.studies.flow_matching.run import VelocityMLP
 from experiments.studies.flow_matching.seeds import seed as seed_from
 from experiments.studies.flow_matching.seeds import seed_int
@@ -188,7 +188,9 @@ def main(argv: list[str] | None = None) -> int:
         args.steps = 20
         args.seeds = [0]
         args.targets = ["eight_gaussians"]
-    targets = [target for target in args.targets if target in TARGETS]
+    # EN: the default stays the pre-registered TARGETS; explicit d=32 is the exploratory extension.
+    # CN: 默认仍是预注册的 TARGETS；显式 d=32 是探索性扩展。
+    targets = [target for target in args.targets if target in DATASETS]
     arms = [arm for arm in args.arms if arm in ARMS]
     out_dir = OUT / args.tag
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -53,7 +53,7 @@ __all__ = [
 BATCH = 256
 MAC_REG = 0.5
 TARGETS = ("eight_gaussians", "two_moons", "mixture_d8")
-SEEDS = {"eight_gaussians": 10, "two_moons": 10, "mixture_d8": 5}
+SEEDS = {"eight_gaussians": 10, "two_moons": 10, "mixture_d8": 5, "mixture_d32": 10}
 NFE_GRID = (1, 2, 5, 10, 50)
 
 
