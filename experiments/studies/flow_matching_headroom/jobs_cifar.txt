@@ -1,9 +1,15 @@
-# Stage 1 — unconditional CIFAR-10, one job per arm so each gets its own GPU.
-# Run from the repo root:  experiments/scripts/gpu_queue.sh --parallel --jobs 3 experiments/studies/flow_matching_headroom/jobs_cifar.txt
+# Stage 1 — unconditional CIFAR-10, one job per arm so each gets its own GPU (patched cifar.py, v2).
+# Run from the repo root.  Do these two steps first, once, by hand (not through the queue):
+#   python -m pip install -q pytorch-fid scipy
+#   python -m experiments.studies.flow_matching_headroom.cifar --prepare-fid          # FID reference + floors, cached
+#   python -m experiments.studies.flow_matching_headroom.cifar --profile-steps 100 --arms independent w2_mb mac_full
+# Only if the profile shows w2_mb/mac_full within ~1.5x of independent and mac_full's logged
+# "mac top1 / emd-agree" are not degenerate (see agent brief), launch:
+#   experiments/scripts/gpu_queue.sh --parallel --jobs 3 experiments/studies/flow_matching_headroom/jobs_cifar.txt
 # 50k steps, batch 128, three seeds. The analysis merges every cifar* tag.
 python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms independent --seeds 0 1 2 --tag cifar_independent
 python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --tag cifar_w2_mb
 python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms mac_full --seeds 0 1 2 --tag cifar_mac_full
-# Optional, expensive: teacher/reflow (10x bank of 500k noise images needs a large GPU; see README).
+# Optional, expensive: teacher/reflow (bank is now chunked, float16, ~6 GB on the GPU; needs a large card).
 # python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms teacher_routed_ot --seeds 0 1 2 --tag cifar_teacher
 # python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms reflow_ref --seeds 0 1 2 --tag cifar_reflow
