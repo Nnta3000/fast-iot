@@ -85,6 +85,48 @@ downloadable (PyPI and Hugging Face reachable). Install `pytorch-fid` once befor
 launcher; `experiments/scripts/run_job.sh` is the local one. Do not add launchers to the
 repository-root `scripts/`, which belongs to HELLO-OT.
 
+## Phase A/B/C/D pre-registered rules (2026-11-27)
+
+These are fixed before the phase runs. Nothing below changes the model, loss, optimiser, 50 000 steps, batch 128,
+seeds 0/1/2 or the FID protocol. The threshold at NFE 4 is always `T = max(1.0 FID, 2 × sd of the paired differences)`,
+and a win is a FID decrease larger than `T`, paired by seed.
+
+**Phase A — housekeeping (no GPU hours).** `analyse.py` must filter `config["steps"]`; the Stage 0 table must use the
+v2 **10 000-step** baselines. The CIFAR analysis must ignore records whose `steps` is not 50 000 (in particular the
+4-step smoke). A test must guard the budget filter. The stale smoke must be removed or ignored on `im2`. The queue
+typo must be corrected. Sample grids (64 per arm, same noise, NFE 4/32, seed 0) go under
+`experiments/out/flow_matching_headroom/cifar_grids/`. Equal-compute accounting uses `train_seconds`,
+`coupling_seconds`, `teacher_seconds`, `bank_seconds` from the records.
+
+**Phase B — why is MAC worse?** Add `w2_sinkhorn` (plain Euclidean cost, exactly the same Sinkhorn, `--mac-reg-rel`
+0.1, and row-wise sampling as `mac_full`; no EMA and no warm-up) and `mac_exact` (same MAC cost and EMA 0.999,
+390-step warm-up, exact EMD instead of Sinkhorn). Run each for seeds 0/1/2, 50k steps. At NFE 4:
+- If `|w2_sinkhorn − mac_full| < T`, the soft plan explains MAC's loss, not the model-aligned cost.
+- If `w2_sinkhorn` beats `mac_full` by more than `T` in at least 2/3 seeds, the cost hurts.
+- If `mac_exact` beats `w2_mb` by more than `T` in at least 2/3 seeds, the model-aligned cost has headroom.
+- If `mac_exact` is within `T`, it neither helps nor hurts; if worse by more than `T` in at least 2/3 seeds, it hurts.
+Optional only with spare time: `mac_full` at `--mac-reg-rel 0.03` and `0.3`, one seed, as a sensitivity note; the
+pre-registered setting remains 0.1.
+
+**Phase C — best-informed pairing.** Use the existing 50k `independent_s{0,1,2}_t50000.pt` EMA weights as the teacher
+via `--teacher-ckpt`; build the chunked float16 bank (factor 10, 20 Euler steps); record the teacher's original
+`train_seconds` from the checkpoint metrics as `teacher_seconds` and the bank time as `bank_seconds`. Run
+`teacher_routed_ot` and `reflow_ref`, seeds 0/1/2, 50k steps. At NFE 4, `teacher_routed_ot` beats `w2_mb` by more
+than `T` in at least 2/3 seeds ⇒ headroom for a better-informed pairing; otherwise **no headroom at this scale**.
+Also state whether it wins at equal total compute (`teacher_seconds + bank_seconds + train_seconds`); `reflow_ref`
+is a reference only.
+
+**Phase D — larger OT pools.** Add `--pool` to `w2_mb`: draw `pool` noise points and `pool` real images each step,
+solve exact OT on the pool, train on 128 of the resulting pairs. Existing pool 128 records are the baseline. Measure
+seconds per step at pool 512 and 1024 on the A100 before launching: if a 50k-step run would exceed **~2 hours**,
+stop and report the timing. If acceptable, run both pools for seeds 0/1/2 at 50k steps. At NFE 4, pool 1024 beating
+pool 128 by more than `T` in at least 2/3 seeds ⇒ pool size matters on CIFAR; otherwise **no evidence that pool size
+matters here**. Do not attempt a global 50k × 50k POT plan; write the one-page memory/time note instead, including
+the fixed-noise control required by the toy study.
+
+**Scope.** Every result here is a coupling screen. It is not evidence about inverse OT, learned costs, HELLO, or a
+large-scale solver. Null results are reported as nulls, without tuning or extra runs to rescue them.
+
 ## What is not tested
 
 No inverse OT, no learned cost, no HELLO, no CIFAR at the reference scale, no conditional CIFAR, no FFHQ, no state of

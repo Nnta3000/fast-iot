@@ -30,6 +30,7 @@ OUT = Path("experiments/out")
 V2 = OUT / "records/flow_matching_coupling_v2/eval.json"
 TOYS = sorted((OUT / "flow_matching_headroom").glob("stage0*/records.json"))
 CIFAR = sorted((OUT / "flow_matching_headroom").glob("cifar*/records.json"))
+CIFAR_STEPS = 50000
 
 
 def _load(paths: list[Path]) -> list[dict]:
@@ -46,11 +47,15 @@ def _mean_sd(values: np.ndarray) -> str:
     return f"{values.mean():.3f}±n/a" if values.size < 2 else f"{values.mean():.3f}±{values.std(ddof=1):.3f}"
 
 
-def _sw2_table(records: list[dict], nfes: tuple[int, ...] = (1, 2, 5, 10)) -> dict[tuple, dict[int, float]]:
-    """EN: `(geometry, arm, seed) -> nfe -> sw2`, Euler only. CN: `(几何, 臂, 种子) -> nfe -> sw2`，仅 Euler。"""
+def _sw2_table(records: list[dict], *, steps: int,
+               nfes: tuple[int, ...] = (1, 2, 5, 10)) -> dict[tuple, dict[int, float]]:
+    """EN: `(geometry, arm, seed) -> nfe -> sw2`, Euler only, **one training budget**. CN: 同上，且只取一个训练预算。"""
     table: dict[tuple, dict[int, float]] = defaultdict(dict)
     for record in records:
         if record["config"].get("sampler") != "euler":
+            continue
+        # A table must never mix budgets: the v2 file contains both 1k and 10k records.
+        if int(record["config"].get("steps", -1)) != int(steps):
             continue
         nfe = int(record["config"]["nfe"])
         if nfe in nfes and "sw2" in record["metrics"]:
@@ -64,7 +69,7 @@ def toys() -> None:
         raise SystemExit(f"missing records: {V2} or {TOYS}")
     baseline_records = json.loads(V2.read_text())["records"]
     headroom_records = _load(TOYS)
-    table = _sw2_table([*baseline_records, *headroom_records])
+    table = _sw2_table([*baseline_records, *headroom_records], steps=10000)
     datasets = sorted({key[0] for key in table})
     for dataset in datasets:
         print(f"\n== {dataset}")
@@ -107,7 +112,10 @@ def cifar() -> None:
     """EN: Stage 1 FID table and decision. CN: Stage 1 FID 表与判据。"""
     if not CIFAR:
         raise SystemExit(f"missing records: {CIFAR}")
-    records = _load(CIFAR)
+    records = [record for record in _load(CIFAR)
+               if int(record["config"].get("steps", -1)) == CIFAR_STEPS]
+    if not records:
+        raise SystemExit(f"no CIFAR records with steps={CIFAR_STEPS}")
     floors = {record["metrics"].get("fid_floor_real") for record in records}
     floors_test = {record["metrics"].get("fid_floor_test") for record in records}
     print(f"FID floors: held-out real {sorted(v for v in floors if v is not None)}, "
