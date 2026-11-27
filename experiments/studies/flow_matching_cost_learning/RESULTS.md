@@ -63,3 +63,37 @@ that on these toys.
 - The `cost_l2` arm is not identical to v2 `ot_pool_B256` (different model seeding and on-the-fly pair construction);
   treat it as the internal control, and v2 as the external reference.
 - Any null here is a null for this screen; it is not evidence that no cost can ever help.
+
+## Parametric follow-up and held-out validation
+
+The fixed-cost screen was followed by a low-dimensional black-box screen: diagonal weights `(1, r)` with
+`r ∈ {0.25, 0.5, 2, 4}` and RBF bandwidth scales `0.25, 0.5, 2, 4`, 2 targets × 3 seeds, 10k steps.
+Records: `experiments/out/flow_matching_cost_learning/parametric/records.json`.
+
+One grid point looked promising on two-moons: `diag_r2`, i.e. cost `(x1 difference)^2 + 2(x2 difference)^2`.
+On the selection seeds 0–2 it was better than the same-seed `cost_l2` at NFE 2/5/10, but worse at NFE 1.
+It was then re-run on **held-out seeds 3 and 4** with a same-code L2 baseline
+(`.../validation/records.json`):
+
+| NFE | selection seeds 0–2: diag_r2 − l2 | held-out seeds 3–4: diag_r2 − l2 |
+| ---: | ---: | ---: |
+| 1 | +0.0047 | **+0.0094** (both seeds worse) |
+| 2 | −0.0032 | **+0.0031** (both seeds worse) |
+| 5 | −0.0018 | +0.0008 |
+| 10 | −0.0017 | +0.0007 |
+
+The candidate **does not replicate**: on the held-out seeds it is worse at every NFE, including the NFE-2
+effect that made it look interesting. The selection-seed gain was a grid/multiple-comparison artifact.
+
+The rest of the parametric grid had no robust improvement:
+
+- eight-Gaussians: all diagonal weights flat or worse; RBF `s=2` was 0.1584 vs L2 0.1712 at NFE 1 but 0/3 and
+  within noise; RBF `s=4` was much worse (0.295).
+- two-moons: RBF `s=2`/`s=4` were much worse; RBF `s=0.25/0.5` was essentially L2; diagonal `r=0.25/0.5/4`
+  was flat or worse.
+- `global_ot` remained far better than every cost arm.
+
+**Conclusion.** The cost is sensitive — bad costs can hurt a lot — but this cheap fixed/parametric search found
+no cost that improves few-step W2 out of sample. The only candidate failed held-out validation. A high-capacity
+learned cost would need a different family or a better target/anchor; the evidence here does not support running
+one on these toys.

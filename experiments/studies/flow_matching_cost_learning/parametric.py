@@ -31,6 +31,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--targets", nargs="+", default=list(TARGETS))
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument("--steps", type=int, default=10000)
+    parser.add_argument("--diag", type=float, nargs="*", default=None)
+    parser.add_argument("--rbf", type=float, nargs="*", default=None)
+    parser.add_argument("--include-l2", action="store_true")
     parser.add_argument("--tag", default="parametric")
     args = parser.parse_args(argv)
     out_dir = OUT / args.tag
@@ -41,11 +44,15 @@ def main(argv: list[str] | None = None) -> int:
     for name in args.targets:
         data = dataset(name, 8192, 10001)
         specs: list[tuple[str, _Features, dict[str, object]]] = []
-        for value in DIAG:
+        if args.include_l2:
+            specs.append(("l2", _Features("l2", data, device), {"family": "l2", "value": 1.0}))
+        diag_values = DIAG if args.diag is None else args.diag
+        rbf_values = RBF if args.rbf is None else args.rbf
+        for value in diag_values:
             weights = (1.0, float(value)) if data.shape[1] == 2 else (1.0,) + (float(value),) * (data.shape[1] - 1)
             specs.append((f"diag_r{value:g}", _Features("diag", data, device, weights=weights),
                           {"family": "diag", "value": value}))
-        for value in RBF:
+        for value in rbf_values:
             specs.append((f"rbf_s{value:g}", _Features("rbf", data, device, scale=value),
                           {"family": "rbf", "value": value}))
         for label, features, config_extra in specs:
@@ -65,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     write_records(out_dir / "records.json", records,
                   provenance={"question": "does a low-dimensional cost family improve toy OT-CFM?",
                               "coupling": "exact OT on a fresh 256-point pool, as w2_mb",
-                              "diag": list(DIAG), "rbf_scale": list(RBF), "seeds": args.seeds,
+                              "diag": list(diag_values), "rbf_scale": list(rbf_values), "seeds": args.seeds,
                               "steps": args.steps, "note": "parametric screen; no high-capacity learner",
                               "commit": _commit()})
     log.line(f"parametric screen done: {len(records)} records")
