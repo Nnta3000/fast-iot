@@ -199,6 +199,13 @@ class _Stream:
         flip = torch.rand(self.batch, generator=self.generator, device=self.device) < 0.5
         return torch.where(flip[:, None, None, None], x.flip(3), x)
 
+    def next_pool(self, count: int) -> torch.Tensor:
+        """EN: a fresh pool of `count` real images for larger-OT-pool experiments. CN: 为更大 OT 池抽取 count 张真实图像。"""
+        index = torch.randint(self.count, (int(count),), generator=self.generator, device=self.device)
+        x = self.images[index].float().div_(127.5).sub_(1.0)
+        flip = torch.rand(int(count), generator=self.generator, device=self.device) < 0.5
+        return torch.where(flip[:, None, None, None], x.flip(3), x)
+
 
 class _Rng:
     """EN: one generator per purpose, so arms at the same seed share noise, times and the pair stream layout.
@@ -288,12 +295,20 @@ def _mac_cost(model: DiT, x0: torch.Tensor, x1: torch.Tensor) -> torch.Tensor:
 
 
 @torch.no_grad()
+def _emd_plan(cost: torch.Tensor) -> np.ndarray:
+    """EN: exact OT plan (uniform marginals) on CPU; the cost may be a pool larger than the training batch.
+    CN: CPU 上的精确 OT 计划（均匀边际）；代价池可以大于训练批次。"""
+    side = int(cost.shape[0])
+    mass = np.full(side, 1.0 / side, dtype=np.float64)
+    return np.asarray(ot.emd(mass, mass, cost.cpu().numpy(), numItermax=2_000_000))
+
+
+@torch.no_grad()
 def _emd_pairs(cost: torch.Tensor) -> torch.Tensor:
     """EN: exact OT (uniform marginals) as an assignment: `cols[i]` is the partner of row `i`.
     CN: 精确 OT（均匀边际）化为指派：`cols[i]` 是第 `i` 行的伙伴。"""
     side = int(cost.shape[0])
-    mass = np.full(side, 1.0 / side, dtype=np.float64)
-    plan = np.asarray(ot.emd(mass, mass, cost.cpu().numpy(), numItermax=2_000_000))
+    plan = _emd_plan(cost)
     columns = plan.argmax(axis=1)
     if np.unique(columns).size != side:
         raise RuntimeError("ot.emd did not return a permutation (iteration limit?)")
@@ -341,6 +356,11 @@ def _couple(arm: str, x0: torch.Tensor, x1: torch.Tensor, *, ema: _Average | Non
             diagnose: bool, stats: dict[str, list[float]]) -> tuple[torch.Tensor, torch.Tensor]:
     """EN: re-pair one batch for a coupled arm. CN: 为带耦合的臂重新配对一批。"""
     if arm == "w2_mb":
+        if args.pool > args.batch:
+            plan = _emd_plan(_gram(x0, x1))
+            rows = torch.randperm(int(x0.shape[0]), generator=rng.pair, device=x0.device)[: args.batch]
+            columns = torch.from_numpy(plan.argmax(axis=1)[rows.cpu().numpy()]).to(x0.device)
+            return x0[rows], x1[columns]
         return x0, x1[_emd_pairs(_gram(x0, x1))]
     if arm == "w2_sinkhorn":
         cost = _gram(x0, x1)
@@ -413,7 +433,10 @@ def _loop(arm: str, model: nn.Module, optimiser: torch.optim.Optimizer, ema_eval
     started_loop = time.perf_counter()
     for step in range(int(steps)):
         with timer.stage("data"):
-            x1 = stream.next()
+            if arm == "w2_mb" and args.pool > args.batch:
+                x1 = stream.next_pool(args.pool)
+            else:
+                x1 = stream.next()
             x0 = rng.randn_like(x1)
         if arm in COUPLED and not (arm in ("mac_full", "mac_exact") and step < warmup):
             _sync(device)
@@ -645,6 +668,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument("--steps", type=int, default=50000)
     parser.add_argument("--batch", type=int, default=BATCH)
+    parser.add_argument("--pool", type=int, default=BATCH,
+                        help="w2_mb pool size; exact OT is solved on pool x pool, then 128 pairs are trained")
     parser.add_argument("--dim", type=int, default=256)
     parser.add_argument("--depth", type=int, default=6)
     parser.add_argument("--bank-factor", type=int, default=10)
@@ -673,6 +698,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.teacher_ckpt:
             args.dim, args.depth = 32, 1
         args.seeds, args.fid_samples, args.nfe = [0], 0, [1]
+    if args.pool < args.batch:
+        raise ValueError(f"--pool ({args.pool}) must be at least --batch ({args.batch})")
     for arm in args.arms:
         if arm not in ARMS:
             raise ValueError(f"unknown arm: {arm}")
@@ -699,6 +726,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def config(arm: str, seed: int, nfe: int) -> dict[str, object]:
         return {"stage": "cifar", "arm": arm, "seed": seed, "steps": args.steps, "batch": args.batch,
+                "pool": args.pool,
                 "dim": args.dim, "depth": args.depth, "nfe": nfe, "mac_reg_rel": args.mac_reg_rel,
                 "sinkhorn_iters": args.sinkhorn_iters, "ema_couple": args.ema_couple, "ema_eval": args.ema_eval,
                 "warmup": args.warmup, "bank_factor": args.bank_factor, "teacher_steps": args.teacher_steps,

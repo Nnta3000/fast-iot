@@ -1,0 +1,9 @@
+# Phase D — larger OT pools.  DO NOT launch until the A100 timing gate passes:
+#   python -m experiments.studies.flow_matching_headroom.cifar --profile-steps 100 --batch 128 \
+#       --arms w2_mb --pool 512 --tag profile_pool512
+#   python -m experiments.studies.flow_matching_headroom.cifar --profile-steps 100 --batch 128 \
+#       --arms w2_mb --pool 1024 --tag profile_pool1024
+# Gate: estimated 50k wall time = ms/step * 50000; stop if > ~2 hours (per-step > ~144 ms).
+# Existing pool=128 records are the baseline. Training batch remains 128.
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --pool 512 --tag cifar_w2_p512
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --pool 1024 --tag cifar_w2_p1024

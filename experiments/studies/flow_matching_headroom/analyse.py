@@ -39,7 +39,8 @@ def _load(paths: list[Path]) -> list[dict]:
     for path in paths:
         rows.extend(json.loads(path.read_text())["records"])
     return rows
-ARMS = ("independent", "ot_pool_B256", "global_ot", "mac_full", "teacher_routed_ot", "reflow_ref")
+ARMS = ("independent", "ot_pool_B256", "global_ot", "mac_full", "w2_sinkhorn", "mac_exact",
+        "teacher_routed_ot", "reflow_ref")
 
 
 def _mean_sd(values: np.ndarray) -> str:
@@ -109,7 +110,7 @@ def toys() -> None:
 
 
 def cifar() -> None:
-    """EN: Stage 1 FID table and decision. CN: Stage 1 FID 表与判据。"""
+    """EN: Stage 1 FID table and decisions, grouped by arm and OT pool. CN: Stage 1 FID 表与判据，按 arm 与 OT 池分组。"""
     if not CIFAR:
         raise SystemExit(f"missing records: {CIFAR}")
     records = [record for record in _load(CIFAR)
@@ -120,39 +121,54 @@ def cifar() -> None:
     floors_test = {record["metrics"].get("fid_floor_test") for record in records}
     print(f"FID floors: held-out real {sorted(v for v in floors if v is not None)}, "
           f"test {sorted(v for v in floors_test if v is not None)}")
-    table: dict[tuple, dict[int, float]] = defaultdict(dict)
+    table: dict[tuple[str, int, int], dict[int, float]] = defaultdict(dict)
     for record in records:
         if record["config"]["nfe"] > 0 and "fid" in record["metrics"]:
-            table[(record["arm"], int(record["draw"]))][int(record["config"]["nfe"])] = record["metrics"]["fid"]
-    arms = sorted({key[0] for key in table})
+            pool = int(record["config"].get("pool", 128))
+            table[(record["arm"], pool, int(record["draw"]))][int(record["config"]["nfe"])] = record["metrics"]["fid"]
+    groups = sorted({(arm, pool) for arm, pool, _ in table})
     nfes = sorted({nfe for cells in table.values() for nfe in cells})
-    print(f"{'arm':18s} " + " ".join(f"{'NFE'+str(nfe):>15s}" for nfe in nfes))
-    for arm in arms:
-        seeds = sorted({key[1] for key in table if key[0] == arm})
-        cells = [np.array([table[(arm, seed)][nfe] for seed in seeds if nfe in table[(arm, seed)]]) for nfe in nfes]
-        print(f"{arm:18s} " + " ".join(f"{_mean_sd(cell):>15s}" if cell.size else f"{'—':>15s}" for cell in cells))
+    print(f"{'arm/pool':22s} " + " ".join(f"{'NFE'+str(nfe):>15s}" for nfe in nfes))
+    for arm, pool in groups:
+        seeds = sorted({seed for group, seed in ((key[:2], key[2]) for key in table) if group == (arm, pool)})
+        cells = [np.array([table[(arm, pool, seed)][nfe] for seed in seeds if nfe in table[(arm, pool, seed)]])
+                 for nfe in nfes]
+        label = f"{arm} p{pool}"
+        print(f"{label:22s} " + " ".join(f"{_mean_sd(cell):>15s}" if cell.size else f"{'—':>15s}" for cell in cells))
     print("straightness:")
     for record in records:
         if record["config"]["nfe"] == 0 and "straightness" in record["metrics"]:
-            print(f"  {record['arm']:18s} s{record['draw']} {record['metrics']['straightness']:.3f} "
+            pool = int(record["config"].get("pool", 128))
+            print(f"  {record['arm']:18s} p{pool:<4d} s{record['draw']} {record['metrics']['straightness']:.3f} "
                   f"train {record['metrics']['train_seconds']:.0f}s coupling {record['metrics']['coupling_seconds']:.0f}s")
-    if 4 in nfes:
-        print("decision at NFE 4 (paired vs w2_mb; headroom if gain < -max(1.0, 2 sd) in >= 2/3 seeds)")
-        for arm in ("mac_full", "teacher_routed_ot"):
-            if arm not in arms or "w2_mb" not in arms:
-                continue
-            seeds = sorted({key[1] for key in table if key[0] == arm and key[0] == arm})
-            for seed in seeds:
-                if 4 in table.get((arm, seed), {}) and 4 in table.get(("w2_mb", seed), {}):
-                    difference = table[(arm, seed)][4] - table[("w2_mb", seed)][4]
-                    print(f"  {arm:16s} s{seed}: {difference:+.2f} FID")
-            differences = np.array([table[(arm, seed)][4] - table[("w2_mb", seed)][4] for seed in seeds
-                                    if 4 in table.get((arm, seed), {}) and 4 in table.get(("w2_mb", seed), {})])
-            if differences.size >= 2:
-                threshold = max(1.0, 2.0 * differences.std(ddof=1))
-                wins = int(np.sum(differences < -threshold))
-                print(f"  {arm:16s} mean {differences.mean():+.2f}, sd {differences.std(ddof=1):.2f}, "
-                      f"threshold {threshold:.2f}, wins {wins}/{differences.size}")
+    if 4 not in nfes:
+        return
+
+    def paired(left: tuple[str, int], right: tuple[str, int], label: str) -> None:
+        """EN: paired NFE-4 difference and the pre-registered threshold. CN: NFE-4 配对差与预定阈值。"""
+        seeds = sorted({seed for arm, pool, seed in table if (arm, pool) == left}
+                       & {seed for arm, pool, seed in table if (arm, pool) == right})
+        differences = np.array([table[(left[0], left[1], seed)][4] - table[(right[0], right[1], seed)][4]
+                                for seed in seeds
+                                if 4 in table.get((left[0], left[1], seed), {})
+                                and 4 in table.get((right[0], right[1], seed), {})])
+        if not differences.size:
+            return
+        if differences.size >= 2:
+            threshold = max(1.0, 2.0 * differences.std(ddof=1))
+            wins = int(np.sum(differences < -threshold))
+            print(f"  {label:34s} mean {differences.mean():+.2f}, sd {differences.std(ddof=1):.2f}, "
+                  f"threshold {threshold:.2f}, wins {wins}/{differences.size}")
+        else:
+            print(f"  {label:34s} mean {differences.mean():+.2f} (one seed; no sd)")
+
+    print("decision at NFE 4 (paired; negative means the first arm is better)")
+    paired(("mac_full", 128), ("w2_mb", 128), "mac_full - w2_mb")
+    paired(("w2_sinkhorn", 128), ("mac_full", 128), "w2_sinkhorn - mac_full")
+    paired(("mac_exact", 128), ("w2_mb", 128), "mac_exact - w2_mb")
+    paired(("teacher_routed_ot", 128), ("w2_mb", 128), "teacher_routed_ot - w2_mb")
+    paired(("w2_mb", 1024), ("w2_mb", 128), "w2_mb p1024 - w2_mb p128")
+    paired(("reflow_ref", 128), ("w2_mb", 128), "reflow_ref - w2_mb (reference)")
 
 
 def main(argv: list[str] | None = None) -> int:
