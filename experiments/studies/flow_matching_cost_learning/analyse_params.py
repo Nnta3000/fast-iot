@@ -47,7 +47,8 @@ def main() -> int:
     if not fixed.exists() or not parametric.exists() or not V2.exists():
         raise SystemExit(f"missing records: {fixed}, {parametric}, {V2}")
     table = _table([*_load(V2), *_load(fixed), *_load(parametric)])
-    params = sorted({arm for (dataset, arm, seed) in table if arm.startswith("cost_") and arm != "cost_l2"})
+    params = sorted({arm for (dataset, arm, seed) in table
+                     if arm.startswith("cost_") and arm not in ("cost_l2", "cost_pca", "cost_rbf")})
     for dataset in ("eight_gaussians", "two_moons"):
         print(f"\n== {dataset} (10k, Euler sliced W2, mean±sd)")
         print(f"{'arm':20s} " + " ".join(f"{'NFE'+str(n):>16s}" for n in NFES))
