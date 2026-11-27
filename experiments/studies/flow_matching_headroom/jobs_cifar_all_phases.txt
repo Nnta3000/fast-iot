@@ -1,0 +1,23 @@
+# Single queue file for Phases B, C and D.  Run from the repo root:
+#   experiments/scripts/gpu_queue.sh experiments/studies/flow_matching_headroom/jobs_cifar_all_phases.txt
+#
+# Serial by design (no --parallel).  The D pool runs are conditional on the measured timing gate:
+# the gate profiles pool 512/1024 at 100 steps on the assigned GPU, prints the projected 50k wall time,
+# and writes pool_gate_ok only if both are <= 2 h.  If it fails, the queue records the gate as failed and
+# the two pool lines print "skipped"; nothing else is launched.
+#
+# Phase B — why is MAC worse?
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_sinkhorn --seeds 0 1 2 --tag cifar_w2_sinkhorn
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms mac_exact --seeds 0 1 2 --tag cifar_mac_exact
+#
+# Phase C — best-informed pairing from the existing 50k independent checkpoints.
+# teacher_seconds = the independent run's original train_seconds; bank_seconds = the bank build.
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms teacher_routed_ot --seeds 0 1 2 --tag cifar_teacher_ckpt --teacher-ckpt 'experiments/out/flow_matching_headroom/cifar_independent/independent_s{seed}_t50000.pt'
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms reflow_ref --seeds 0 1 2 --tag cifar_reflow_ckpt --teacher-ckpt 'experiments/out/flow_matching_headroom/cifar_independent/independent_s{seed}_t50000.pt'
+#
+# Phase D timing gate (100 steps at batch 128, pool 512 and 1024; threshold 2 h/50k).
+python -m experiments.studies.flow_matching_headroom.pool_gate --threshold-hours 2.0
+#
+# Phase D pool runs, only if the timing gate passed.
+if [ -f experiments/out/flow_matching_headroom/pool_gate_ok ]; then python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --pool 512 --tag cifar_w2_p512; else echo "Phase D gate failed; skipping pool 512"; fi
+if [ -f experiments/out/flow_matching_headroom/pool_gate_ok ]; then python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_mb --seeds 0 1 2 --pool 1024 --tag cifar_w2_p1024; else echo "Phase D gate failed; skipping pool 1024"; fi
