@@ -57,12 +57,20 @@ def _sqdist(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 class _Features:
     """EN: a fixed feature map for a ground cost. CN: ground cost 的固定特征映射。"""
 
-    def __init__(self, kind: str, data: np.ndarray, device: str) -> None:
+    def __init__(self, kind: str, data: np.ndarray, device: str, *, weights: tuple[float, ...] | None = None,
+                 scale: float = 1.0) -> None:
         self.kind = kind
         self.device = device
         self.mean: torch.Tensor | None = None
         self.matrix: torch.Tensor | None = None
+        self.weights: torch.Tensor | None = None
         if kind == "l2":
+            return
+        if kind == "diag":
+            if weights is None or len(weights) != int(data.shape[1]):
+                raise ValueError(f"diag weights must have length {data.shape[1]}")
+            self.weights = torch.as_tensor(np.sqrt(np.asarray(weights, dtype=np.float64)),
+                                           dtype=torch.float32, device=device)
             return
         if kind == "rbf":
             dimension = int(data.shape[1])
@@ -70,7 +78,7 @@ class _Features:
             sample = data[: min(512, len(data))]
             median = float(np.median(np.linalg.norm(sample[:, None, :] - sample[None, :, :], axis=-1)))
             gamma = 1.0 / max(median, 1e-6)
-            self.matrix = torch.as_tensor(rng.normal(scale=gamma, size=(64, dimension)),
+            self.matrix = torch.as_tensor(rng.normal(scale=gamma * float(scale), size=(64, dimension)),
                                           dtype=torch.float32, device=device)
             self.phase = torch.as_tensor(rng.uniform(0.0, 2.0 * np.pi, size=64),
                                          dtype=torch.float32, device=device)
@@ -90,6 +98,9 @@ class _Features:
         """EN: map points to the cost feature space. CN: 将点映射到代价特征空间。"""
         if self.kind == "l2":
             return x
+        if self.kind == "diag":
+            assert self.weights is not None
+            return x * self.weights
         if self.kind == "rbf":
             assert self.matrix is not None
             return np.sqrt(2.0 / 64.0) * torch.cos(x @ self.matrix.T + self.phase)
@@ -118,14 +129,14 @@ def _ot_columns(cost: torch.Tensor) -> torch.Tensor:
     return torch.from_numpy(columns).to(cost.device)
 
 
-def train(name: str, seed: int, *, cost_name: str, steps: int, device: str, log: RunLog
-          ) -> tuple[VelocityMLP, dict[str, float]]:
+def train(name: str, seed: int, *, cost_name: str, steps: int, device: str, log: RunLog,
+          features: _Features | None = None) -> tuple[VelocityMLP, dict[str, float]]:
     """EN: train one flow with a fixed cost and return the model and its coupling cost. CN: 用固定代价训练一个 flow，返回模型与耦合开销。"""
     data = dataset(name, TRAIN_POINTS, 10001)
     torch.manual_seed(seed_int(name, "cost", seed))
     model = VelocityMLP(int(data.shape[1])).to(device)
     optimiser = torch.optim.Adam(model.parameters(), lr=LR)
-    features = _Features(cost_name, data, device)
+    features = features or _Features(cost_name, data, device)
     rng = np.random.default_rng(seed_from(name, "cost", seed))
     coupling_seconds = 0.0
     started = time.perf_counter()
