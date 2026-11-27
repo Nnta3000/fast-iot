@@ -584,25 +584,42 @@ def _run_one(arm: str, seed: int, *, args: argparse.Namespace, images: np.ndarra
     bank = None
     teacher_seconds = bank_seconds = 0.0
     if arm in TEACHER_ARMS:
-        torch.manual_seed(seed_int("cifar-teacher", seed))
-        teacher = DiT(dim=args.dim, depth=args.depth).to(device)
-        teacher_ema = _Average(teacher, args.ema_eval)
-        teacher_opt = torch.optim.AdamW(teacher.parameters(), lr=LR)
-        _sync(device)
-        started = time.perf_counter()
-        _loop("independent", teacher, teacher_opt, teacher_ema, None, _Stream(images, args.batch, f"teacher-{seed}", device),
-              _Rng(f"teacher-{seed}", device), steps=steps, warmup=0, bank=None, args=args, device=device, log=log,
-              label=f"{label} teacher", timer=timer)
-        _sync(device)
-        teacher_seconds = time.perf_counter() - started
+        teacher_opt: torch.optim.Optimizer | None = None
+        teacher_ema: _Average | None = None
+        if args.teacher_ckpt:
+            template = str(args.teacher_ckpt)
+            path = Path(template.format(seed=seed)) if "{seed}" in template else Path(template)
+            if not path.exists():
+                raise FileNotFoundError(f"teacher checkpoint not found: {path}")
+            saved = torch.load(path, map_location=device, weights_only=False)
+            teacher = DiT(dim=args.dim, depth=args.depth).to(device)
+            teacher.load_state_dict(saved["ema_eval"])
+            teacher.eval()
+            teacher_seconds = float(saved.get("metrics", {}).get("train_seconds", 0.0))
+            log.line(f"[{label}] loaded teacher {path} (original train {teacher_seconds:.1f}s)")
+            teacher_model = teacher
+        else:
+            torch.manual_seed(seed_int("cifar-teacher", seed))
+            teacher = DiT(dim=args.dim, depth=args.depth).to(device)
+            teacher_ema = _Average(teacher, args.ema_eval)
+            teacher_opt = torch.optim.AdamW(teacher.parameters(), lr=LR)
+            _sync(device)
+            started = time.perf_counter()
+            _loop("independent", teacher, teacher_opt, teacher_ema, None,
+                  _Stream(images, args.batch, f"teacher-{seed}", device), _Rng(f"teacher-{seed}", device),
+                  steps=steps, warmup=0, bank=None, args=args, device=device, log=log,
+                  label=f"{label} teacher", timer=timer)
+            _sync(device)
+            teacher_seconds = time.perf_counter() - started
+            teacher_model = teacher_ema.model
         size = 64 if args.smoke else args.bank_factor * len(images)
         started = time.perf_counter()
-        bank = _teacher_bank(teacher_ema.model, size=size, steps=args.teacher_steps, device=device, key=str(seed))
+        bank = _teacher_bank(teacher_model, size=size, steps=args.teacher_steps, device=device, key=str(seed))
         _sync(device)
         bank_seconds = time.perf_counter() - started
         log.line(f"[bank] {label}: {size} points, {args.teacher_steps} Euler, {bank_seconds:.1f}s, "
                  f"teacher {teacher_seconds:.1f}s")
-        del teacher, teacher_opt, teacher_ema
+        del teacher, teacher_ema, teacher_opt
     _sync(device)
     started = time.perf_counter()
     coupling_seconds, stats = _loop(arm, model, optimiser, ema_eval, ema_couple, stream, rng, steps=steps,
@@ -632,6 +649,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--depth", type=int, default=6)
     parser.add_argument("--bank-factor", type=int, default=10)
     parser.add_argument("--teacher-steps", type=int, default=20)
+    parser.add_argument("--teacher-ckpt", default=None,
+                        help="existing EMA checkpoint for teacher_routed_ot/reflow_ref; a '{seed}' placeholder "
+                             "is formatted per run (otherwise the same checkpoint is used for every seed)")
     parser.add_argument("--fid-samples", type=int, default=10000)
     parser.add_argument("--nfe", type=int, nargs="+", default=[2, 4, 8, 32])
     parser.add_argument("--mac-reg-rel", type=float, default=0.1,
@@ -649,7 +669,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tag", default="cifar")
     args = parser.parse_args(argv)
     if args.smoke:
-        args.steps, args.batch, args.dim, args.depth = 4, 8, 32, 1
+        args.steps, args.batch = 4, 8
+        if not args.teacher_ckpt:
+            args.dim, args.depth = 32, 1
         args.seeds, args.fid_samples, args.nfe = [0], 0, [1]
     for arm in args.arms:
         if arm not in ARMS:
@@ -680,6 +702,7 @@ def main(argv: list[str] | None = None) -> int:
                 "dim": args.dim, "depth": args.depth, "nfe": nfe, "mac_reg_rel": args.mac_reg_rel,
                 "sinkhorn_iters": args.sinkhorn_iters, "ema_couple": args.ema_couple, "ema_eval": args.ema_eval,
                 "warmup": args.warmup, "bank_factor": args.bank_factor, "teacher_steps": args.teacher_steps,
+                "teacher_ckpt": args.teacher_ckpt,
                 "tf32": not args.no_tf32, "bf16": args.bf16, "eval_weights": "ema", "device": device,
                 "commit": commit}
 

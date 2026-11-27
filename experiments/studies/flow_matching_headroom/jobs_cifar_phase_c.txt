@@ -1,0 +1,5 @@
+# Phase C — best-informed pairing from the existing 50k independent checkpoints.
+# The teacher is the EMA of the independent run with the same seed; no teacher retraining.
+# teacher_seconds in the records is the original independent run's train_seconds; bank_seconds is the bank build.
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms teacher_routed_ot --seeds 0 1 2 --tag cifar_teacher_ckpt --teacher-ckpt 'experiments/out/flow_matching_headroom/cifar_independent/independent_s{seed}_t50000.pt'
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms reflow_ref --seeds 0 1 2 --tag cifar_reflow_ckpt --teacher-ckpt 'experiments/out/flow_matching_headroom/cifar_independent/independent_s{seed}_t50000.pt'
