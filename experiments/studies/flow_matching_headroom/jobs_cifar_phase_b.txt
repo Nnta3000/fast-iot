@@ -1,0 +1,6 @@
+# Phase B — why is MAC worse?  One job per arm so the queue can spread them.
+# 50k steps, batch 128, seeds 0 1 2; identical model/loss/optimiser/FID to the 50k baseline.
+# w2_sinkhorn: plain Euclidean cost + the same Sinkhorn plan as mac_full.
+# mac_exact:   model-aligned cost + exact EMD (same EMA, same 390-step warm-up).
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms w2_sinkhorn --seeds 0 1 2 --tag cifar_w2_sinkhorn
+python -m experiments.studies.flow_matching_headroom.cifar --steps 50000 --batch 128 --arms mac_exact --seeds 0 1 2 --tag cifar_mac_exact

@@ -66,9 +66,9 @@ DATA = Path("data/cifar10")
 FID_STATS = OUT / "cifar_fid_reference.npz"
 BATCH = 128
 LR = 2e-4
-ARMS = ("independent", "w2_mb", "mac_full", "teacher_routed_ot", "reflow_ref")
+ARMS = ("independent", "w2_mb", "w2_sinkhorn", "mac_full", "mac_exact", "teacher_routed_ot", "reflow_ref")
 TEACHER_ARMS = ("teacher_routed_ot", "reflow_ref")
-COUPLED = ("w2_mb", "mac_full", "teacher_routed_ot", "reflow_ref")
+COUPLED = ("w2_mb", "w2_sinkhorn", "mac_full", "mac_exact", "teacher_routed_ot", "reflow_ref")
 FID_COUNTS = (40000, 10000, 10000)
 
 
@@ -342,6 +342,19 @@ def _couple(arm: str, x0: torch.Tensor, x1: torch.Tensor, *, ema: _Average | Non
     """EN: re-pair one batch for a coupled arm. CN: 为带耦合的臂重新配对一批。"""
     if arm == "w2_mb":
         return x0, x1[_emd_pairs(_gram(x0, x1))]
+    if arm == "w2_sinkhorn":
+        cost = _gram(x0, x1)
+        plan, error, iterations = _sinkhorn_log(cost, args.mac_reg_rel, args.sinkhorn_iters)
+        columns = torch.multinomial(plan.float(), 1, generator=rng.pair).squeeze(1)
+        if diagnose:
+            side = float(plan.shape[0])
+            exact = _emd_pairs(cost)
+            stats["top1"].append(float((plan.max(1).values * side).mean()))
+            stats["emd_agreement"].append(float((plan.argmax(1) == exact).double().mean()))
+            stats["sinkhorn_error"].append(error)
+            stats["sinkhorn_iters"].append(float(iterations))
+            stats["pair_distinct"].append(float(torch.unique(columns).numel()) / side)
+        return x0, x1[columns]
     if arm == "mac_full":
         assert ema is not None
         cost = _mac_cost(ema.model, x0, x1)
@@ -355,6 +368,12 @@ def _couple(arm: str, x0: torch.Tensor, x1: torch.Tensor, *, ema: _Average | Non
             stats["sinkhorn_error"].append(error)
             stats["sinkhorn_iters"].append(float(iterations))
             stats["pair_distinct"].append(float(torch.unique(columns).numel()) / side)
+        return x0, x1[columns]
+    if arm == "mac_exact":
+        assert ema is not None
+        columns = _emd_pairs(_mac_cost(ema.model, x0, x1))
+        if diagnose:
+            stats["pair_distinct"].append(float(torch.unique(columns).numel()) / float(columns.numel()))
         return x0, x1[columns]
     assert bank is not None
     index = torch.randperm(bank[0].shape[0], generator=rng.pair, device=x0.device)[: x0.shape[0]]
@@ -396,7 +415,7 @@ def _loop(arm: str, model: nn.Module, optimiser: torch.optim.Optimizer, ema_eval
         with timer.stage("data"):
             x1 = stream.next()
             x0 = rng.randn_like(x1)
-        if arm in COUPLED and not (arm == "mac_full" and step < warmup):
+        if arm in COUPLED and not (arm in ("mac_full", "mac_exact") and step < warmup):
             _sync(device)
             started = time.perf_counter()
             with timer.stage("couple"):
@@ -557,7 +576,7 @@ def _run_one(arm: str, seed: int, *, args: argparse.Namespace, images: np.ndarra
         log.line(f"[{label}] resumed from {checkpoint}")
         return ema_eval.model, saved["metrics"]
     optimiser = torch.optim.AdamW(model.parameters(), lr=LR)
-    ema_couple = _Average(model, args.ema_couple) if arm == "mac_full" else None
+    ema_couple = _Average(model, args.ema_couple) if arm in ("mac_full", "mac_exact") else None
     stream = _Stream(images, args.batch, str(seed), device)
     rng = _Rng(str(seed), device)
     warmup = args.warmup if args.warmup is not None else stream.per_epoch
@@ -593,7 +612,8 @@ def _run_one(arm: str, seed: int, *, args: argparse.Namespace, images: np.ndarra
     train_seconds = time.perf_counter() - started
     metrics = {"train_seconds": train_seconds, "coupling_seconds": coupling_seconds,
                "teacher_seconds": teacher_seconds, "bank_seconds": bank_seconds,
-               "extra_forward_evals": 2.0 if arm == "mac_full" else 0.0, "warmup_steps": float(warmup),
+               "extra_forward_evals": 2.0 if arm in ("mac_full", "mac_exact") else 0.0,
+               "warmup_steps": float(warmup),
                **{f"mac_{key}": float(np.mean(values)) for key, values in stats.items() if values}}
     if not timer.enabled and not args.smoke:
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
